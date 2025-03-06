@@ -16,7 +16,7 @@ export default function ContactSection() {
           className="max-w-3xl mx-auto  rounded-2xl p-8 border border-gray-800"
         >
           <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-4">Get in <span className="text-accent">Touch</span></h2>
+            <h2 className="text-4xl text-white font-bold mb-4">Get in <span className="text-accent">Touch</span></h2>
             <p className="text-gray-400">
               Interested in implementing Fleet for your dealership? Have questions about our platform? We're here to help.
             </p>
@@ -84,7 +84,7 @@ export default function ContactSection() {
             </div>
           </form>
           
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="mt-12 text-white grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div>
               <div className="w-12 h-12 rounded-full bg-black-medium border border-accent flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

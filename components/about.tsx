@@ -14,13 +14,13 @@ export default function AboutSection() {
           transition={{ duration: 0.8 }}
           className="mb-12 text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Revolutionizing <span className="text-accent">Car Shopping</span></h2>
+          <h2 className="text-4xl text-white md:text-5xl font-bold mb-4">Revolutionizing <span className="text-accent">Car Shopping</span></h2>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
             Fleet connects car buyers with trusted dealerships through an intuitive platform designed to make vehicle shopping seamless and enjoyable.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 text-white md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
             {
               title: "For Car Buyers",

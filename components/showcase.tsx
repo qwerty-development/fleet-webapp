@@ -73,7 +73,7 @@ export default function AppShowcase() {
   };
 
   return (
-    <section id="app" className="py-20 bg-gradient-to-b relative overflow-hidden">
+    <section id="app" className="py-20 bg-gradient-to-b relative text-white overflow-hidden">
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
