@@ -1,6 +1,4 @@
-'use client'
-
-import { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, useAnimation, useScroll, useTransform } from 'framer-motion';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { SparklesIcon, ShieldCheckIcon, CubeTransparentIcon } from '@heroicons/react/24/solid';
@@ -25,26 +23,26 @@ export default function HeroSection() {
   const backgroundBlur = useTransform(scrollYProgress, [0, 0.5], [0, 10]);
 
   useEffect(() => {
-    // Replace the URL below with a real API endpoint that returns an array of car logos
-    fetch('https://api.example.com/car-logos')
+    // Using a dummy API endpoint from npoint.io that returns an array of car logos.
+    // Expected JSON format: [{ "id": "1", "url": "https://example.com/logos/tesla.png" }, ... ]
+    fetch('https://api.npoint.io/7c0f9d2af9af9c4f7f9f')
       .then((response) => response.json())
       .then((data) => {
-        // Expecting data to be an array of objects with { id, url }
         setCarLogos(data);
       })
       .catch((error) => {
         console.error('Error fetching car logos:', error);
         // Fallback static logos if API fails
         setCarLogos([
-          { id: '1', url: '/logos/tesla.png' },
-          { id: '2', url: '/logos/bmw.png' },
-          { id: '3', url: '/logos/audi.png' },
-          { id: '4', url: '/logos/mercedes.png' },
-          { id: '5', url: '/logos/ford.png' },
-          { id: '6', url: '/logos/honda.png' },
-          { id: '7', url: '/logos/toyota.png' },
-          { id: '8', url: '/logos/porsche.png' },
-          { id: '9', url: '/logos/ferrari.png' },
+          { id: '1', url: 'https://www.carlogos.org/car-logos/tesla-logo.png' },
+          { id: '2', url: 'https://www.carlogos.org/car-logos/bmw-logo.png' },
+          { id: '3', url: 'https://www.carlogos.org/car-logos/audi-logo.png' },
+          { id: '4', url: 'https://www.carlogos.org/car-logos/mercedes-benz-logo.png' },
+          { id: '5', url: 'https://www.carlogos.org/car-logos/ford-logo.png' },
+          { id: '6', url: 'https://www.carlogos.org/car-logos/honda-logo.png' },
+          { id: '7', url: 'https://www.carlogos.org/car-logos/toyota-logo.png' },
+          { id: '8', url: 'https://www.carlogos.org/car-logos/porsche-logo.png' },
+          { id: '9', url: 'https://www.carlogos.org/car-logos/ferrari-logo.png' },
         ]);
       });
       
@@ -325,7 +323,7 @@ export default function HeroSection() {
         <svg width="400" height="150" viewBox="0 0 400 150" fill="currentColor" className="text-accent/30">
           <path d="M50,65 C50,45 75,40 100,40 L250,40 C275,40 280,55 280,65 L280,70 C280,80 270,80 250,80 L100,80 C80,80 50,85 50,65 Z M65,75 C55,75 50,70 50,65 C50,60 55,55 65,55 C75,55 75,75 65,75 Z M265,75 C255,75 250,70 250,65 C250,60 255,55 265,55 C275,55 275,75 265,75 Z" />
           <motion.path 
-            d="M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z" 
+            d="M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z"
             animate={{ 
               d: [
                 "M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z",

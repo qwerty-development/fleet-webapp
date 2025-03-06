@@ -8,6 +8,7 @@ import Footer from "@/components/footer";
 import HeroSection from "@/components/herosection";
 import Navbar from "@/components/navbar";
 import AppShowcase from "@/components/showcase";
+import FloatingCarLogos from "@/components/FloatingCarLogos";
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
@@ -107,11 +108,11 @@ export default function Home() {
 
       {/* Main content sections */}
       <main className="pt-16 relative z-10 text-foreground">
-        <HeroSection />
-        <AboutSection />
-        <AppShowcase />
-        <ContactSection />
-      </main>
+  <HeroSection />
+  <AboutSection />
+  <AppShowcase />
+  <ContactSection />
+</main>
 
       {/* Optional Footer */}
       <Footer />

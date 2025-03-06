@@ -102,7 +102,7 @@ export default function ContactSection() {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold mb-2">Phone</h3>
-              <p className="text-gray-400">+1 (123) 456-7890</p>
+              <p className="text-gray-400">+961 76875575</p>
             </div>
             
             <div>

@@ -34,7 +34,7 @@ export default function AboutSection() {
             },
             {
               title: "Platform Features",
-              description: "Advanced search, real-time updates, interactive video content, secure messaging, and robust analytics all in one place.",
+              description: "Advanced search, real-time updates, interactive video content, and robust analytics all in one place.",
               icon: <CogIcon className="w-12 h-12 mb-4 text-accent" />
             }
           ].map((card, index) => (
