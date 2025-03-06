@@ -1,52 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, useAnimation, useScroll, useTransform } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useAnimation, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
-import { SparklesIcon, ShieldCheckIcon, CubeTransparentIcon } from '@heroicons/react/24/solid';
-
-interface CarLogo {
-  id: string;
-  url: string;
-}
+import { SparklesIcon, ShieldCheckIcon, CubeTransparentIcon, FireIcon } from '@heroicons/react/24/solid';
 
 export default function HeroSection() {
-  const [carLogos, setCarLogos] = useState<CarLogo[]>([]);
-  const heroRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef(null);
   const controls = useAnimation();
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
   
-  // Transform scrollYProgress to use for parallax effects
+  // Transform scrollYProgress for parallax effects
   const titleOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const titleY = useTransform(scrollYProgress, [0, 0.5], [0, -50]);
-  const backgroundBlur = useTransform(scrollYProgress, [0, 0.5], [0, 10]);
+  
+  // Collection of car images for the scrolling collage
+  const carImages = [
+    'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1583121274602-3e2820c69888?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1567808291548-fc3ee04dbcf0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1570733577524-3a047079e80d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1542362567-b07e54358753?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1550355291-bbee04a92027?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1493238792000-8113da705763?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1553440569-bcc63803a83d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1502877338535-766e1452684a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1486496572940-2bb2341fdbdf?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    // Additional images
+    'https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1583267746897-2cf415887172?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1526726538690-5cbf956ae2fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1517672651691-24622a91b550?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1532581140115-3e355d1ed1de?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1558992658-08a063bb01af?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://images.unsplash.com/photo-1685914375306-9671a2603b19?q=80&w=2662&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+  ];
 
   useEffect(() => {
-    // Using a dummy API endpoint from npoint.io that returns an array of car logos.
-    // Expected JSON format: [{ "id": "1", "url": "https://example.com/logos/tesla.png" }, ... ]
-    fetch('https://api.npoint.io/7c0f9d2af9af9c4f7f9f')
-      .then((response) => response.json())
-      .then((data) => {
-        setCarLogos(data);
-      })
-      .catch((error) => {
-        console.error('Error fetching car logos:', error);
-        // Fallback static logos if API fails
-        setCarLogos([
-          { id: '1', url: 'https://www.carlogos.org/car-logos/tesla-logo.png' },
-          { id: '2', url: 'https://www.carlogos.org/car-logos/bmw-logo.png' },
-          { id: '3', url: 'https://www.carlogos.org/car-logos/audi-logo.png' },
-          { id: '4', url: 'https://www.carlogos.org/car-logos/mercedes-benz-logo.png' },
-          { id: '5', url: 'https://www.carlogos.org/car-logos/ford-logo.png' },
-          { id: '6', url: 'https://www.carlogos.org/car-logos/honda-logo.png' },
-          { id: '7', url: 'https://www.carlogos.org/car-logos/toyota-logo.png' },
-          { id: '8', url: 'https://www.carlogos.org/car-logos/porsche-logo.png' },
-          { id: '9', url: 'https://www.carlogos.org/car-logos/ferrari-logo.png' },
-        ]);
-      });
-      
-    // Sequence the initial animations
+    // Initial animation sequence
     const sequence = async () => {
       await controls.start("visible");
     };
@@ -55,7 +53,7 @@ export default function HeroSection() {
   }, [controls]);
 
   // Scroll helper function
-  const scrollToSection = (sectionId: string) => {
+  const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
     if (section) {
       section.scrollIntoView({ behavior: 'smooth' });
@@ -83,84 +81,132 @@ export default function HeroSection() {
     }
   };
 
-  // Particle animation for the background
-  const generateParticles = (count: number) => {
-    return Array.from({ length: count }).map((_, i) => (
-      <motion.div
-        key={`particle-${i}`}
-        className="absolute rounded-full bg-accent/20"
-        style={{
-          width: Math.random() * 8 + 2,
-          height: Math.random() * 8 + 2,
-          top: `${Math.random() * 100}%`,
-          left: `${Math.random() * 100}%`,
-        }}
-        animate={{
-          y: [0, Math.random() * -100 - 50],
-          x: [0, (Math.random() - 0.5) * 50],
-          opacity: [0, 0.8, 0],
-          scale: [0, 1, 0.5]
-        }}
-        transition={{
-          duration: Math.random() * 10 + 10,
-          repeat: Infinity,
-          repeatType: "loop",
-          ease: "easeInOut",
-          delay: Math.random() * 5
-        }}
-      />
-    ));
+  // Create the scrolling collage columns with truly seamless looping
+  const createScrollingCollage = () => {
+    // Divide images into 4 columns
+    const imagesPerColumn = Math.ceil(carImages.length / 4);
+    
+    // Create columns with different scroll speeds
+    const columns = [
+      { images: carImages.slice(0, imagesPerColumn), direction: 'down', speed: 120 },
+      { images: carImages.slice(imagesPerColumn, imagesPerColumn * 2), direction: 'up', speed: 150 },
+      { images: carImages.slice(imagesPerColumn * 2, imagesPerColumn * 3), direction: 'down', speed: 135 },
+      { images: carImages.slice(imagesPerColumn * 3), direction: 'up', speed: 145 }
+    ];
+
+    return columns.map((column, columnIndex) => {
+      // Calculate the total height of images in a column to properly set up the seamless loop
+      const columnHeight = column.images.length * 260; // 260px = image height (240px) + gap (20px)
+      
+      return (
+        <div 
+          key={`column-${columnIndex}`} 
+          className="h-full flex-1 flex flex-col relative overflow-hidden"
+        >
+          {/* Create two identical sets of images that will infinitely scroll */}
+          {[0, 1].map((setIndex) => (
+            <motion.div
+              key={`set-${columnIndex}-${setIndex}`}
+              className="flex flex-col gap-5 w-full absolute"
+              style={{ 
+                top: setIndex === 0 ? 0 : `-${columnHeight}px`
+              }}
+              animate={{
+                y: column.direction === 'down' 
+                  ? [0, columnHeight] 
+                  : [0, -columnHeight]
+              }}
+              transition={{
+                duration: column.speed,
+                repeat: Infinity,
+                repeatType: "loop",
+                ease: "linear",
+                repeatDelay: 0 // No delay for seamless looping
+              }}
+            >
+              {column.images.map((image, imageIndex) => (
+                <div
+                  key={`image-${columnIndex}-${setIndex}-${imageIndex}`}
+                  className="w-full h-60 relative rounded-xl overflow-hidden shadow-lg"
+                  style={{ marginBottom: "20px" }}
+                >
+                  <div 
+                    className="w-full h-full bg-cover bg-center transform hover:scale-105 transition-transform duration-1000"
+                    style={{ 
+                      backgroundImage: `url(${image})`,
+                    }}
+                  />
+                  {/* Overlay with improved gradient for better text readability */}
+                  <div 
+                    className="absolute inset-0" 
+                    style={{ 
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 100%)',
+                      boxShadow: 'inset 0 0 30px rgba(0,0,0,0.6)'
+                    }}
+                  />
+                </div>
+              ))}
+            </motion.div>
+          ))}
+        </div>
+      );
+    });
   };
 
   return (
     <section
       id="hero"
       ref={heroRef}
-      className="relative flex flex-col items-center justify-center min-h-screen text-foreground overflow-hidden"
+      className="relative flex flex-col items-center justify-center min-h-screen text-white overflow-hidden"
     >
-      {/* Ambient light effects */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-accent/10 rounded-full filter blur-3xl opacity-30 animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-1/2 h-1/2 bg-blue-500/10 rounded-full filter blur-3xl opacity-30 animate-pulse" 
-             style={{ animationDelay: '2s' }} />
+      {/* Full-screen scrolling collage background with improved styling */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+          className="absolute inset-0 flex"
+        >
+          {createScrollingCollage()}
+        </motion.div>
+        
+        {/* Enhanced dark overlay with more sophisticated gradient and blur */}
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            background: 'linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.8) 100%)',
+            backdropFilter: 'blur(5px)'
+          }}
+        />
+        
+        {/* Additional accent color overlay to add brand color tint */}
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            background: 'radial-gradient(circle at center, rgba(255,106,0,0.15) 0%, rgba(0,0,0,0) 70%)',
+            mixBlendMode: 'overlay'
+          }}
+        />
+      </div>
+
+      {/* Subtle light effects */}
+      <div className="absolute inset-0 z-1 pointer-events-none overflow-hidden">
+        <motion.div 
+          className="absolute top-1/4 left-1/4 w-full h-full bg-gradient-to-br from-accent/5 to-transparent rounded-full filter blur-3xl"
+          animate={{ 
+            x: ["-5%", "5%", "-5%"],
+            y: ["-5%", "5%", "-5%"],
+            scale: [0.9, 1.1, 0.9],
+            opacity: [0.2, 0.3, 0.2]
+          }}
+          transition={{ 
+            duration: 15, 
+            repeat: Infinity,
+            ease: "easeInOut" 
+          }}
+        />
       </div>
       
-      {/* Floating particles */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        {generateParticles(30)}
-      </div>
-
-      {/* Background Car Logos with enhanced animation */}
-      <div className="absolute inset-0 z-0 filter blur-3xl opacity-20">
-        {carLogos.map((logo, index) => {
-          // Position each logo in a more artistic manner based on its index
-          const top = (index * 15 + Math.sin(index) * 20) % 100;
-          const left = (index * 25 + Math.cos(index) * 20) % 100;
-          return (
-            <motion.img
-              key={logo.id}
-              src={logo.url}
-              alt="Car Logo"
-              className="w-16 h-16 m-4 absolute"
-              style={{ top: `${top}%`, left: `${left}%` }}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ 
-                opacity: [0, 0.6, 0.4, 0.6], 
-                scale: [0.8, 1.2, 1, 1.2],
-                rotate: [0, 5, -5, 0],
-                filter: ["blur(0px)", "blur(1px)", "blur(0px)", "blur(1px)"]
-              }}
-              transition={{ 
-                duration: 20 + index * 2, 
-                repeat: Infinity, 
-                ease: "easeInOut",
-                delay: index * 0.5
-              }}
-            />
-          );
-        })}
-      </div>
-
       {/* Main content with parallax effects */}
       <motion.div 
         className="z-10 text-center px-4 max-w-5xl relative"
@@ -169,37 +215,52 @@ export default function HeroSection() {
         variants={containerVariants}
         style={{ y: titleY, opacity: titleOpacity }}
       >
-        {/* Glow effect behind title */}
-        <div className="absolute inset-0 bg-accent/5 filter blur-3xl rounded-full opacity-70" />
-        
         <motion.div
           variants={itemVariants}
           className="mb-8 relative"
         >
-          {/* 3D looking title with enhanced gradient and shadow effects */}
-          <motion.h1
-            className="text-7xl md:text-9xl font-black tracking-tighter mb-6 bg-clip-text text-transparent"
-            style={{
-              backgroundImage: "linear-gradient(135deg, #ff8a00, #e52e71, #ff8a00)",
-              backgroundSize: "200% 200%",
-              textShadow: "0 0 40px rgba(229, 46, 113, 0.2), 0 0 20px rgba(255, 138, 0, 0.1)",
-              WebkitTextStroke: "1px rgba(255, 255, 255, 0.1)"
-            }}
-            animate={{
-              backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
-            }}
-            transition={{
-              duration: 15,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-          >
-            FLEET
-          </motion.h1>
+          {/* Redesigned premium title with enhanced styling */}
+          <div className="relative mb-10">
+            <motion.h1
+              className="text-7xl md:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/90"
+              style={{
+                WebkitTextStroke: "2px rgba(255,255,255,0.8)",
+                filter: "drop-shadow(0 0 20px rgba(255, 106, 0, 0.6))"
+              }}
+              animate={{
+                filter: [
+                  "drop-shadow(0 0 20px rgba(255, 106, 0, 0.6))",
+                  "drop-shadow(0 0 35px rgba(255, 106, 0, 0.8))",
+                  "drop-shadow(0 0 20px rgba(255, 106, 0, 0.6))"
+                ]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              FLEET
+            </motion.h1>
+            
+            {/* Additional subtle title highlight */}
+            <motion.div
+              className="absolute -inset-2 -z-10 rounded-lg bg-gradient-to-r from-accent/0 via-accent/30 to-accent/0 opacity-30 blur-2xl"
+              animate={{
+                opacity: [0.2, 0.4, 0.2],
+                scale: [0.96, 1.04, 0.96],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+          </div>
           
-          {/* Animated underline */}
+          {/* Animated accent line */}
           <motion.div
-            className="h-1 bg-gradient-to-r from-accent-light via-accent to-accent-light rounded-full mx-auto"
+            className="h-1 bg-gradient-to-r from-accent/50 via-accent to-accent/50 rounded-full mx-auto"
             style={{ width: "60%" }}
             initial={{ scaleX: 0, opacity: 0 }}
             animate={{ scaleX: 1, opacity: 1 }}
@@ -208,18 +269,32 @@ export default function HeroSection() {
           
           <motion.div
             variants={itemVariants}
-            className="text-xl md:text-3xl font-medium mt-8 mb-10 space-y-3"
+            className="text-xl md:text-3xl font-medium mt-8 mb-10 text-white/90"
           >
-            <p className="leading-relaxed text-white/90">Connecting car buyers with trusted dealerships.</p>
-            <p className="text-accent-light font-semibold relative inline-block">
-              Your journey to the perfect ride begins here.
-              <motion.span
-                className="absolute bottom-0 left-0 h-0.5 bg-accent-light"
-                initial={{ width: 0 }}
-                animate={{ width: "100%" }}
-                transition={{ delay: 2, duration: 1.5 }}
+            <p className="leading-relaxed mb-4">Connecting car enthusiasts with their dream rides.</p>
+            <div className="flex items-center justify-center">
+              <motion.span 
+                className="w-12 h-0.5 bg-gradient-to-r from-transparent to-accent hidden md:block"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 48, opacity: 1 }}
+                transition={{ delay: 1.7, duration: 1 }}
               />
-            </p>
+              <p className="text-accent-light font-semibold relative inline-block mx-3 px-1">
+                Your journey begins with the perfect car
+                <motion.span
+                  className="absolute bottom-0 left-0 h-0.5 bg-accent w-full"
+                  initial={{ scaleX: 0, transformOrigin: "left" }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 2, duration: 1.5 }}
+                />
+              </p>
+              <motion.span 
+                className="w-12 h-0.5 bg-gradient-to-l from-transparent to-accent hidden md:block"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 48, opacity: 1 }}
+                transition={{ delay: 1.7, duration: 1 }}
+              />
+            </div>
           </motion.div>
         </motion.div>
         
@@ -231,22 +306,21 @@ export default function HeroSection() {
           <motion.button
             whileHover={{ 
               scale: 1.05, 
-              boxShadow: "0 0 30px rgba(213,80,4,0.4)",
-              backgroundColor: "#FF6A00"
+              boxShadow: "0 0 30px rgba(255,106,0,0.5)",
             }}
             whileTap={{ scale: 0.97 }}
             onClick={() => scrollToSection('app')}
             className="group relative px-10 py-5 rounded-full bg-accent text-white font-bold text-xl shadow-xl transition-all duration-300 w-full md:w-auto overflow-hidden"
           >
-            <span className="relative z-10">Explore App</span>
+            <span className="relative z-10">Find Your Car</span>
             <motion.span 
-              className="absolute inset-0 bg-gradient-to-r from-accent-dark via-accent to-accent-light opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              className="absolute inset-0 bg-gradient-to-r from-accent-dark via-accent to-accent-light opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             />
             {/* Shine effect on hover */}
             <motion.span 
               className="absolute inset-0 opacity-0 group-hover:opacity-100"
               style={{ 
-                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
                 left: "-100%",
                 width: "150%",
                 height: "100%",
@@ -256,7 +330,7 @@ export default function HeroSection() {
               transition={{ 
                 repeat: Infinity, 
                 repeatType: "loop", 
-                duration: 1.5,
+                duration: 1,
                 repeatDelay: 0.5
               }}
             />
@@ -266,25 +340,24 @@ export default function HeroSection() {
           <motion.button
             whileHover={{ 
               scale: 1.05, 
-              boxShadow: "0 0 30px rgba(213,80,4,0.2)",
-              borderColor: "#FF6A00"
+              boxShadow: "0 0 20px rgba(255,255,255,0.2)",
             }}
             whileTap={{ scale: 0.97 }}
             onClick={() => scrollToSection('contact')}
-            className="px-10 py-5 rounded-full bg-white/5 backdrop-blur-sm border border-accent text-white font-bold text-xl shadow-xl hover:bg-accent/10 transition-all duration-300 w-full md:w-auto"
+            className="px-10 py-5 rounded-full bg-black/30 backdrop-blur-sm border border-white/30 text-white font-bold text-xl shadow-xl hover:bg-black/40 hover:border-accent/50 transition-all duration-300 w-full md:w-auto"
           >
-            Book a Demo
+            Watch Demo
           </motion.button>
         </motion.div>
         
         <motion.div
           variants={containerVariants}
-          className="flex flex-wrap justify-center gap-8 text-gray-300 text-lg"
+          className="flex flex-wrap justify-center gap-8 text-white/80 text-lg"
         >
           {[
-            { text: 'Browse Vehicles', icon: <CubeTransparentIcon className="w-6 h-6 mr-2" /> },
-            { text: 'Connect with Dealerships', icon: <SparklesIcon className="w-6 h-6 mr-2" /> },
-            { text: 'Watch AutoClips', icon: <ShieldCheckIcon className="w-6 h-6 mr-2" /> }
+            { text: 'Premium Vehicles', icon: <CubeTransparentIcon className="w-6 h-6 mr-2" /> },
+            { text: 'Direct Dealership Connect', icon: <SparklesIcon className="w-6 h-6 mr-2" /> },
+            { text: 'Exclusive Test Drives', icon: <ShieldCheckIcon className="w-6 h-6 mr-2" /> }
           ].map((item, index) => (
             <motion.div
               key={index}
@@ -293,11 +366,11 @@ export default function HeroSection() {
               whileHover={{ 
                 scale: 1.05, 
                 color: '#FF6A00',
-                boxShadow: "0 10px 30px -10px rgba(255,106,0,0.3)" 
+                textShadow: "0 0 10px rgba(255,106,0,0.5)" 
               }}
               custom={index}
             >
-              <span className="flex items-center justify-center w-10 h-10 mr-3 rounded-full bg-accent/10 text-accent">
+              <span className="flex items-center justify-center w-10 h-10 mr-3 rounded-full bg-white/10 text-accent backdrop-blur-sm">
                 {item.icon}
               </span>
               <span>{item.text}</span>
@@ -306,105 +379,33 @@ export default function HeroSection() {
         </motion.div>
       </motion.div>
       
-      {/* Enhanced decorative car silhouette */}
-      <motion.div
-        className="absolute top-1/4 right-1/6 opacity-0"
-        animate={{
-          opacity: [0, 0.12, 0.08, 0.12],
-          rotate: [0, 2, 0, -2, 0],
-          scale: [0.9, 1, 0.98, 1]
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          repeatType: 'reverse'
-        }}
-      >
-        <svg width="400" height="150" viewBox="0 0 400 150" fill="currentColor" className="text-accent/30">
-          <path d="M50,65 C50,45 75,40 100,40 L250,40 C275,40 280,55 280,65 L280,70 C280,80 270,80 250,80 L100,80 C80,80 50,85 50,65 Z M65,75 C55,75 50,70 50,65 C50,60 55,55 65,55 C75,55 75,75 65,75 Z M265,75 C255,75 250,70 250,65 C250,60 255,55 265,55 C275,55 275,75 265,75 Z" />
-          <motion.path 
-            d="M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z"
-            animate={{ 
-              d: [
-                "M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z",
-                "M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z",
-                "M320,65 C320,55 330,55 335,55 C340,55 350,55 350,65 C350,75 340,75 335,75 C330,75 320,75 320,65 Z"
-              ]
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.path 
-            d="M30,65 C30,55 40,55 45,55 C50,55 60,55 60,65 C60,75 50,75 45,75 C40,75 30,75 30,65 Z" 
-            animate={{ 
-              d: [
-                "M30,65 C30,55 40,55 45,55 C50,55 60,55 60,65 C60,75 50,75 45,75 C40,75 30,75 30,65 Z",
-                "M30,65 C30,55 40,55 45,55 C50,55 60,55 60,65 C60,75 50,75 45,75 C40,75 30,75 30,65 Z",
-                "M30,65 C30,55 40,55 45,55 C50,55 60,55 60,65 C60,75 50,75 45,75 C40,75 30,75 30,65 Z"
-              ]
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </svg>
-      </motion.div>
-      
-      {/* Dynamic road lines animation */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 overflow-hidden">
-        <motion.div 
-          className="absolute h-px w-1/3 bg-accent/30 left-1/3"
-          style={{ bottom: '15%' }}
-          animate={{ 
-            x: ["-100%", "100%"],
-            opacity: [0, 0.8, 0] 
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 3,
-            ease: "linear" 
-          }}
-        />
-        <motion.div 
-          className="absolute h-px w-1/4 bg-accent/30 left-1/3"
-          style={{ bottom: '30%' }}
-          animate={{ 
-            x: ["-100%", "100%"],
-            opacity: [0, 0.6, 0] 
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 2.5,
-            ease: "linear",
-            delay: 1
-          }}
-        />
-      </div>
-      
       {/* Enhanced scroll down indicator */}
       <motion.div
-        className="absolute hidden lg:flex bottom-24 left-0 right-0 flex justify-center"
+        className="absolute hidden lg:flex bottom-16 left-0 right-0 justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2, duration: 1 }}
       >
         <motion.button
           onClick={() => scrollToSection('about')}
-          className="flex flex-col items-center text-gray-400 hover:text-accent transition-colors duration-300 group"
+          className="flex flex-col items-center text-white/70 hover:text-accent transition-colors duration-300 group"
           whileHover={{ y: 5 }}
         >
           <motion.span 
-            className="text-base mb-2 group-hover:font-medium relative overflow-hidden"
+            className="text-base mb-2 group-hover:text-white relative overflow-hidden"
           >
-            Discover More
+            Explore More
             <motion.span
-              className="absolute bottom-0 left-0 h-0.5 bg-accent/50 w-full"
+              className="absolute bottom-0 left-0 h-0.5 bg-accent w-full"
               initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
+              whileHover={{ scaleX: 1 }}
+              transition={{ duration: 0.3 }}
             />
           </motion.span>
           <motion.div
-            animate={{ y: [0, 12, 0] }}
+            animate={{ y: [0, 8, 0] }}
             transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-            className="bg-accent/10 rounded-full p-2 group-hover:bg-accent/30 backdrop-blur-sm"
+            className="bg-black/30 backdrop-blur-sm rounded-full p-2 group-hover:bg-accent/20"
           >
             <ChevronDownIcon className="h-6 w-6 text-accent" />
           </motion.div>
