@@ -53,7 +53,7 @@ export default function HeroSection() {
   }, [controls]);
 
   // Scroll helper function
-  const scrollToSection = (sectionId) => {
+  const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId);
     if (section) {
       section.scrollIntoView({ behavior: 'smooth' });
