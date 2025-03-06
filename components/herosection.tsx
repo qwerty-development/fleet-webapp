@@ -306,7 +306,7 @@ export default function HeroSection() {
 
       {/* Main content */}
       <motion.div
-        className="relative z-20 text-center px-4 max-w-6xl mx-auto mt-16"
+        className="relative z-20 text-center px-4 max-w-6xl mx-auto "
         initial="hidden"
         animate={controls}
         variants={containerVariants}
