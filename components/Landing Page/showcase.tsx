@@ -175,23 +175,38 @@ export default function AppShowcase() {
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <motion.div
+      <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8 }}
-          className="mb-8 text-center"
+          className="mb-16 text-center"
         >
-          <span className="inline-block px-4 py-1.5 bg-accent/10 text-accent rounded-full text-sm font-medium mb-3">
+          <motion.span 
+            className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
             Fleet Mobile App
-          </span>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Experience the <span className="text-accent">Full Feature Set</span>
+          </motion.span>
+          <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mb-6">
+            <span className="relative">
+            Experience 
+              <motion.span 
+                className="absolute -bottom-2 left-0 w-full h-1 bg-accent"
+                initial={{ width: 0 }}
+                whileInView={{ width: "100%" }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.5 }}
+              />
+            </span>
+            {" "}
+            <span className="text-accent">the Full Feature Set</span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Discover all the powerful tools available in the Fleet app,
-            connecting car buyers with dealerships through an intuitive,
-            feature-rich experience
+          Discover all the powerful tools available in the Fleet app, connecting car buyers with dealerships through an intuitive, feature-rich experience
           </p>
         </motion.div>
 

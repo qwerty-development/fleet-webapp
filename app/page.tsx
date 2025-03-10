@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 // Critical sections load immediately
 import HeroSection from "@/components/Landing Page/herosection";
 import Navbar from "@/components/Landing Page/navbar";
+import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
 
 // Dynamically import non-critical sections with loading placeholders
 const AboutSection = dynamic(
@@ -128,6 +129,7 @@ export default function Home() {
           <div className="relative z-30" style={{ background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)" }}>
             <AboutSection />
             <AppShowcase />
+            <MarqueeLogos/>
             <ContactSection />
             <Footer />
           </div>
