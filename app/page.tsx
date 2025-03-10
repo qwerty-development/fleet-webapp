@@ -1,51 +1,41 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useEffect, useState } from "react";
 import dynamic from 'next/dynamic';
 
 // Critical sections load immediately
-import HeroSection from "@/components/herosection";
-import Navbar from "@/components/navbar";
+import HeroSection from "@/components/Landing Page/herosection";
+import Navbar from "@/components/Landing Page/navbar";
 
 // Dynamically import non-critical sections with loading placeholders
 const AboutSection = dynamic(
-  () => import('@/components/about'),
+  () => import('@/components/Landing Page/about'),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading About...</div> }
 );
 const AppShowcase = dynamic(
-  () => import('@/components/showcase'),
+  () => import('@/components/Landing Page/showcase'),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Showcase...</div> }
 );
 const ContactSection = dynamic(
-  () => import('@/components/contact'),
+  () => import('@/components/Landing Page/contact'),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Contact...</div> }
 );
 const Footer = dynamic(
-  () => import('@/components/footer'),
+  () => import('@/components/Landing Page/footer'),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Footer...</div> }
 );
 
 // Splash screen (client-side only)
 const WebSplashScreen = dynamic(
-  () => import('../components/splashscreen'),
+  () => import('../components/Landing Page/splashscreen'),
   { ssr: false }
 );
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [showSplash, setShowSplash] = useState(false);
-  const mainRef = useRef(null);
   
-  // Create parallax effect for main content
-  const { scrollYProgress } = useScroll({
-    target: mainRef,
-    offset: ["start start", "end start"]
-  });
-  
-  const mainContentY = useTransform(scrollYProgress, [0, 0.1], ["100vh", "0vh"]);
-
-  // Track scroll position
+  // Track scroll position for background grid effect only
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -89,17 +79,8 @@ export default function Home() {
               background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)",
             }}
           />
-          <motion.div
+          <div
             className="absolute inset-0 opacity-30"
-            animate={{
-              backgroundPosition: ["0% 0%", "100% 100%"],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              repeatType: "reverse",
-              ease: "linear",
-            }}
             style={{
               backgroundSize: "200% 200%",
               backgroundImage:
@@ -108,36 +89,15 @@ export default function Home() {
           />
           <div className="absolute inset-0">
             {[...Array(20)].map((_, i) => (
-              <motion.div
+              <div
                 key={i}
                 className="absolute rounded-full bg-accent/20"
-                initial={{
-                  x: Math.random() * 100 + "%",
-                  y: Math.random() * 100 + "%",
-                  scale: Math.random() * 0.5 + 0.5,
-                  opacity: Math.random() * 0.3 + 0.1,
-                }}
-                animate={{
-                  y: [
-                    `${Math.random() * 100}%`,
-                    `${Math.random() * 100}%`,
-                    `${Math.random() * 100}%`,
-                  ],
-                  x: [
-                    `${Math.random() * 100}%`,
-                    `${Math.random() * 100}%`,
-                    `${Math.random() * 100}%`,
-                  ],
-                  opacity: [0.1, 0.3, 0.1],
-                }}
-                transition={{
-                  duration: Math.random() * 30 + 40,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
                 style={{
                   width: `${Math.random() * 40 + 10}px`,
                   height: `${Math.random() * 40 + 10}px`,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  opacity: Math.random() * 0.3 + 0.1,
                   filter: "blur(8px)",
                 }}
               />
@@ -154,25 +114,15 @@ export default function Home() {
           />
         </div>
 
-        {/* Fixed Hero Section */}
-        <div className="fixed inset-0 w-full h-full pt-16">
-          <HeroSection />
-        </div>
-
         {/* Navbar */}
         <Navbar />
 
-        {/* Main Content with Parallax Effect */}
-        <motion.main 
-          ref={mainRef}
-          className="relative z-20"
-          style={{ 
-            y: mainContentY,
-            willChange: "transform"
-          }}
-        >
-          {/* Spacer for the hero section */}
-          <div className="h-screen w-full" />
+        {/* Main Content - Simple Structure Without Parallax */}
+        <main className="relative z-20">
+          {/* Hero Section - No longer fixed */}
+          <section className="min-h-screen pt-16">
+            <HeroSection />
+          </section>
           
           {/* Content Sections */}
           <div className="relative z-30" style={{ background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)" }}>
@@ -181,7 +131,7 @@ export default function Home() {
             <ContactSection />
             <Footer />
           </div>
-        </motion.main>
+        </main>
       </div>
     </>
   );
