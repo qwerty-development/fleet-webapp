@@ -15,6 +15,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import RandomCarCards from "./RandomCarCards";
+import Link from "next/link";
 
 
 
@@ -310,6 +311,11 @@ export default function HeroSection() {
           </motion.div>
           <div className="mt-12 p-3 w-full max-w-4xl">
           <RandomCarCards />
+          <Link href="/home" passHref>
+            <span className="inline-block mt-12 bg-accent hover:bg-accent-dark transition-colors duration-300 text-white font-bold rounded-xl px-8 py-5 cursor-pointer">
+              Start Browsing
+            </span>
+          </Link>
         </div>
         </motion.div>
 
@@ -332,6 +338,7 @@ export default function HeroSection() {
                 animate={{ x: ["-100%", "100%"] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
+              
             </div>
 
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to find your next car?</h3>

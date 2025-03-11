@@ -183,7 +183,7 @@ const CarCard: React.FC<CarCardProps> = ({
                 <ClockIcon className="h-3 w-3 text-accent mr-1" />
                 <span className="text-gray-300">
                   {car.mileage > 0
-                    ? `${(car.mileage / 1000).toFixed(1)}k `
+                    ? `${(car.mileage / 1000).toFixed(1)}k km`
                     : "New"}
                 </span>
               </div>
