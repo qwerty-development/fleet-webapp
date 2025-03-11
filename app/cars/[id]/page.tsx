@@ -132,6 +132,26 @@ const LoadingState = () => (
   </div>
 );
 
+// Thumbnail component for the image gallery
+const ImageThumbnail: React.FC<{
+  src: string;
+  isActive: boolean;
+  onClick: () => void;
+}> = ({ src, isActive, onClick }) => (
+  <div
+    onClick={onClick}
+    className={`cursor-pointer relative mt- rounded-md overflow-hidden transition-all ${
+      isActive ? "ring-2 ring-accent" : "opacity-70"
+    }`}
+  >
+    <img
+      src={src}
+      alt="Car thumbnail"
+      className="w-16 h-16 object-cover"
+    />
+  </div>
+);
+
 // Main component for the car details page
 export default function CarDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -139,6 +159,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const thumbnailsRef = useRef<HTMLDivElement>(null);
 
   // Fetch car data
   useEffect(() => {
@@ -249,15 +270,51 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         behavior: "smooth",
       });
     }
+
+    // Ensure the active thumbnail is visible
+    if (thumbnailsRef.current) {
+      const thumbnail = thumbnailsRef.current.children[newIndex] as HTMLElement;
+      if (thumbnail) {
+        thumbnailsRef.current.scrollTo({
+          left: thumbnail.offsetLeft - thumbnailsRef.current.clientWidth / 2 + thumbnail.clientWidth / 2,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
+
+  // Set the active image directly by clicking a thumbnail
+  const setActiveImage = (index: number) => {
+    setActiveImageIndex(index);
+    if (carouselRef.current) {
+      carouselRef.current.scrollTo({
+        left: index * carouselRef.current.clientWidth,
+        behavior: "smooth",
+      });
+    }
   };
 
   // Handle carousel scroll
   const handleCarouselScroll = () => {
     if (carouselRef.current) {
-      const index = Math.round(
-        carouselRef.current.scrollLeft / carouselRef.current.clientWidth
-      );
-      setActiveImageIndex(index);
+      const scrollPosition = carouselRef.current.scrollLeft;
+      const itemWidth = carouselRef.current.clientWidth;
+      const index = Math.round(scrollPosition / itemWidth);
+      
+      if (index !== activeImageIndex) {
+        setActiveImageIndex(index);
+        
+        // Also scroll the thumbnail into view
+        if (thumbnailsRef.current) {
+          const thumbnail = thumbnailsRef.current.children[index] as HTMLElement;
+          if (thumbnail) {
+            thumbnailsRef.current.scrollTo({
+              left: thumbnail.offsetLeft - thumbnailsRef.current.clientWidth / 2 + thumbnail.clientWidth / 2,
+              behavior: "smooth",
+            });
+          }
+        }
+      }
     }
   };
 
@@ -333,42 +390,61 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         ← Back
       </button>
 
-      {/* Image Carousel - Only render if images exist */}
+      {/* Improved Image Carousel - Only render if images exist */}
       {car.images && car.images.length > 0 ? (
-        <div className="relative h-64 sm:h-80 md:h-96  overflow-hidden">
+        <div className="relative bg-black">
+          {/* Main large image carousel */}
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-full"
-            style={{ scrollBehavior: "smooth" }}
+            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-64 sm:h-80 md:h-96 lg:h-[500px]"
+            style={{ scrollBehavior: "smooth", scrollSnapType: "x mandatory" }}
           >
             {car.images.map((img, index) => (
               <div
                 key={index}
-                className="w-full snap-center relative flex-shrink-0 h-full"
+                className="w-1/2 flex-shrink-0 h-full snap-center relative"
               >
                 <img
                   src={img}
                   alt={`${car.make} ${car.model}`}
-                  className="w-full h-full object-contain bg-gray-800"
+                  className="w-full h-full object-cover object-center"
                 />
               </div>
             ))}
           </div>
+
+          {/* Thumbnail gallery at the bottom */}
+          {car.images.length > 1 && (
+            <div 
+              ref={thumbnailsRef}
+              className="flex gap-2 overflow-x-auto py-2 px-4 bg-gray-900 scrollbar-hide"
+              style={{ scrollBehavior: "smooth" }}
+            >
+              {car.images.map((img, index) => (
+                <ImageThumbnail
+                  key={index}
+                  src={img}
+                  isActive={index === activeImageIndex}
+                  onClick={() => setActiveImage(index)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Navigation Arrows */}
           {car.images.length > 1 && (
             <>
               <button
                 onClick={() => navigateCarousel("prev")}
-                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
                 aria-label="Previous image"
               >
                 <ChevronLeftIcon className="h-6 w-6 text-white" />
               </button>
               <button
                 onClick={() => navigateCarousel("next")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 rounded-full p-2 hover:bg-black/70 transition-colors"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
                 aria-label="Next image"
               >
                 <ChevronRightIcon className="h-6 w-6 text-white" />
@@ -376,16 +452,9 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             </>
           )}
 
-          {/* Pagination Dots */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            {car.images.map((_, index) => (
-              <div
-                key={index}
-                className={`w-2 h-2 rounded-full ${
-                  index === activeImageIndex ? "bg-accent" : "bg-gray-500"
-                }`}
-              />
-            ))}
+          {/* Image counter */}
+          <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full text-sm">
+            {activeImageIndex + 1} / {car.images.length}
           </div>
         </div>
       ) : (
@@ -395,7 +464,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
       )}
 
       {/* Price Badge - Positioned to overlap the image and content */}
-      <div className="relative z-10 flex  px-4 -mt-3">
+      <div className="relative z-10 flex px-4 -top-24">
         <div className="bg-accent px-6 py-1 rounded-full shadow-lg inline-block mx-auto">
           <span className="text-white text-xl font-bold">
             ${car.price.toLocaleString()}
@@ -411,7 +480,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             <img
               src={getLogoUrl(car.make, true)}
               alt={car.make}
-              className="w-full h-full rounded-full"
+              className=" h-10  rounded-full"
             />
           </div>
           <div>
@@ -523,31 +592,28 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            {/* Contact Buttons - Circular on mobile */}
+            {/* Contact Buttons - Icons only */}
             {dealershipPhone && (
-              <div className="flex space-x-2">
+              <div className="flex space-x-3">
                 <button
                   onClick={handleCall}
                   className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors"
                   aria-label="Call"
                 >
                   <PhoneIcon className="h-5 w-5" />
-                  <span className="hidden md:inline ml-1">Call</span>
                 </button>
                 <button
                   onClick={handleWhatsApp}
                   className="p-3 bg-green-600 rounded-full hover:bg-green-500 transition-colors"
                   aria-label="WhatsApp"
                 >
-                  <svg
+                  <svg 
+                    viewBox="0 0 32 32" 
+                    className="h-5 w-5 fill-current"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
                   >
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.967-.273-.1-.472-.148-.672.15-.198.297-.768.967-.942 1.166-.173.2-.347.213-.644.068-.297-.146-1.255-.463-2.134-1.312-.788-.702-1.319-1.562-1.477-1.86-.157-.297-.017-.458.118-.606.12-.12.283-.303.424-.455.14-.15.187-.258.28-.431.093-.174.047-.326-.024-.475-.07-.149-.61-1.478-.834-2.017-.219-.524-.443-.453-.612-.461-.158-.009-.34-.012-.522-.012-.18 0-.472.068-.72.34-.248.272-.94.919-.94 2.24s.96 2.6 1.092 2.788c.133.187 1.87 2.853 4.525 3.993.633.273 1.127.435 1.512.556.635.203 1.213.175 1.67.107.509-.076 1.758-.718 2.006-1.413.248-.695.248-1.29.173-1.413-.075-.123-.273-.187-.57-.336" />
+                    <path d="M16.004 0h-.008c-8.837 0-16 7.163-16 16 0 3.497 1.126 6.741 3.038 9.377L1.01 31l5.724-1.846c2.532 1.682 5.549 2.66 8.784 2.66h.008c8.837 0 16-7.163 16-16s-7.163-16-16-16zm0 29.156h-.007c-2.699 0-5.347-.724-7.663-2.091l-.53-.324-5.477 1.766 1.797-5.368-.345-.546c-1.487-2.365-2.272-5.096-2.272-7.93C1.507 8.386 7.893 2 16.004 2c3.934 0 7.621 1.528 10.403 4.31s4.31 6.47 4.31 10.4-1.528 7.621-4.31 10.403c-2.782 2.783-6.469 4.043-10.403 4.043zm5.737-7.346l-.332-.186c-.538-.301-3.184-1.576-3.682-1.754-.498-.179-.86-.268-1.223.269-.361.537-1.403 1.754-1.718 2.114-.316.36-.632.404-1.17.134-.539-.268-2.273-.837-4.326-2.667-1.599-1.425-2.677-3.183-2.993-3.72-.317-.537-.034-.827.238-1.095.244-.243.539-.634.807-.951.27-.317.359-.537.539-.896.179-.36.09-.673-.045-.95-.135-.274-1.218-2.94-1.67-4.028-.44-1.058-.887-.914-1.22-.93-.312-.015-.673-.018-1.035-.018s-.944.134-1.442.672c-.497.537-1.903 1.859-1.903 4.533s1.947 5.258 2.218 5.618c.269.36 3.8 5.801 9.21 8.136 1.286.556 2.29.889 3.074 1.139 1.292.4 2.47.344 3.398.209.75-.101 2.92-1.139 3.33-2.24.41-1.097.41-2.042.286-2.24-.121-.197-.482-.315-1.022-.583z" />
                   </svg>
-                  <span className="hidden md:inline ml-1">WhatsApp</span>
                 </button>
                 <button
                   onClick={handleShare}
@@ -555,7 +621,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                   aria-label="Share"
                 >
                   <ShareIcon className="h-5 w-5" />
-                  <span className="hidden md:inline ml-1">Share</span>
                 </button>
               </div>
             )}
@@ -582,6 +647,17 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
       {/* Padding at the bottom for spacing */}
       <div className="h-8"></div>
+
+      {/* Hide scrollbar */}
+      <style jsx global>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
+      `}</style>
     </div>
   );
 }

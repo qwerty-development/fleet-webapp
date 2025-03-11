@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { createClient } from '@/utils/supabase/client';
 import { FilterState } from '@/types';
@@ -102,7 +102,29 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   const [models, setModels] = useState<string[]>([]);
   const [hasFiltersSelected, setHasFiltersSelected] = useState(false);
   const [filterCount, setFilterCount] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const filterContainerRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+
+  // Calculate the max height for the fixed container
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const updateMaxHeight = () => {
+        if (filterContainerRef.current) {
+          const windowHeight = window.innerHeight;
+          const offsetTop = 80; // Adjust based on your header height
+          filterContainerRef.current.style.maxHeight = `${windowHeight - offsetTop}px`;
+        }
+      };
+      
+      updateMaxHeight();
+      window.addEventListener('resize', updateMaxHeight);
+      
+      return () => {
+        window.removeEventListener('resize', updateMaxHeight);
+      };
+    }
+  }, []);
 
   // Load dealerships
   useEffect(() => {
@@ -312,253 +334,279 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   return (
-    <div className={`${className}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Filters</h2>
-        {hasFiltersSelected && (
-          <button
-            onClick={onResetFilters}
-            className="text-accent hover:text-accent-light transition-colors text-sm"
-          >
-            Clear All ({filterCount})
-          </button>
-        )}
+    <div 
+      className={`${className} sticky bg-gray-900 rounded-xl overflow-y p-2 `} 
+      style={{ height: 'fit-content' }}
+    >
+      <div 
+        ref={filterContainerRef}
+        className="overflow-hidden"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div 
+          className={`py-4 transition-all duration-300 ${isHovered ? "overflow-y-auto" : "overflow-y-hidden"}`}
+          style={{ 
+            maxHeight: '100%',
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#4a4a4a #1e1e1e'
+          }}
+        >
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Filters</h2>
+            {hasFiltersSelected && (
+              <button
+                onClick={onResetFilters}
+                className="text-accent hover:text-accent-light transition-colors text-sm"
+              >
+                Clear All ({filterCount})
+              </button>
+            )}
+          </div>
+
+          {/* Quick Filters */}
+          <FilterSection title="Quick Filters">
+            <div className="grid grid-cols-2 gap-2">
+              {QUICK_FILTERS.map((quickFilter) => (
+                <button
+                  key={quickFilter.id}
+                  onClick={() => handleQuickFilterClick(quickFilter)}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filters.specialFilter === quickFilter.filter.specialFilter
+                      ? "bg-accent text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {quickFilter.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          {/* Price Filters */}
+          <FilterSection title="Price Range">
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {PRICE_RANGES.map((range, index) => (
+                <button
+                  key={index}
+                  onClick={() => selectPriceRange(range.value[0], range.value[1])}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filters.priceRange[0] === range.value[0] && filters.priceRange[1] === range.value[1]
+                      ? "bg-accent text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-400 text-xs mb-1">Min ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.priceRange[0]}
+                  onChange={handlePriceMinChange}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-xs mb-1">Max ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.priceRange[1]}
+                  onChange={handlePriceMaxChange}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+            </div>
+          </FilterSection>
+
+          {/* Year Range */}
+          <FilterSection title="Year Range">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-400 text-xs mb-1">From</label>
+                <input
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  value={filters.yearRange[0]}
+                  onChange={handleYearMinChange}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-xs mb-1">To</label>
+                <input
+                  type="number"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  value={filters.yearRange[1]}
+                  onChange={handleYearMaxChange}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+            </div>
+          </FilterSection>
+
+          {/* Mileage Range */}
+          <FilterSection title="Mileage Range">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-gray-400 text-xs mb-1">Min (mi)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.mileageRange[0]}
+                  onChange={handleMileageMinChange}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 text-xs mb-1">Max (mi)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={filters.mileageRange[1]}
+                  onChange={handleMileageMaxChange}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+            </div>
+          </FilterSection>
+
+          {/* Transmission Options */}
+          <FilterSection title="Transmission">
+            <div className="flex flex-wrap gap-2">
+              {TRANSMISSION_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => toggleTransmissionFilter(option.value)}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filters.transmission.includes(option.value)
+                      ? "bg-accent text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          {/* Drivetrain Options */}
+          <FilterSection title="Drivetrain">
+            <div className="flex flex-wrap gap-2">
+              {DRIVETRAIN_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => toggleDrivetrainFilter(option.value)}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filters.drivetrain.includes(option.value)
+                      ? "bg-accent text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          {/* Colors */}
+          <FilterSection title="Exterior Color">
+            <div className="flex flex-wrap gap-2">
+              {VEHICLE_COLORS.map((colorOption) => (
+                <button
+                  key={colorOption.name}
+                  onClick={() => toggleColorFilter(colorOption.name)}
+                  className={`relative p-1 rounded-lg transition-colors ${
+                    filters.color.includes(colorOption.name)
+                      ? "ring-2 ring-accent"
+                      : ""
+                  }`}
+                  title={colorOption.name}
+                >
+                  <div 
+                    className="w-8 h-8 rounded-md border border-gray-700"
+                    style={{ backgroundColor: colorOption.color }}
+                  ></div>
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          {/* Models (if makes are selected) */}
+          {filters.make.length > 0 && models.length > 0 && (
+            <FilterSection title={`Models (${filters.make.join(', ')})`}>
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-hidden hover:overflow-y-auto pr-2">
+                {models.map((model) => (
+                  <button
+                    key={model}
+                    onClick={() => toggleModelFilter(model)}
+                    className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                      filters.model.includes(model)
+                        ? "bg-accent text-white"
+                        : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    }`}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+            </FilterSection>
+          )}
+
+          {/* Dealerships */}
+          <FilterSection title="Dealerships">
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-hidden hover:overflow-y-auto pr-2">
+              {dealerships.map((dealer) => (
+                <button
+                  key={dealer.id}
+                  onClick={() => toggleDealershipFilter(dealer.id, dealer.name)}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                    filters.dealership.includes(dealer.id)
+                      ? "bg-accent text-white"
+                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                  }`}
+                >
+                  {dealer.name}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+        </div>
       </div>
 
-      {/* Quick Filters */}
-      <FilterSection title="Quick Filters">
-        <div className="grid grid-cols-2 gap-2">
-          {QUICK_FILTERS.map((quickFilter) => (
-            <button
-              key={quickFilter.id}
-              onClick={() => handleQuickFilterClick(quickFilter)}
-              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                filters.specialFilter === quickFilter.filter.specialFilter
-                  ? "bg-accent text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              {quickFilter.label}
-            </button>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Price Filters */}
-      <FilterSection title="Price Range">
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {PRICE_RANGES.map((range, index) => (
-            <button
-              key={index}
-              onClick={() => selectPriceRange(range.value[0], range.value[1])}
-              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                filters.priceRange[0] === range.value[0] && filters.priceRange[1] === range.value[1]
-                  ? "bg-accent text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              {range.label}
-            </button>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-gray-400 text-xs mb-1">Min ($)</label>
-            <input
-              type="number"
-              min="0"
-              value={filters.priceRange[0]}
-              onChange={handlePriceMinChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-400 text-xs mb-1">Max ($)</label>
-            <input
-              type="number"
-              min="0"
-              value={filters.priceRange[1]}
-              onChange={handlePriceMaxChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-            />
-          </div>
-        </div>
-      </FilterSection>
-
-      {/* Year Range */}
-      <FilterSection title="Year Range">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-gray-400 text-xs mb-1">From</label>
-            <input
-              type="number"
-              min="1900"
-              max={new Date().getFullYear()}
-              value={filters.yearRange[0]}
-              onChange={handleYearMinChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-400 text-xs mb-1">To</label>
-            <input
-              type="number"
-              min="1900"
-              max={new Date().getFullYear()}
-              value={filters.yearRange[1]}
-              onChange={handleYearMaxChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-            />
-          </div>
-        </div>
-      </FilterSection>
-
-      {/* Mileage Range */}
-      <FilterSection title="Mileage Range">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-gray-400 text-xs mb-1">Min (mi)</label>
-            <input
-              type="number"
-              min="0"
-              value={filters.mileageRange[0]}
-              onChange={handleMileageMinChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-400 text-xs mb-1">Max (mi)</label>
-            <input
-              type="number"
-              min="0"
-              value={filters.mileageRange[1]}
-              onChange={handleMileageMaxChange}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-            />
-          </div>
-        </div>
-      </FilterSection>
-
-      {/* Transmission Options */}
-      <FilterSection title="Transmission">
-        <div className="flex flex-wrap gap-2">
-          {TRANSMISSION_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => toggleTransmissionFilter(option.value)}
-              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                filters.transmission.includes(option.value)
-                  ? "bg-accent text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Drivetrain Options */}
-      <FilterSection title="Drivetrain">
-        <div className="flex flex-wrap gap-2">
-          {DRIVETRAIN_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => toggleDrivetrainFilter(option.value)}
-              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                filters.drivetrain.includes(option.value)
-                  ? "bg-accent text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Colors */}
-      <FilterSection title="Exterior Color">
-        <div className="flex flex-wrap gap-2">
-          {VEHICLE_COLORS.map((colorOption) => (
-            <button
-              key={colorOption.name}
-              onClick={() => toggleColorFilter(colorOption.name)}
-              className={`relative p-1 rounded-lg transition-colors ${
-                filters.color.includes(colorOption.name)
-                  ? "ring-2 ring-accent"
-                  : ""
-              }`}
-              title={colorOption.name}
-            >
-              <div 
-                className="w-8 h-8 rounded-md border border-gray-700"
-                style={{ backgroundColor: colorOption.color }}
-              ></div>
-            </button>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Models (if makes are selected) */}
-      {filters.make.length > 0 && models.length > 0 && (
-        <FilterSection title={`Models (${filters.make.join(', ')})`}>
-          <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-            {models.map((model) => (
-              <button
-                key={model}
-                onClick={() => toggleModelFilter(model)}
-                className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                  filters.model.includes(model)
-                    ? "bg-accent text-white"
-                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                }`}
-              >
-                {model}
-              </button>
-            ))}
-          </div>
-        </FilterSection>
-      )}
-
-      {/* Dealerships */}
-      <FilterSection title="Dealerships">
-        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-          {dealerships.map((dealer) => (
-            <button
-              key={dealer.id}
-              onClick={() => toggleDealershipFilter(dealer.id, dealer.name)}
-              className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                filters.dealership.includes(dealer.id)
-                  ? "bg-accent text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              {dealer.name}
-            </button>
-          ))}
-        </div>
-      </FilterSection>
-
-      {/* Styling for custom scrollbar */}
+      {/* Styling for scrollbar */}
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
+        /* Webkit browsers like Chrome/Safari/Edge */
+        ::-webkit-scrollbar {
           width: 8px;
         }
         
-        .custom-scrollbar::-webkit-scrollbar-track {
+        ::-webkit-scrollbar-track {
           background: #1e1e1e;
           border-radius: 4px;
         }
         
-        .custom-scrollbar::-webkit-scrollbar-thumb {
+        ::-webkit-scrollbar-thumb {
           background: #4a4a4a;
           border-radius: 4px;
         }
         
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        ::-webkit-scrollbar-thumb:hover {
           background: #666;
+        }
+
+        /* Firefox */
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: #4a4a4a #1e1e1e;
         }
       `}</style>
     </div>

@@ -55,7 +55,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({
       {/* Button changes to circular on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full md:flex md:items-center md:justify-between md:px-4 md:py-3 md:bg-gray-800 md:border md:border-gray-700 md:rounded-full text-white focus:outline-none focus:ring-2 focus:ring-accent hidden md:inline-flex"
+        className="w-full z-100  md:flex md:items-center md:justify-between md:px-4 md:py-3 md:bg-gray-800 md:border md:border-gray-700 md:rounded-full text-white focus:outline-none focus:ring-2 focus:ring-accent hidden md:inline-flex"
         type="button"
       >
         <div className="flex items-center">
@@ -106,7 +106,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-20 mt-2 right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-lg w-48 md:w-full"
+            className="absolute z-80 mt-2 right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-lg w-48 md:w-full"
           >
             <div className="py-1">
               {SORT_OPTIONS.map((option) => (

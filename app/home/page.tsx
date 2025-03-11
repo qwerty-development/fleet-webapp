@@ -300,8 +300,6 @@ export default function HomePage() {
           }
         }
 
-        
-
         // Merge dealership info into the car data
         const newCars: Car[] =
         data?.map((item: any) => {
@@ -326,7 +324,6 @@ export default function HomePage() {
             dealerships: dealershipData, // Ensure dealerships is defined
           };
         }) || [];
-      
 
         // Deduplicate car entries by id
         const uniqueCarIds = Array.from(new Set(newCars.map((car) => car.id)));
@@ -471,18 +468,21 @@ export default function HomePage() {
       {/* Fixed Navbar at the top */}
       <Navbar />
 
+      {/* Main content area */}
       <div className="flex flex-1 pt-3">
-        {/* Left Sidebar Filter Panel for Desktop */}
-        <aside className="hidden lg:block w-80 xl:w-96 border-r border-gray-800 p-4 h-screen overflow-y-auto sticky top-[120px]">
-          <FilterPanel
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onResetFilters={handleResetFilters}
-          />
+        {/* Left Sidebar Filter Panel - Fixed position with proper height and scrollable content */}
+        <aside className="hidden md:block w-56 lg:w-64 xl:w-80 shrink-0">
+          <div className="fixed top-[80px] bottom-0 w-56 lg:w-64 xl:w-80 border-r border-gray-800 p-4 overflow-y-auto custom-scrollbar">
+            <FilterPanel
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
+            />
+          </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 w-full">
+        {/* Main Content - Scrollable area */}
+        <main className="flex-1 p-4 min-w-0 overflow-x-hidden">
           {/* Fixed search bar that stays at the top */}
           <div className="sticky top-16 z-40 bg-black py-4 mb-4 border-b border-gray-800 shadow-md">
             <div className="flex items-center gap-2">
@@ -532,7 +532,7 @@ export default function HomePage() {
             </div>
           ) : cars.length > 0 ? (
             <motion.div
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-8"
+              className="grid grid-cols-1 gap-6 mt-8"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
