@@ -26,6 +26,15 @@ const Navbar: React.FC = () => {
     <nav className="bg-black dark:bg-neutral-900 shadow-md fixed top-0 inset-x-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center h-16">
+        <div className="flex-shrink-0 ml-4">
+            <Link href={"/"}>
+            <img
+              src="/logo.png"
+              alt="CarApp Logo"
+              className="h-8 w-auto object-contain"
+            />
+            </Link>
+          </div>
           {/* Navigation items - now takes up more space */}
           <div className="flex items-center justify-center flex-1 space-x-4 md:space-x-8">
             {navItems.map((item) => {
@@ -48,15 +57,7 @@ const Navbar: React.FC = () => {
           </div>
           
           {/* Logo on the right */}
-          <div className="flex-shrink-0 ml-4">
-            <Link href={"/"}>
-            <img
-              src="/logo.png"
-              alt="CarApp Logo"
-              className="h-8 w-auto object-contain"
-            />
-            </Link>
-          </div>
+
         </div>
       </div>
     </nav>
