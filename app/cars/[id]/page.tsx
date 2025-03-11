@@ -1,12 +1,4 @@
-// app/cars/[id]/page.tsx
-'use client';
-// The page component must be a server component initially
-export default function CarPage({ params }: { params: { id: string } }) {
-  return <CarDetailsClient id={params.id} />;
-}
-
-// Then use a separate client component for all the interactive functionality
-
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -141,7 +133,7 @@ const LoadingState = () => (
 );
 
 // Main component for the car details page
-function CarDetailsClient({ id }: { id: string }) {
+export default function CarDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [car, setCar] = useState<Car | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +158,7 @@ function CarDetailsClient({ id }: { id: string }) {
             )
           `
           )
-          .eq("id", id)
+          .eq("id", params.id)
           .single();
 
         if (carError) {
@@ -213,7 +205,7 @@ function CarDetailsClient({ id }: { id: string }) {
           images: images,
           features: features,
           // Add dealership info from the joined table
-          dealership_id: carData.dealerships?.id,
+          dealership_id :carData.dealerships?.id,
           dealership_name: carData.dealerships?.name,
           dealership_logo: carData.dealerships?.logo,
           dealership_phone: carData.dealerships?.phone,
@@ -230,10 +222,10 @@ function CarDetailsClient({ id }: { id: string }) {
       }
     };
 
-    if (id) {
+    if (params.id) {
       fetchCarData();
     }
-  }, [id, router]);
+  }, [params.id, router]);
 
   // Navigation controls for the carousel
   const navigateCarousel = (direction: "prev" | "next") => {
@@ -583,7 +575,7 @@ function CarDetailsClient({ id }: { id: string }) {
             </div>
           )}
         </div>
-        <DealershipCarsSection dealershipID={car.dealership_id} currentCarId={id} />
+        <DealershipCarsSection dealershipID={car.dealership_id} currentCarId={params.id} />
 
       </div>
 
