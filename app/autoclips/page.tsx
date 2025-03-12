@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Navbar from "@/components/home/Navbar";
 import { createClient } from "@/utils/supabase/client";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
@@ -30,7 +30,18 @@ interface AutoClip {
   car_price?: number;
 }
 
-export default function AutoClipsPage() {
+// Loading fallback component
+const AutoClipsLoadingFallback = () => (
+  <div className="min-h-screen bg-black flex flex-col">
+    <Navbar />
+    <div className="flex-1 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+    </div>
+  </div>
+);
+
+// Inner component that uses useSearchParams
+const AutoClipsContent = () => {
   const [clips, setClips] = useState<AutoClip[]>([]);
   const [currentClipIndex, setCurrentClipIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -268,7 +279,7 @@ export default function AutoClipsPage() {
       <Navbar />
       
       {/* Main Content */}
-      <div className="flex-1  flex flex-col items-center">
+      <div className="flex-1 flex flex-col items-center">
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
@@ -341,5 +352,14 @@ export default function AutoClipsPage() {
         }
       `}</style>
     </div>
+  );
+};
+
+// Main component that wraps the content with Suspense
+export default function AutoClipsPage() {
+  return (
+    <Suspense fallback={<AutoClipsLoadingFallback />}>
+      <AutoClipsContent />
+    </Suspense>
   );
 }
