@@ -56,7 +56,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             type="text"
             value={localQuery}
             onChange={handleInputChange}
-            placeholder="Search cars..."
+            placeholder="Search..."
             className="w-full py-3 pl-12 pr-12 bg-gray-800 border border-gray-700 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-accent"
           />
           

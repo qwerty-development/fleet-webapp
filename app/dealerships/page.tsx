@@ -1,4 +1,3 @@
-// pages/dealerships/page.tsx or pages/dealerships/index.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -19,6 +18,7 @@ export default function DealershipsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [totalDealershipCount, setTotalDealershipCount] = useState(0);
 
   const supabase = createClient();
 
@@ -62,10 +62,12 @@ export default function DealershipsPage() {
         setDealerships([]);
         setTotalPages(0);
         setCurrentPage(1);
+        setTotalDealershipCount(0);
         return;
       }
 
       const totalItems = count;
+      setTotalDealershipCount(totalItems);
       const totalPagesCalc = Math.ceil(totalItems / ITEMS_PER_PAGE);
       const safePageNumber = Math.min(page, totalPagesCalc);
       const startRange = (safePageNumber - 1) * ITEMS_PER_PAGE;
@@ -174,14 +176,29 @@ export default function DealershipsPage() {
       {/* Fixed Navbar */}
       <Navbar />
       <div className="flex flex-1 pt-20">
-        <main className="flex-1 p-4 w-full">
-          {/* Fixed Search and Sort Bar */}
-          <div className="sticky top-16 z-40 bg-black py-4 mb-4 border-b border-gray-800 shadow-md flex items-center gap-2">
-            <SearchBar searchQuery={searchQuery} onSearch={handleSearch} className="flex-1" />
-            <DealershipSortSelector onSort={handleSort} selectedOption={sortOption} className="flex-shrink-0" />
+        <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
+          {/* Fixed Search and Sort Bar - Styled to match All Brands page */}
+          <div className="sticky top-16 z-40 bg-black py-4 mb-6 border-b border-gray-800 shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl md:text-3xl font-bold text-white">Dealerships</h1>
+              <p className="text-gray-400 text-sm">{totalDealershipCount} {totalDealershipCount === 1 ? 'dealership' : 'dealerships'} available</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <SearchBar 
+                searchQuery={searchQuery} 
+                onSearch={handleSearch} 
+                className="flex-1"
+              />
+              <DealershipSortSelector 
+                onSort={handleSort} 
+                selectedOption={sortOption} 
+                className="flex-shrink-0" 
+              />
+            </div>
           </div>
+          
           {isLoading ? (
-            <div className="flex justify-center mt-12">
+            <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : dealerships.length > 0 ? (

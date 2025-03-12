@@ -61,25 +61,27 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
 
   return (
     <Link href={`/cars/${car.id}`} className="block">
-      <div className="flex bg-gray-800 rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-700 hover:border-accent/50 group">
-        {/* Main image - with slightly increased dimensions */}
-        <div className="relative w-72 h-68 aspect-[16/9] bg-gray-900 max-w-full overflow-hidden">
-          <img 
-            src={car.images?.[0] || '/placeholder-car.jpg'} 
-            alt={`${car.year} ${car.make} ${car.model}`}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 max-w-full"
-            onError={handleImageError}
-          />
+      <div className="flex flex-col md:flex-row bg-gray-800 rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-700 hover:border-accent/50 group">
+        {/* Main image with fixed dimensions and aspect ratio */}
+        <div className="relative w-full md:w-72 h-80 md:h-64 md:flex-shrink-0 bg-gray-900 overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img 
+              src={car.images?.[0] || '/placeholder-car.jpg'} 
+              alt={`${car.year} ${car.make} ${car.model}`}
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+              onError={handleImageError}
+            />
+          </div>
           
-          {/* Price tag - slightly larger */}
+          {/* Price tag */}
           <div className="absolute top-2 left-2 flex justify-center bg-accent px-4 py-2 rounded-full text-white font-bold shadow-md text-lg">
             ${car.price.toLocaleString()}
           </div>
         </div>
         
-        {/* Car information section - slightly increased padding */}
+        {/* Car information section */}
         <div className="p-5 flex flex-col flex-1">
-          {/* Title and year with make logo - slightly larger */}
+          {/* Title and year with make logo */}
           <div className="mb-3">
             <div className="flex items-center">
               <div className="h-8 w-8 mr-2 flex-shrink-0">
@@ -101,8 +103,8 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
             </div>
           </div>
           
-          {/* Specification grid - slightly larger with increased spacing */}
-          <div className="grid lg:grid-cols-4 grid-cols-2 gap-3 mt-4">
+          {/* Specification grid */}
+          <div className="grid grid-cols-2 md:grid-cols-1 lg:grid-cols-4 gap-3 mt-4">
             {/* Mileage */}
             <div className="flex items-center bg-gray-700/50 rounded-lg p-2.5">
               <ClockIcon className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
@@ -141,14 +143,14 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
           </div>
           
           {/* Spacer to push dealer info to bottom */}
-          <div className="flex-grow"></div>
+          <div className="flex-grow min-h-[20px]"></div>
           
           {/* Dealership info - rearranged with location on right and name on left */}
           {(car.dealership_name || car.dealerships?.name) && (
             <div className="mt-4 pt-3 border-t border-gray-700">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap">
                 {/* Dealership name and logo on left */}
-                <div className="flex items-center">
+                <div className="flex items-center mr-2">
                   <div className="h-8 w-8 mr-2 flex-shrink-0">
                     <img 
                       src={car.dealership_logo || car.dealerships?.logo || '/placeholder-dealer.png'} 
@@ -157,7 +159,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                       onError={handleLogoError}
                     />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 max-w-[150px]">
                     <p className="text-sm font-medium text-gray-300 truncate">
                       {car.dealership_name || car.dealerships?.name}
                     </p>
@@ -166,9 +168,9 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                 
                 {/* Location on right */}
                 {(car.dealership_location || car.dealerships?.location) && (
-                  <div className="flex items-center">
-                    <MapPinIcon className="h-4 w-4 mr-1 text-gray-400" />
-                    <p className="text-sm text-gray-400 truncate">
+                  <div className="flex items-center mt-1 md:mt-0">
+                    <MapPinIcon className="h-4 w-4 mr-1 text-gray-400 flex-shrink-0" />
+                    <p className="text-sm text-gray-400 truncate max-w-[120px] md:max-w-[180px]">
                       {car.dealership_location || car.dealerships?.location}
                     </p>
                   </div>

@@ -80,7 +80,7 @@ const BrandRow: React.FC<BrandRowProps> = ({
         <h2 className="text-xl z-40 font-bold text-white">
           Explore by Brands
         </h2>
-        <Link href="/all-brands" className="text-accent z-20 hover:text-accent-light transition-colors flex items-center">
+        <Link href="/allbrands" className="text-accent z-20 hover:text-accent-light transition-colors flex items-center">
           <span>View All</span>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 ml-1">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />

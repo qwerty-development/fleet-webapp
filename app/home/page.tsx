@@ -471,8 +471,8 @@ export default function HomePage() {
       {/* Main content area */}
       <div className="flex flex-1 pt-3">
         {/* Left Sidebar Filter Panel - Fixed position with proper height and scrollable content */}
-        <aside className="hidden md:block w-56 lg:w-64 xl:w-80 shrink-0">
-          <div className="fixed top-[80px] bottom-0 w-56 lg:w-64 xl:w-80 border-r border-gray-800 p-4 overflow-y-auto custom-scrollbar">
+        <aside className="hidden md:block w-1/4 shrink-0">
+          <div className="fixed top-[80px] bottom-0 w-1/4 border-r border-gray-800 p-4 overflow-y-auto custom-scrollbar">
             <FilterPanel
               filters={filters}
               onFilterChange={handleFilterChange}

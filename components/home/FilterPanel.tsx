@@ -335,12 +335,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
   return (
     <div 
-      className={`${className} sticky bg-gray-900 rounded-xl overflow-y p-2 `} 
+      className={`${className} sticky bg-black  rounded-xl overflow-y p-2 `} 
       style={{ height: 'fit-content' }}
     >
       <div 
         ref={filterContainerRef}
-        className="overflow-hidden"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -365,6 +364,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
 
           {/* Quick Filters */}
+          
           <FilterSection title="Quick Filters">
             <div className="grid grid-cols-2 gap-2">
               {QUICK_FILTERS.map((quickFilter) => (
