@@ -32,7 +32,7 @@ interface AutoClip {
 
 // Loading fallback component
 const AutoClipsLoadingFallback = () => (
-  <div className="min-h-screen bg-black flex flex-col">
+  <div className="h-screen bg-black flex flex-col">
     <Navbar />
     <div className="flex-1 flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
@@ -161,7 +161,6 @@ const AutoClipsContent = () => {
             setCurrentClipIndex(index);
             
             // Update view count when a clip becomes visible
-            // (In a real app, this would be throttled to prevent abuse)
             updateViewCount(index);
           }
         });
@@ -273,49 +272,49 @@ const AutoClipsContent = () => {
     }
   };
 
+  // Get the navbar height to adjust clip height
+  const [navbarHeight, setNavbarHeight] = useState(64); // Default navbar height
+  
+  useEffect(() => {
+    // Function to get actual navbar height
+    const getNavbarHeight = () => {
+      const navbar = document.querySelector('nav');
+      if (navbar) {
+        setNavbarHeight(navbar.offsetHeight);
+      }
+    };
+    
+    // Get height after component mounts
+    getNavbarHeight();
+    
+    // Update on window resize
+    window.addEventListener('resize', getNavbarHeight);
+    return () => window.removeEventListener('resize', getNavbarHeight);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="h-screen bg-black flex flex-col">
       {/* Navbar */}
       <Navbar />
       
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center">
+      {/* Main Content - Adjusted to take full height minus navbar */}
+      <div className="flex-1 flex flex-col items-center" style={{ height: `calc(100vh - ${navbarHeight}px)` }}>
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
           </div>
         ) : clips.length > 0 ? (
           <>
-            {/* Clips Container - Full viewport height minus navbar */}
-            <div className="w-full max-w-md mx-auto h-[calc(100vh-4rem)] relative">
-              {/* Clip Navigation Buttons */}
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 z-10 flex flex-col space-y-6">
-                <button 
-                  onClick={goToPrevClip}
-                  disabled={currentClipIndex === 0}
-                  className="p-2 bg-black/50 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Previous clip"
-                >
-                  <ChevronUpIcon className="h-6 w-6 text-white" />
-                </button>
-                <button 
-                  onClick={goToNextClip}
-                  disabled={currentClipIndex === clips.length - 1}
-                  className="p-2 bg-black/50 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Next clip"
-                >
-                  <ChevronDownIcon className="h-6 w-6 text-white" />
-                </button>
-              </div>
-              
+            {/* Responsive Clips Container - Full height */}
+            <div className="w-full h-full relative mx-auto md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl">
               {/* Individual Clips */}
-              <div className="w-full h-full overflow-y-scroll snap-y snap-mandatory hide-scrollbar">
+              <div className="h-full w-full overflow-y-scroll snap-y snap-mandatory hide-scrollbar">
                 {clips.map((clip, index) => (
                   <div 
                     key={clip.id}
                     ref={(el) => { clipContainerRefs.current[index] = el; }}
                     data-index={index}
-                    className="w-full h-full relative snap-start snap-always flex items-center justify-center overflow-hidden bg-gray-900 clip-container"
+                    className="w-full h-full snap-start snap-always flex items-center justify-center overflow-hidden bg-black"
                   >
                     <AutoClipCard
                       clip={clip}
@@ -349,6 +348,14 @@ const AutoClipsContent = () => {
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none; /* Chrome, Safari, Opera */
+        }
+        
+        /* Ensure body and html take full height */
+        html, body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
         }
       `}</style>
     </div>
