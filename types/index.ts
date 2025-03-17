@@ -19,7 +19,9 @@ export interface FilterState {
 
   
   export interface Car  {
-    id: number; 
+    features: any;
+        likes: number;
+    id: string; 
     make: string;
     model: string;
     year: number;
@@ -57,4 +59,68 @@ export interface FilterState {
   export interface Brand {
     name: string;
     logoUrl: string;
+
+
   }
+
+  // types.ts - Add this to your existing types file
+
+export interface Dealership {
+  id: string;
+  name: string;
+  description?: string;
+  logo?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  opening_hours?: {
+    monday?: string;
+    tuesday?: string;
+    wednesday?: string;
+    thursday?: string;
+    friday?: string;
+    saturday?: string;
+    sunday?: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+  status?: 'active' | 'inactive';
+  featured?: boolean;
+  rating?: number;
+  review_count?: number;
+  social_media?: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+    linkedin?: string;
+    youtube?: string;
+  };
+  amenities?: string[];
+  specializations?: string[];
+  owner_id?: string;
+  staff?: {
+    id: string;
+    name: string;
+    role: string;
+    avatar?: string;
+    contact?: string;
+  }[];
+}
+
+// You may also want a simplified version for listing cards
+export interface DealershipSummary {
+  id: string;
+  name: string;
+  logo?: string;
+  location?: string;
+  rating?: number;
+  featured?: boolean;
+}
