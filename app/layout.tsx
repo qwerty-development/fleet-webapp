@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import GuestModeHandler from "@/components/GuestModeHandler";
+import { Suspense } from "react";
 
 const geistSans = localFont({
   src: "../public/fonts/GeistVF.woff",
@@ -31,7 +32,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <GuestModeHandler />
+        <Suspense fallback={<div>Loading...</div>}>
+      <GuestModeHandler />
+    </Suspense>
           {children}
         </Providers>
       </body>
