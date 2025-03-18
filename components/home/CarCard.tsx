@@ -2,19 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { 
-  ClockIcon, 
-  Cog6ToothIcon, 
+import {
+  ClockIcon,
+  Cog6ToothIcon,
   SwatchIcon,
   MapPinIcon,
   TruckIcon
 } from '@heroicons/react/24/outline';
 import { Car } from '@/types';
+import FavoriteButton from './FavoriteButton';
 
 interface CarCardProps {
   car: Car;
-  isFavorite?: boolean;
-  onFavoritePress?: () => void;
   isDealer?: boolean;
 }
 
@@ -65,28 +64,41 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
         {/* Main image with fixed dimensions and aspect ratio */}
         <div className="relative w-full md:w-72 h-80 md:h-64 md:flex-shrink-0 bg-gray-900 overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center">
-            <img 
-              src={car.images?.[0] || '/placeholder-car.jpg'} 
+            <img
+              src={car.images?.[0] || '/placeholder-car.jpg'}
               alt={`${car.year} ${car.make} ${car.model}`}
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
               onError={handleImageError}
             />
           </div>
-          
+
           {/* Price tag */}
           <div className="absolute top-2 left-2 flex justify-center bg-accent px-4 py-2 rounded-full text-white font-bold shadow-md text-lg">
             ${car.price.toLocaleString()}
           </div>
+
+          {/* Favorite button */}
+          <div className="absolute top-3 right-3 z-10">
+            <FavoriteButton
+              carId={Number(car.id)}
+              initialLikes={car.likes || 0}
+              onLikesUpdate={(newLikes) => {
+                // This is optional and would need additional state management
+                // to update the car object in the parent component
+              }}
+              size="md"
+            />
+          </div>
         </div>
-        
+
         {/* Car information section */}
         <div className="p-5 flex flex-col flex-1">
           {/* Title and year with make logo */}
           <div className="mb-3">
             <div className="flex items-center">
               <div className="h-8 w-8 mr-2 flex-shrink-0">
-                <img 
-                  src={getLogoUrl(car.make)} 
+                <img
+                  src={getLogoUrl(car.make)}
                   alt={car.make}
                   className="w-full h-full object-contain"
                   onError={handleLogoError}
@@ -102,7 +114,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
               </div>
             </div>
           </div>
-          
+
           {/* Specification grid */}
           <div className="grid grid-cols-2 md:grid-cols-1 lg:grid-cols-4 gap-3 mt-4">
             {/* Mileage */}
@@ -112,7 +124,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                 {car.mileage > 0 ? `${(car.mileage / 1000).toFixed(1)}k Km` : 'New'}
               </span>
             </div>
-            
+
             {/* Transmission */}
             <div className="flex items-center bg-gray-700/50 rounded-lg p-2.5">
               <Cog6ToothIcon className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
@@ -120,7 +132,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                 {car.transmission || 'Unknown'}
               </span>
             </div>
-            
+
             {/* Drivetrain if available */}
             {car.drivetrain && (
               <div className="flex items-center bg-gray-700/50 rounded-lg p-2.5">
@@ -130,7 +142,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                 </span>
               </div>
             )}
-            
+
             {/* Color if available */}
             {car.color && (
               <div className="flex items-center bg-gray-700/50 rounded-lg p-2.5">
@@ -141,10 +153,10 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
               </div>
             )}
           </div>
-          
+
           {/* Spacer to push dealer info to bottom */}
           <div className="flex-grow min-h-[20px]"></div>
-          
+
           {/* Dealership info - rearranged with location on right and name on left */}
           {(car.dealership_name || car.dealerships?.name) && (
             <div className="mt-4 pt-3 border-t border-gray-700">
@@ -152,8 +164,8 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                 {/* Dealership name and logo on left */}
                 <div className="flex items-center mr-2">
                   <div className="h-8 w-8 mr-2 flex-shrink-0">
-                    <img 
-                      src={car.dealership_logo || car.dealerships?.logo || '/placeholder-dealer.png'} 
+                    <img
+                      src={car.dealership_logo || car.dealerships?.logo || '/placeholder-dealer.png'}
                       alt="Dealership Logo"
                       className="w-full h-full rounded-full object-cover border border-gray-600"
                       onError={handleLogoError}
@@ -165,7 +177,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Location on right */}
                 {(car.dealership_location || car.dealerships?.location) && (
                   <div className="flex items-center mt-1 md:mt-0">

@@ -302,7 +302,7 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={() => router.push('/')}
-                className="mt-4 text-white/80 hover:text-white"
+                className="mt-4 text-white hover:text-white"
               >
                 Return to Home
               </button>

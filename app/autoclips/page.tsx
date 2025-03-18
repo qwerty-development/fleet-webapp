@@ -49,7 +49,7 @@ const AutoClipsContent = () => {
   const clipContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
   const observer = useRef<IntersectionObserver | null>(null);
   const searchParams = useSearchParams();
-  
+
   const supabase = createClient();
 
   // Fetch auto clips data
@@ -84,7 +84,7 @@ const AutoClipsContent = () => {
           // Safely parse JSON fields with error handling
           let likedUsers = [];
           let viewedUsers = [];
-          
+
           try {
             if (clip.liked_users && typeof clip.liked_users === 'string' && clip.liked_users.trim() !== '') {
               likedUsers = JSON.parse(clip.liked_users);
@@ -92,7 +92,7 @@ const AutoClipsContent = () => {
           } catch (e) {
             console.warn(`Error parsing liked_users for clip ${clip.id}:`, e);
           }
-          
+
           try {
             if (clip.viewed_users && typeof clip.viewed_users === 'string' && clip.viewed_users.trim() !== '') {
               viewedUsers = JSON.parse(clip.viewed_users);
@@ -123,13 +123,13 @@ const AutoClipsContent = () => {
           const clipIndex = enrichedClips.findIndex(clip => clip.id.toString() === clipId);
           if (clipIndex !== -1) {
             setCurrentClipIndex(clipIndex);
-            
+
             // Need to wait for the DOM to update before scrolling
             setTimeout(() => {
               if (clipContainerRefs.current[clipIndex]) {
-                clipContainerRefs.current[clipIndex]?.scrollIntoView({ 
-                  behavior: 'auto', 
-                  block: 'center' 
+                clipContainerRefs.current[clipIndex]?.scrollIntoView({
+                  behavior: 'auto',
+                  block: 'center'
                 });
               }
             }, 100);
@@ -151,7 +151,7 @@ const AutoClipsContent = () => {
   useEffect(() => {
     // Initialize an array of refs for each clip
     clipContainerRefs.current = clipContainerRefs.current.slice(0, clips.length);
-    
+
     // Set up intersection observer
     observer.current = new IntersectionObserver(
       (entries) => {
@@ -159,7 +159,7 @@ const AutoClipsContent = () => {
           if (entry.isIntersecting) {
             const index = parseInt(entry.target.getAttribute('data-index') || '0');
             setCurrentClipIndex(index);
-            
+
             // Update view count when a clip becomes visible
             updateViewCount(index);
           }
@@ -190,7 +190,7 @@ const AutoClipsContent = () => {
     try {
       // In a real app, you would check if the user has already viewed the clip
       // For demo purposes, we'll just increment the view count
-      
+
       // Update in state
       const updatedClips = [...clips];
       updatedClips[index] = {
@@ -198,7 +198,7 @@ const AutoClipsContent = () => {
         views: updatedClips[index].views + 1
       };
       setClips(updatedClips);
-      
+
       // Update in database (would include user tracking in a real app)
       await supabase
         .from("auto_clips")
@@ -215,14 +215,14 @@ const AutoClipsContent = () => {
       if (likedClips.includes(clipId)) {
         // Unlike
         setLikedClips(likedClips.filter(id => id !== clipId));
-        
+
         // Update clip in state to show decreased like count
-        setClips(prevClips => 
-          prevClips.map(clip => 
+        setClips(prevClips =>
+          prevClips.map(clip =>
             clip.id === clipId ? { ...clip, likes: clip.likes - 1 } : clip
           )
         );
-        
+
         // Update in database (would include user tracking in a real app)
         await supabase
           .from("auto_clips")
@@ -231,14 +231,14 @@ const AutoClipsContent = () => {
       } else {
         // Like
         setLikedClips([...likedClips, clipId]);
-        
+
         // Update clip in state to show increased like count
-        setClips(prevClips => 
-          prevClips.map(clip => 
+        setClips(prevClips =>
+          prevClips.map(clip =>
             clip.id === clipId ? { ...clip, likes: clip.likes + 1 } : clip
           )
         );
-        
+
         // Update in database (would include user tracking in a real app)
         await supabase
           .from("auto_clips")
@@ -274,7 +274,7 @@ const AutoClipsContent = () => {
 
   // Get the navbar height to adjust clip height
   const [navbarHeight, setNavbarHeight] = useState(64); // Default navbar height
-  
+
   useEffect(() => {
     // Function to get actual navbar height
     const getNavbarHeight = () => {
@@ -283,10 +283,10 @@ const AutoClipsContent = () => {
         setNavbarHeight(navbar.offsetHeight);
       }
     };
-    
+
     // Get height after component mounts
     getNavbarHeight();
-    
+
     // Update on window resize
     window.addEventListener('resize', getNavbarHeight);
     return () => window.removeEventListener('resize', getNavbarHeight);
@@ -296,7 +296,7 @@ const AutoClipsContent = () => {
     <div className="h-screen bg-black flex flex-col">
       {/* Navbar */}
       <Navbar />
-      
+
       {/* Main Content - Adjusted to take full height minus navbar */}
       <div className="flex-1 flex flex-col items-center" style={{ height: `calc(100vh - ${navbarHeight}px)` }}>
         {isLoading ? (
@@ -310,7 +310,7 @@ const AutoClipsContent = () => {
               {/* Individual Clips */}
               <div className="h-full w-full overflow-y-scroll snap-y snap-mandatory hide-scrollbar">
                 {clips.map((clip, index) => (
-                  <div 
+                  <div
                     key={clip.id}
                     ref={(el) => { clipContainerRefs.current[index] = el; }}
                     data-index={index}
@@ -339,7 +339,7 @@ const AutoClipsContent = () => {
           </div>
         )}
       </div>
-      
+
       {/* Hidden scrollbar styles */}
       <style jsx global>{`
         .hide-scrollbar {
@@ -349,7 +349,7 @@ const AutoClipsContent = () => {
         .hide-scrollbar::-webkit-scrollbar {
           display: none; /* Chrome, Safari, Opera */
         }
-        
+
         /* Ensure body and html take full height */
         html, body {
           height: 100%;
