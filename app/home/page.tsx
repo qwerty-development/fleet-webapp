@@ -12,6 +12,9 @@ import SortSelector from "@/components/home/SortSelector";
 import Navbar from "@/components/home/Navbar";
 import { createClient } from "@/utils/supabase/client";
 import { FilterState, Car, Brand } from "@/types";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
+import { useRouter } from "next/navigation";
 
 // Define constants for filter options to avoid string literals
 export const SORT_OPTIONS = {
@@ -47,6 +50,11 @@ const DEFAULT_FILTERS: FilterState = {
 };
 
 export default function HomePage() {
+  // Authentication hooks
+  const { user, profile, isLoaded, isSignedIn } = useAuth();
+  const { isGuest, guestId } = useGuestUser();
+  const router = useRouter();
+
   // Global UI states
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState<boolean>(false);
@@ -60,6 +68,88 @@ export default function HomePage() {
 
   const ITEMS_PER_PAGE = 9;
   const supabase = createClient();
+
+  // Sync user to Supabase (for both signed-in and guest users)
+  useEffect(() => {
+    const syncUserToSupabase = async () => {
+      if ((!isSignedIn && !isGuest) || !isLoaded) return;
+
+      try {
+        const userId = isGuest ? `guest_${guestId}` : user?.id;
+        if (!userId) return;
+
+        // Check if user exists in Supabase
+        const { data: existingUser, error: fetchError } = await supabase
+          .from("users")
+          .select()
+          .eq("id", userId)
+          .single();
+
+        if (fetchError && fetchError.code !== "PGRST116") {
+          throw fetchError;
+        }
+
+        // Create user if they don't exist
+        if (!existingUser) {
+          const email = isGuest
+            ? `guest_${guestId}@example.com`
+            : user?.email || "";
+          const name = isGuest
+            ? "Guest User"
+            : profile?.name || user?.user_metadata?.name || "";
+
+          const { error: upsertError } = await supabase
+            .from("users")
+            .upsert(
+              [
+                {
+                  id: userId,
+                  name: name,
+                  email: email,
+                  favorite: [],
+                  is_guest: isGuest,
+                  last_active: new Date().toISOString(),
+                  timezone: "UTC",
+                },
+              ],
+              {
+                onConflict: "id",
+                ignoreDuplicates: false,
+              }
+            );
+
+          if (upsertError && upsertError.code !== "23505") {
+            throw upsertError;
+          }
+        }
+
+        // Update last_active timestamp
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ last_active: new Date().toISOString() })
+          .eq("id", userId);
+
+        if (updateError) throw updateError;
+      } catch (error) {
+        console.error("Error syncing user to Supabase:", error);
+      }
+    };
+
+    syncUserToSupabase();
+  }, [isSignedIn, isGuest, isLoaded, user, profile, guestId]);
+
+  // Redirect admin users to the admin panel if applicable
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const redirectBasedOnRole = async () => {
+      if (isSignedIn && profile?.role === "admin") {
+        router.push("/admin");
+      }
+    };
+
+    redirectBasedOnRole();
+  }, [isLoaded, isSignedIn, profile]);
 
   // Get logo URL function
   const getLogoUrl = (make: string, isLightMode: boolean): string => {
@@ -302,34 +392,34 @@ export default function HomePage() {
 
         // Merge dealership info into the car data
         const newCars: Car[] =
-        data?.map((item: any) => {
-          const dealershipData = item.dealerships || {
-            name: "",
-            logo: "",
-            phone: "",
-            location: "",
-            latitude: 0,
-            longitude: 0,
-          };
-      
-          return {
-            ...item,
-            dealership_name: dealershipData.name,
-            dealership_logo: dealershipData.logo,
-            dealership_phone: dealershipData.phone,
-            dealership_location: dealershipData.location,
-            dealership_latitude: dealershipData.latitude,
-            dealership_longitude: dealershipData.longitude,
-            condition: item.condition || "Unknown",
-            dealerships: dealershipData, // Ensure dealerships is defined
-          };
-        }) || [];
+          data?.map((item: any) => {
+            const dealershipData = item.dealerships || {
+              name: "",
+              logo: "",
+              phone: "",
+              location: "",
+              latitude: 0,
+              longitude: 0,
+            };
+
+            return {
+              ...item,
+              dealership_name: dealershipData.name,
+              dealership_logo: dealershipData.logo,
+              dealership_phone: dealershipData.phone,
+              dealership_location: dealershipData.location,
+              dealership_latitude: dealershipData.latitude,
+              dealership_longitude: dealershipData.longitude,
+              condition: item.condition || "Unknown",
+              dealerships: dealershipData, // Ensure dealerships is defined
+            };
+          }) || [];
 
         // Deduplicate car entries by id
         const uniqueCarIds = Array.from(new Set(newCars.map((car) => car.id)));
-        const uniqueCars = uniqueCarIds.map((id) => 
-          newCars.find((car) => car.id === id)
-        ).filter((car): car is Car => car !== undefined);
+        const uniqueCars = uniqueCarIds
+          .map((id) => newCars.find((car) => car.id === id))
+          .filter((car): car is Car => car !== undefined);
 
         setCars((prevCars) =>
           safePageNumber === 1 ? uniqueCars : [...prevCars, ...uniqueCars]
@@ -498,18 +588,23 @@ export default function HomePage() {
                 selectedOption={filters.sortBy}
                 className="flex-shrink-0"
               />
-              <button 
+              <button
                 onClick={() => setIsFilterModalOpen(true)}
                 className="md:hidden flex-shrink-0 p-3 bg-gray-800 border border-gray-700 rounded-full text-white focus:outline-none"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                  />
                 </svg>
               </button>
             </div>
@@ -537,7 +632,7 @@ export default function HomePage() {
               initial="hidden"
               animate="visible"
             >
-              {cars.map((car, index) => (
+              {cars.map((car) => (
                 <motion.div key={car.id} variants={itemVariants}>
                   <CarCard
                     car={car}

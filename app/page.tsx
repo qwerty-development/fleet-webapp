@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
 
 // Critical sections load immediately
 import HeroSection from "@/components/Landing Page/herosection";
@@ -10,32 +13,65 @@ import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
 
 // Dynamically import non-critical sections with loading placeholders
 const AboutSection = dynamic(
-  () => import('@/components/Landing Page/about'),
+  () => import("@/components/Landing Page/about"),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading About...</div> }
 );
 const AppShowcase = dynamic(
-  () => import('@/components/Landing Page/showcase'),
+  () => import("@/components/Landing Page/showcase"),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Showcase...</div> }
 );
 const ContactSection = dynamic(
-  () => import('@/components/Landing Page/contact'),
+  () => import("@/components/Landing Page/contact"),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Contact...</div> }
 );
 const Footer = dynamic(
-  () => import('@/components/Landing Page/footer'),
+  () => import("@/components/Landing Page/footer"),
   { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Footer...</div> }
 );
 
 // Splash screen (client-side only)
 const WebSplashScreen = dynamic(
-  () => import('../components/Landing Page/splashscreen'),
+  () => import("../components/Landing Page/splashscreen"),
   { ssr: false }
 );
 
 export default function Home() {
+  // Authentication & guest mode hooks
+  const { isLoaded, isSignedIn, profile } = useAuth();
+  const { isGuest, setGuestMode, clearGuestMode } = useGuestUser();
+  const router = useRouter();
+
+  // Handle guest mode from URL query parameter
+  useEffect(() => {
+    const handleGuestModeFromQuery = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const guestParam = urlParams.get("guest");
+      if (guestParam === "true" && !isSignedIn && !isGuest) {
+        await setGuestMode(true);
+        router.push("/home");
+      }
+    };
+    handleGuestModeFromQuery();
+  }, [isSignedIn, isGuest, setGuestMode, router]);
+
+  // Redirect authenticated or guest users away from the landing page
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (isSignedIn) {
+      if (profile?.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/home");
+      }
+    } else if (isGuest) {
+      router.push("/home");
+    }
+  }, [isLoaded, isSignedIn, isGuest, profile, router]);
+
+  // Local state for scroll tracking and splash screen
   const [scrollY, setScrollY] = useState(0);
   const [showSplash, setShowSplash] = useState(false);
-  
+
   // Track scroll position for background grid effect only
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -45,20 +81,20 @@ export default function Home() {
 
   // Check first visit to show the splash screen
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hasSeenSplash = localStorage.getItem('hasSeenSplash');
+    if (typeof window !== "undefined") {
+      const hasSeenSplash = localStorage.getItem("hasSeenSplash");
       if (!hasSeenSplash) {
         // Lock scroll while splash is showing
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflow = "hidden";
         setShowSplash(true);
       }
     }
   }, []);
 
   const handleSplashComplete = () => {
-    localStorage.setItem('hasSeenSplash', 'true');
+    localStorage.setItem("hasSeenSplash", "true");
     // Re-enable scrolling
-    document.body.style.overflow = '';
+    document.body.style.overflow = "";
     setShowSplash(false);
   };
 
@@ -66,7 +102,7 @@ export default function Home() {
     <>
       {/* Show splash screen on first visit */}
       {showSplash && <WebSplashScreen onAnimationComplete={handleSplashComplete} />}
-      
+
       {/* Hide main content while splash is active */}
       <div
         className="min-h-screen relative overflow-hidden"
@@ -124,12 +160,15 @@ export default function Home() {
           <section className="min-h-screen pt-16">
             <HeroSection />
           </section>
-          
+
           {/* Content Sections */}
-          <div className="relative z-30" style={{ background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)" }}>
+          <div
+            className="relative z-30"
+            style={{ background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)" }}
+          >
             <AboutSection />
             <AppShowcase />
-            <MarqueeLogos/>
+            <MarqueeLogos />
             <ContactSection />
             <Footer />
           </div>
