@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
-import { HeartIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, LockClosedIcon } from '@heroicons/react/24/solid';
 
 // Dynamically import Navbar to avoid SSR issues with localStorage
 const Navbar = dynamic(() => import('@/components/home/Navbar'), { ssr: false });
@@ -27,7 +27,7 @@ interface Car {
 
 export default function FavoritesPage() {
   const { user, profile, isLoaded, isSignedIn } = useAuth();
-  const { isGuest, guestId } = useGuestUser();
+  const { isGuest, guestId,clearGuestMode } = useGuestUser();
   const router = useRouter();
   const supabase = createClient();
 
@@ -130,6 +130,12 @@ export default function FavoritesPage() {
     }
   };
 
+  const handleSignIn = () => {
+    clearGuestMode();
+    router.push('/auth/signin');
+  };
+
+
   // Format price as currency
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -152,6 +158,39 @@ export default function FavoritesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-black-light">
       <Navbar />
+
+         {isGuest && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", duration: 0.6 }}
+            className="bg-accent text-white p-8 rounded-xl max-w-md mx-4 shadow-lg"
+          >
+            <div className="flex flex-col items-center text-center">
+              <LockClosedIcon className="h-16 w-16 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">You're browsing as a guest</h2>
+              <p className="mb-6">Please sign in to access and manage your profile.</p>
+              <button
+                onClick={handleSignIn}
+                className="bg-white text-accent font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="mt-4 text-white/80 hover:text-white"
+              >
+                Return to Home
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <main className="container mx-auto px-4 py-20">
         <motion.div

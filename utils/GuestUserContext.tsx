@@ -1,87 +1,231 @@
-'use client'
-import React, { createContext, useState, useContext, useEffect } from 'react';
+'use client';
+
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface GuestUserContextType {
   isGuest: boolean;
   guestId: string | null;
-  setGuestMode: (isActive: boolean) => Promise<void>;
+  setGuestMode: (isActive: boolean) => Promise<string | null>;
   clearGuestMode: () => Promise<void>;
 }
 
-const GuestUserContext = createContext<GuestUserContextType | undefined>(undefined);
+// Create a default context value
+const defaultContextValue: GuestUserContextType = {
+  isGuest: false,
+  guestId: null,
+  setGuestMode: async () => null,
+  clearGuestMode: async () => {},
+};
+
+const GuestUserContext = createContext<GuestUserContextType>(defaultContextValue);
 
 export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Initialize the context by checking localStorage
-  useEffect(() => {
-    const initializeGuestState = () => {
-      try {
-        const storedIsGuest = localStorage.getItem('isGuestUser');
-        const storedGuestId = localStorage.getItem('guestUserId');
+  // Helper function to get a cookie value by name
+  const getCookie = (name: string): string | null => {
+    if (typeof document === 'undefined') return null;
 
-        if (storedIsGuest === 'true' && storedGuestId) {
-          setIsGuest(true);
-          setGuestId(storedGuestId);
-        }
-      } catch (error) {
-        console.error('Error loading guest state:', error);
-      }
-    };
-
-    // Only run in browser environment
-    if (typeof window !== 'undefined') {
-      initializeGuestState();
-    }
-  }, []);
-
-  const setGuestMode = async (isActive: boolean) => {
-    try {
-      if (typeof window === 'undefined') return;
-
-      const id = isActive ? (guestId || uuidv4()) : null;
-
-      localStorage.setItem('isGuestUser', isActive ? 'true' : 'false');
-
-      if (isActive && id) {
-        localStorage.setItem('guestUserId', id);
-      } else {
-        localStorage.removeItem('guestUserId');
-      }
-
-      setIsGuest(isActive);
-      setGuestId(id);
-    } catch (error) {
-      console.error('Error setting guest mode:', error);
-    }
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
   };
 
-  const clearGuestMode = async () => {
-    try {
-      if (typeof window === 'undefined') return;
+  // Helper function to set a cookie
+  const setCookie = (name: string, value: string, days: number = 1): void => {
+    if (typeof document === 'undefined') return;
 
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+  };
+
+  // Helper function to delete a cookie
+  const deleteCookie = (name: string): void => {
+    if (typeof document === 'undefined') return;
+
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+  };
+
+  // Initialize the context by checking both localStorage and cookies
+  useEffect(() => {
+    if (typeof window === 'undefined' || isInitialized) return;
+
+    try {
+      console.log('GuestUserContext: Initializing...');
+
+      // Check localStorage first
+      const storedIsGuest = localStorage.getItem('isGuestUser');
+      const storedGuestId = localStorage.getItem('guestUserId');
+
+      // Also check cookies as fallback (for server-side consistency)
+      const cookieIsGuest = getCookie('isGuestUser');
+      const cookieGuestId = getCookie('guestUserId');
+
+      console.log('GuestUserContext: Found stored values:', {
+        localStorage: { isGuest: storedIsGuest, guestId: storedGuestId },
+        cookies: { isGuest: cookieIsGuest, guestId: cookieGuestId }
+      });
+
+      // Use either localStorage or cookie values, preferring localStorage
+      const isGuestActive = storedIsGuest === 'true' || cookieIsGuest === 'true';
+      const userGuestId = storedGuestId || cookieGuestId;
+
+      if (isGuestActive && userGuestId) {
+        console.log('GuestUserContext: Setting guest mode from stored values');
+        setIsGuest(true);
+        setGuestId(userGuestId);
+
+        // Ensure both storage mechanisms are in sync
+        localStorage.setItem('isGuestUser', 'true');
+        localStorage.setItem('guestUserId', userGuestId);
+        setCookie('isGuestUser', 'true');
+        setCookie('guestUserId', userGuestId);
+      }
+    } catch (error) {
+      console.error('GuestUserContext: Error loading guest state:', error);
+    } finally {
+      setIsInitialized(true);
+      console.log('GuestUserContext: Initialization complete');
+    }
+  }, [isInitialized]);
+
+  // Set guest mode
+  const setGuestMode = useCallback(async (isActive: boolean): Promise<string | null> => {
+    console.log('GuestUserContext: setGuestMode called with', isActive);
+
+    if (typeof window === 'undefined') {
+      console.log('GuestUserContext: Window not available, returning null');
+      return null;
+    }
+
+    try {
+      // Generate new ID if needed, or use existing one
+      const id = isActive ? (guestId || uuidv4()) : null;
+      console.log('GuestUserContext: Using guest ID:', id);
+
+      // Update storage mechanisms
+      if (isActive && id) {
+        console.log('GuestUserContext: Setting storage values');
+
+        // Set localStorage (client-side)
+        localStorage.setItem('isGuestUser', 'true');
+        localStorage.setItem('guestUserId', id);
+
+        // Set cookies (for server/middleware)
+        setCookie('isGuestUser', 'true');
+        setCookie('guestUserId', id);
+      } else {
+        console.log('GuestUserContext: Clearing storage values');
+
+        // Clear localStorage
+        localStorage.removeItem('isGuestUser');
+        localStorage.removeItem('guestUserId');
+
+        // Clear cookies
+        deleteCookie('isGuestUser');
+        deleteCookie('guestUserId');
+      }
+
+      // Update state
+      console.log('GuestUserContext: Updating state');
+      setIsGuest(isActive);
+      setGuestId(id);
+
+      // Return the ID for verification
+      return id;
+    } catch (error) {
+      console.error('GuestUserContext: Error setting guest mode:', error);
+      return null;
+    }
+  }, [guestId]);
+
+  // Clear guest mode
+  const clearGuestMode = useCallback(async (): Promise<void> => {
+    console.log('GuestUserContext: clearGuestMode called');
+
+    if (typeof window === 'undefined') {
+      console.log('GuestUserContext: Window not available, returning');
+      return;
+    }
+
+    try {
+      // Clear all storage mechanisms
+      console.log('GuestUserContext: Clearing storage values');
+
+      // Clear localStorage
       localStorage.removeItem('isGuestUser');
       localStorage.removeItem('guestUserId');
+
+      // Clear cookies
+      deleteCookie('isGuestUser');
+      deleteCookie('guestUserId');
+
+      // Update state
+      console.log('GuestUserContext: Updating state');
       setIsGuest(false);
       setGuestId(null);
     } catch (error) {
-      console.error('Error clearing guest mode:', error);
+      console.error('GuestUserContext: Error clearing guest mode:', error);
     }
+  }, []);
+
+  // Enhance fetch requests with guest headers
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (isGuest && guestId) {
+      // Add headers to fetch requests when in guest mode
+      const originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        init = init || {};
+        init.headers = init.headers || {};
+
+        // Add guest mode headers to API requests
+        init.headers = {
+          ...init.headers,
+          'x-guest-mode': 'true',
+          'x-guest-id': guestId
+        };
+
+        return originalFetch(input, init);
+      };
+
+      // Cleanup
+      return () => {
+        window.fetch = originalFetch;
+      };
+    }
+  }, [isGuest, guestId]);
+
+  // Log state changes during development
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('GuestUserContext: State updated:', { isGuest, guestId });
+    }
+  }, [isGuest, guestId]);
+
+  const contextValue = {
+    isGuest,
+    guestId,
+    setGuestMode,
+    clearGuestMode,
   };
 
   return (
-    <GuestUserContext.Provider value={{ isGuest, guestId, setGuestMode, clearGuestMode }}>
+    <GuestUserContext.Provider value={contextValue}>
       {children}
     </GuestUserContext.Provider>
   );
 };
 
-export const useGuestUser = () => {
+export const useGuestUser = (): GuestUserContextType => {
   const context = useContext(GuestUserContext);
   if (context === undefined) {
-    throw new Error('useGuestUser must be used within a GuestUserProvider');
+    console.error('useGuestUser must be used within a GuestUserProvider');
+    return defaultContextValue;
   }
   return context;
 };

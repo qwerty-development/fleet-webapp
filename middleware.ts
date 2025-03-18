@@ -1,3 +1,4 @@
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from "@supabase/ssr";
@@ -60,12 +61,34 @@ export async function middleware(request: NextRequest) {
   // Check for auth session
   const { data: { session } } = await supabase.auth.getSession();
 
-  // Check for guest mode cookie
+  // ===== MODIFIED SECTION: IMPROVED GUEST MODE DETECTION =====
+  // Check for guest mode in various ways (cookie or header)
   let isGuestMode = false;
+
+  // Check cookie
   const guestModeCookie = request.cookies.get('isGuestUser');
   if (guestModeCookie?.value === 'true') {
     isGuestMode = true;
   }
+
+  // Check custom header (will be added by client-side code)
+  const guestModeHeader = request.headers.get('x-guest-mode');
+  if (guestModeHeader === 'true') {
+    isGuestMode = true;
+  }
+
+  // Check URL parameter (temporary solution)
+  const url = new URL(request.url);
+  if (url.searchParams.get('guest') === 'true') {
+    isGuestMode = true;
+
+    // Remove the parameter and redirect to clean URL
+    if (pathname !== '/auth/signin') { // Avoid redirect loop on signin page
+      url.searchParams.delete('guest');
+      return NextResponse.redirect(url);
+    }
+  }
+  // ===== END MODIFIED SECTION =====
 
   // Handle protected routes
   if (isProtectedRoute && !session && !isGuestMode) {

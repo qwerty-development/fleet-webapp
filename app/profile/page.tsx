@@ -1,91 +1,270 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/utils/AuthContext';
 import { useGuestUser } from '@/utils/GuestUserContext';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  UserCircleIcon,
+  KeyIcon,
+  ShieldCheckIcon,
+  LockClosedIcon,
+  BellIcon,
+  BellSlashIcon,
+  CameraIcon,
+  XMarkIcon,
+  ChevronRightIcon,
+  ArrowRightOnRectangleIcon,
+  EnvelopeIcon,
+  ChatBubbleLeftRightIcon
+} from '@heroicons/react/24/outline';
+import { createClient } from '@/utils/supabase/client';
 import dynamic from 'next/dynamic';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 // Dynamically import Navbar to avoid SSR issues with localStorage
 const Navbar = dynamic(() => import('@/components/home/Navbar'), { ssr: false });
 
+// Default profile image
+const DEFAULT_PROFILE_IMAGE = "";
+
+// Support contact information
+const WHATSAPP_NUMBER = "81972024";
+const SUPPORT_EMAIL = "support@example.com";
+const EMAIL_SUBJECT = "Support Request";
+
+// Notification settings type
+interface NotificationSettings {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  marketingUpdates: boolean;
+  newCarAlerts: boolean;
+}
+
 export default function ProfilePage() {
-  const { user, profile, isLoaded, isSignedIn, updateUserProfile, signOut } = useAuth();
+  const { user, profile, isLoaded, isSignedIn, updateUserProfile, updatePassword, signOut } = useAuth();
   const { isGuest, clearGuestMode } = useGuestUser();
   const router = useRouter();
+  const supabase = createClient();
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('');
-  const [updateLoading, setUpdateLoading] = useState(false);
+  // State for profile information
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(DEFAULT_PROFILE_IMAGE);
+
+  // Modal states
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isChangePasswordMode, setIsChangePasswordMode] = useState(false);
+  const [isSecuritySettingsVisible, setIsSecuritySettingsVisible] = useState(false);
+  const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
+
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Notification preferences
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    pushNotifications: true,
+    emailNotifications: true,
+    marketingUpdates: false,
+    newCarAlerts: true,
+  });
+
+  // UI states
+  const [isLoading, setIsLoading] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [updateError, setUpdateError] = useState('');
+  const [isImageUploading, setIsImageUploading] = useState(false);
 
-  // Initialize form with profile data
+  // Initialize profile data
   useEffect(() => {
-    if (profile) {
-      setName(profile.name || '');
-    }
-  }, [profile]);
+    if (user && profile && !isGuest) {
+      // Extract first and last name from full name in profile
+      const nameParts = profile.name ? profile.name.split(' ') : ['', ''];
+      setFirstName(nameParts[0] || "");
+      setLastName(nameParts.slice(1).join(' ') || "");
+      setEmail(profile.email || user.email || "");
 
-  // Redirect if not signed in
-  useEffect(() => {
-    if (isLoaded && !isSignedIn && !isGuest) {
-      router.push('/auth/signin');
+      // Set avatar URL if available in user metadata
+      if (user.user_metadata?.avatar_url) {
+        setAvatarUrl(user.user_metadata.avatar_url);
+      }
+    } else if (isGuest) {
+      setFirstName("Guest");
+      setLastName("User");
+      setEmail("guest@example.com");
+      setAvatarUrl(DEFAULT_PROFILE_IMAGE);
     }
-  }, [isLoaded, isSignedIn, isGuest, router]);
+  }, [user, profile, isGuest]);
 
-  // Handle profile update
+  // Handler for profile update
   const handleUpdateProfile = async () => {
-    if (!name.trim()) {
-      setUpdateError('Name is required');
-      return;
-    }
+    if (isGuest) return;
 
-    setUpdateLoading(true);
+    setIsLoading(true);
     setUpdateError('');
     setUpdateSuccess(false);
 
     try {
-      // For guest users, we don't actually update anything
-      if (isGuest) {
-        // Simulate a successful update
-        setTimeout(() => {
-          setUpdateSuccess(true);
-          setIsEditing(false);
-          setUpdateLoading(false);
-        }, 1000);
-        return;
-      }
+      // Create full name from first and last name
+      const fullName = `${firstName} ${lastName}`.trim();
 
-      const { error } = await updateUserProfile({ name });
+      // Update user profile
+      const { error } = await updateUserProfile({
+        name: fullName
+      });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setUpdateSuccess(true);
-      setIsEditing(false);
+      setIsEditMode(false);
+
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setUpdateSuccess(false);
+      }, 3000);
     } catch (error: any) {
-      console.error('Profile update error:', error);
+      console.error('Error updating profile:', error);
       setUpdateError(error.message || 'Failed to update profile. Please try again.');
     } finally {
-      setUpdateLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Handle sign out
+  // Handler for changing password
+  const handleChangePassword = async () => {
+    if (isGuest) return;
+
+    if (newPassword !== confirmPassword) {
+      setUpdateError('New passwords do not match.');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setUpdateError('Password must be at least 8 characters long.');
+      return;
+    }
+
+    setIsLoading(true);
+    setUpdateError('');
+
+    try {
+      const { error } = await updatePassword({
+        currentPassword,
+        newPassword
+      });
+
+      if (error) throw error;
+
+      setUpdateSuccess(true);
+      setIsChangePasswordMode(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setUpdateSuccess(false);
+      }, 3000);
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      setUpdateError(error.message || 'Failed to change password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handler for profile image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isGuest) return;
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImageUploading(true);
+
+    try {
+      // Upload to Supabase Storage
+      const fileName = `avatar-${user?.id}-${Date.now()}`;
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      const avatarUrl = urlData?.publicUrl;
+
+      if (avatarUrl) {
+        // Update user metadata with new avatar URL
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { avatar_url: avatarUrl }
+        });
+
+        if (updateError) throw updateError;
+
+        // Update local state
+        setAvatarUrl(avatarUrl);
+      }
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      setUpdateError(error.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setIsImageUploading(false);
+    }
+  };
+
+  // Handler for toggling notification settings
+  const toggleNotification = (key: keyof NotificationSettings) => {
+    if (isGuest) return;
+
+    setNotificationSettings(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Handler for sign out
   const handleSignOut = async () => {
     if (isGuest) {
       await clearGuestMode();
     } else {
       await signOut();
     }
+
     router.push('/');
   };
 
-  // Show loading state
+  // Handler for guest to sign in
+  const handleSignIn = () => {
+    clearGuestMode();
+    router.push('/auth/signin');
+  };
+
+  // Handler for contacting support via WhatsApp
+  const handleWhatsAppSupport = () => {
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}`, '_blank');
+  };
+
+  // Handler for contacting support via email
+  const handleEmailSupport = () => {
+    const subject = encodeURIComponent(EMAIL_SUBJECT);
+    window.open(`mailto:${SUPPORT_EMAIL}?subject=${subject}`, '_blank');
+  };
+
+  // If still loading, show a spinner
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -98,144 +277,598 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-black-light">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-20">
+      {/* Guest Mode Overlay */}
+      {isGuest && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md mx-auto bg-black-medium border border-gray-800 rounded-xl p-8 shadow-xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         >
-          <div className="flex justify-center mb-6">
-            <div className="h-24 w-24 rounded-full bg-accent/20 flex items-center justify-center">
-              <UserCircleIcon className="h-16 w-16 text-accent" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", duration: 0.6 }}
+            className="bg-accent text-white p-8 rounded-xl max-w-md mx-4 shadow-lg"
+          >
+            <div className="flex flex-col items-center text-center">
+              <LockClosedIcon className="h-16 w-16 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">You're browsing as a guest</h2>
+              <p className="mb-6">Please sign in to access and manage your profile.</p>
+              <button
+                onClick={handleSignIn}
+                className="bg-white text-accent font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="mt-4 text-white/80 hover:text-white"
+              >
+                Return to Home
+              </button>
             </div>
-          </div>
+          </motion.div>
+        </motion.div>
+      )}
 
-          <h1 className="text-3xl font-bold text-white text-center mb-8">
-            {isGuest ? 'Guest Profile' : 'Your Profile'}
-          </h1>
-
-          {updateSuccess && (
-            <div className="bg-green-900/30 border border-green-800 text-green-400 px-4 py-3 rounded-lg mb-6">
-              Profile updated successfully!
-            </div>
-          )}
-
-          {updateError && (
-            <div className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg mb-6">
-              {updateError}
-            </div>
-          )}
-
-          <div className="space-y-6">
-            {/* Name */}
-            <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Name
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 bg-black-light border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-white"
-                  placeholder="Your name"
-                />
-              ) : (
-                <div className="w-full px-4 py-3 bg-black-light border border-gray-700 rounded-lg text-white">
-                  {isGuest ? 'Guest User' : profile?.name || user?.user_metadata?.name || 'Not set'}
+      <main className="container mx-auto px-4 pt-20 pb-12">
+        <div className="max-w-4xl mx-auto">
+          {/* Profile Header */}
+          <div className="relative bg-gradient-to-b from-accent to-accent-dark rounded-3xl overflow-hidden mb-8">
+            <div className="p-8 pb-16 text-center">
+              {/* Avatar and Upload Button */}
+              <div className="relative inline-block mb-6">
+                <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-white/20 bg-gray-800">
+                  <Image
+                    src={avatarUrl}
+                    alt="Profile"
+                    width={128}
+                    height={128}
+                    className="object-cover h-full w-full"
+                  />
                 </div>
-              )}
-            </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Email
-              </label>
-              <div className="w-full px-4 py-3 bg-black-light border border-gray-700 rounded-lg text-white">
-                {isGuest ? 'guest@example.com' : profile?.email || user?.email || 'Not set'}
-              </div>
-            </div>
+                {!isGuest && (
+                  <label
+                    htmlFor="avatar-upload"
+                    className="absolute bottom-0 right-0 bg-white/90 p-2 rounded-full shadow-lg cursor-pointer hover:bg-white transition-colors"
+                  >
+                    <CameraIcon className="h-5 w-5 text-accent" />
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={isImageUploading}
+                    />
+                  </label>
+                )}
 
-            {/* Role */}
-            <div>
-              <label className="block text-gray-400 text-sm font-medium mb-2">
-                Account Type
-              </label>
-              <div className="w-full px-4 py-3 bg-black-light border border-gray-700 rounded-lg text-white">
-                {isGuest ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-700 text-gray-300">
-                    Guest
-                  </span>
-                ) : (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${
-                    profile?.role === 'admin' ? 'bg-accent/20 text-accent' : 'bg-gray-700 text-gray-300'
-                  }`}>
-                    {profile?.role === 'admin' ? 'Admin' : 'User'}
-                  </span>
+                {isImageUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                    <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-white rounded-full"></div>
+                  </div>
                 )}
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="pt-4 flex flex-col space-y-4">
-              {isEditing ? (
-                <div className="flex flex-col space-y-4">
-                  <button
-                    onClick={handleUpdateProfile}
-                    disabled={updateLoading}
-                    className="w-full bg-accent hover:bg-accent-dark text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300 disabled:opacity-70 flex justify-center items-center"
-                  >
-                    {updateLoading ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Saving...
-                      </>
-                    ) : "Save Profile"}
-                  </button>
-
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="w-full bg-transparent border border-gray-700 text-gray-300 font-bold py-3 px-4 rounded-lg hover:bg-black-light transition-colors duration-300"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col space-y-4">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="w-full bg-accent hover:bg-accent-dark text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300"
-                    disabled={isGuest}
-                  >
-                    Edit Profile
-                  </button>
-
-                  {isGuest && (
-                    <button
-                      onClick={() => router.push('/auth/signup')}
-                      className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300"
-                    >
-                      Create Account
-                    </button>
-                  )}
-
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full bg-transparent border border-gray-700 text-gray-300 font-bold py-3 px-4 rounded-lg hover:bg-black-light transition-colors duration-300"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
+              <h1 className="text-2xl font-bold text-white">
+                {isGuest ? "Guest User" : `${firstName} ${lastName}`}
+              </h1>
+              <p className="text-white/80 text-sm mt-1">
+                {isGuest ? "" : email}
+              </p>
             </div>
           </div>
-        </motion.div>
+
+          {/* Success message */}
+          {updateSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-green-900/30 border border-green-800 text-green-400 px-4 py-3 rounded-lg mb-6"
+            >
+              Your changes have been saved successfully.
+            </motion.div>
+          )}
+
+          {/* Error message */}
+          {updateError && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg mb-6"
+            >
+              {updateError}
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-1 gap-6">
+            {/* Profile Actions Section */}
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold uppercase text-gray-400 tracking-wider ml-2">Account Management</h2>
+
+              {/* Edit Profile Button */}
+              <button
+                onClick={() => !isGuest && setIsEditMode(true)}
+                className={`w-full flex items-center p-4 rounded-xl transition-colors ${
+                  isGuest
+                    ? "bg-black-light border border-gray-800 opacity-75"
+                    : "bg-black-medium border border-gray-800 hover:border-accent"
+                }`}
+              >
+                <div className="p-3 bg-accent/10 rounded-xl">
+                  <UserCircleIcon className="h-6 w-6 text-accent" />
+                </div>
+                <div className="ml-4 text-left">
+                  <p className="font-medium text-white">Edit Profile</p>
+                  <p className="text-sm text-gray-400">
+                    {isGuest ? "Sign in to edit your profile" : "Update your personal information"}
+                  </p>
+                </div>
+                <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
+              </button>
+
+              {/* Security Settings Button */}
+              <button
+                onClick={() => !isGuest && setIsSecuritySettingsVisible(true)}
+                className={`w-full flex items-center p-4 rounded-xl transition-colors ${
+                  isGuest
+                    ? "bg-black-light border border-gray-800 opacity-75"
+                    : "bg-black-medium border border-gray-800 hover:border-accent"
+                }`}
+              >
+                <div className="p-3 bg-accent/10 rounded-xl">
+                  <ShieldCheckIcon className="h-6 w-6 text-accent" />
+                </div>
+                <div className="ml-4 text-left">
+                  <p className="font-medium text-white">Security</p>
+                  <p className="text-sm text-gray-400">
+                    {isGuest ? "Sign in to access security settings" : "Password and privacy settings"}
+                  </p>
+                </div>
+                <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
+              </button>
+
+              {/* Notification Settings Button */}
+              <button
+                onClick={() => !isGuest && setIsNotificationSettingsVisible(true)}
+                className={`w-full flex items-center p-4 rounded-xl transition-colors ${
+                  isGuest
+                    ? "bg-black-light border border-gray-800 opacity-75"
+                    : "bg-black-medium border border-gray-800 hover:border-accent"
+                }`}
+              >
+                <div className="p-3 bg-accent/10 rounded-xl">
+                  <BellIcon className="h-6 w-6 text-accent" />
+                </div>
+                <div className="ml-4 text-left">
+                  <p className="font-medium text-white">Notifications</p>
+                  <p className="text-sm text-gray-400">
+                    {isGuest ? "Sign in to manage notifications" : "Customize your notification preferences"}
+                  </p>
+                </div>
+                <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Support Section */}
+            <div className="space-y-4 mt-6">
+              <h2 className="text-sm font-semibold uppercase text-gray-400 tracking-wider ml-2">Support & Help</h2>
+
+              {/* WhatsApp Support Button */}
+              <button
+                onClick={handleWhatsAppSupport}
+                className="w-full flex items-center p-4 rounded-xl bg-black-medium border border-gray-800 hover:border-green-500 transition-colors"
+              >
+                <div className="p-3 bg-green-500/10 rounded-xl">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-green-500" />
+                </div>
+                <div className="ml-4 text-left">
+                  <p className="font-medium text-white">WhatsApp Support</p>
+                  <p className="text-sm text-gray-400">Available 24/7</p>
+                </div>
+                <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
+              </button>
+
+              {/* Email Support Button */}
+              <button
+                onClick={handleEmailSupport}
+                className="w-full flex items-center p-4 rounded-xl bg-black-medium border border-gray-800 hover:border-blue-500 transition-colors"
+              >
+                <div className="p-3 bg-blue-500/10 rounded-xl">
+                  <EnvelopeIcon className="h-6 w-6 text-blue-500" />
+                </div>
+                <div className="ml-4 text-left">
+                  <p className="font-medium text-white">Email Support</p>
+                  <p className="text-sm text-gray-400">Detailed inquiries</p>
+                </div>
+                <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Sign Out Button (Only show for non-guest users) */}
+            {!isGuest && (
+              <button
+                onClick={handleSignOut}
+                className="w-full mt-8 p-4 border border-accent text-accent hover:bg-accent/10 font-medium rounded-xl transition-colors"
+              >
+                Sign Out
+              </button>
+            )}
+          </div>
+        </div>
       </main>
+
+      {/* Edit Profile Modal */}
+      <AnimatePresence>
+        {isEditMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-black-medium border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Edit Profile</h2>
+                <button
+                  onClick={() => setIsEditMode(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full p-3 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                    placeholder="First Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full p-3 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                    placeholder="Last Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    disabled
+                    className="w-full p-3 bg-black-light/50 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed"
+                    placeholder="Email"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setIsEditMode(false)}
+                  className="flex-1 p-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-black-light transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateProfile}
+                  disabled={isLoading}
+                  className="flex-1 p-3 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors disabled:opacity-70 flex justify-center items-center"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : "Save Changes"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Security Settings Modal */}
+      <AnimatePresence>
+        {isSecuritySettingsVisible && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-black-medium border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Security & Privacy</h2>
+                <button
+                  onClick={() => setIsSecuritySettingsVisible(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => {
+                    setIsSecuritySettingsVisible(false);
+                    setIsChangePasswordMode(true);
+                  }}
+                  className="w-full flex items-center justify-between p-4 rounded-lg bg-black-light hover:bg-black-light/80 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <KeyIcon className="h-5 w-5 text-gray-400" />
+                    <span className="ml-3 text-white">Change Password</span>
+                  </div>
+                  <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+                </button>
+
+                <button
+                  className="w-full flex items-center justify-between p-4 rounded-lg bg-black-light hover:bg-black-light/80 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
+                    <span className="ml-3 text-white">Privacy Policy</span>
+                  </div>
+                  <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+                </button>
+
+                <button
+                  className="w-full flex items-center justify-between p-4 rounded-lg bg-black-light hover:bg-black-light/80 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                    <span className="ml-3 text-white">Account Security</span>
+                  </div>
+                  <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsSecuritySettingsVisible(false)}
+                className="w-full mt-6 p-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-black-light transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {isChangePasswordMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-black-medium border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Change Password</h2>
+                <button
+                  onClick={() => setIsChangePasswordMode(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Current Password</label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                      placeholder="Current password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
+                    >
+                      {showCurrentPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                      placeholder="New password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
+                    >
+                      {showNewPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters</p>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Confirm New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                      placeholder="Confirm new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
+                    >
+                      {showConfirmPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setIsChangePasswordMode(false)}
+                  className="flex-1 p-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-black-light transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={isLoading}
+                  className="flex-1 p-3 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors disabled:opacity-70 flex justify-center items-center"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </>
+                  ) : "Update Password"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Notification Settings Modal */}
+      <AnimatePresence>
+        {isNotificationSettingsVisible && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-black-medium border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Notification Settings</h2>
+                <button
+                  onClick={() => setIsNotificationSettingsVisible(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {(Object.keys(notificationSettings) as Array<keyof NotificationSettings>).map((key) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between p-4 bg-black-light rounded-lg"
+                  >
+                    <div className="flex items-center">
+                      {notificationSettings[key] ? (
+                        <BellIcon className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <BellSlashIcon className="h-5 w-5 text-gray-400" />
+                      )}
+                      <span className="ml-3 text-white capitalize">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => toggleNotification(key)}
+                      className={`w-12 h-6 rounded-full flex items-center transition-colors ${
+                        notificationSettings[key] ? 'bg-accent justify-end' : 'bg-gray-700 justify-start'
+                      }`}
+                    >
+                      <span className={`h-5 w-5 rounded-full mx-0.5 ${
+                        notificationSettings[key] ? 'bg-white' : 'bg-gray-400'
+                      }`}></span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setIsNotificationSettingsVisible(false)}
+                className="w-full mt-6 p-3 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors"
+              >
+                Save Settings
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

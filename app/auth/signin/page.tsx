@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+
 import { useAuth } from '@/utils/AuthContext';
 import { useGuestUser } from '@/utils/GuestUserContext';
 import { useRouter } from 'next/navigation';
@@ -89,19 +91,26 @@ export default function SignInPage() {
     }
   };
 
-  // Handle guest login
-  const handleGuestSignIn = async () => {
-    setIsGuestLoading(true);
-    try {
-      await setGuestMode(true);
-      router.push('/home');
-    } catch (err) {
-      console.error("Guest mode error:", err);
-      setError("Failed to continue as guest. Please try again.");
-    } finally {
-      setIsGuestLoading(false);
-    }
-  };
+const handleGuestSignIn = async () => {
+  setIsGuestLoading(true);
+  try {
+    // 1. Set localStorage (for client-side detection)
+    const guestId = uuidv4(); // Make sure to import uuidv4 from 'uuid'
+    localStorage.setItem('isGuestUser', 'true');
+    localStorage.setItem('guestUserId', guestId);
+
+    // 2. Set a cookie (for server-side/middleware detection)
+    document.cookie = `isGuestUser=true; path=/; max-age=86400`; // 24 hours
+    document.cookie = `guestUserId=${guestId}; path=/; max-age=86400`;
+
+    // 3. Use URL parameter for first navigation (as fallback)
+    window.location.href = '/home?guest=true';
+  } catch (err) {
+    console.error("Guest mode error:", err);
+    setError("Failed to continue as guest. Please try again.");
+    setIsGuestLoading(false);
+  }
+};
 
   // Handle Google sign in
   const handleGoogleSignIn = async () => {

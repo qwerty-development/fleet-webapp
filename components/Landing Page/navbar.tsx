@@ -63,14 +63,18 @@ export default function Navbar() {
     }
   }
 
-  const handleSignOut = async () => {
-    if (isGuest) {
-      await clearGuestMode()
-    } else {
-      await signOut()
-    }
-    router.push('/')
+const handleSignOut = async () => {
+  // Do not show sign-out for guest users, but keep the function
+  // in case it's called programmatically
+  if (isGuest) {
+    // Optional: Navigate to home instead of clearing guest mode
+    router.push('/home');
+    return;
   }
+
+  await signOut();
+  router.push('/');
+};
 
   return (
     <header
@@ -99,39 +103,58 @@ export default function Navbar() {
             </a>
           ))}
         </div>
-        <div className="flex flex-1 items-center justify-end gap-x-6">
-          {isSignedIn || isGuest ? (
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/home"
-                className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={handleSignOut}
-                className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
-              >
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/auth/signin"
-                className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/auth/signup"
-                className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-accent-dark transition-colors duration-300"
-              >
-                Sign up
-              </Link>
-            </div>
-          )}
-        </div>
+
+<div className="flex flex-1 items-center justify-end gap-x-6">
+  {isSignedIn ? (
+    // SIGNED-IN USER OPTIONS
+    <div className="flex items-center space-x-4">
+      <Link
+        href="/home"
+        className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
+      >
+        Dashboard
+      </Link>
+      <button
+        onClick={handleSignOut}
+        className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
+      >
+        Sign Out
+      </button>
+    </div>
+  ) : isGuest ? (
+    // GUEST USER OPTIONS - No sign out button
+    <div className="flex items-center space-x-4">
+      <Link
+        href="/home"
+        className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
+      >
+        Dashboard
+      </Link>
+      <Link
+        href="/auth/signup"
+        className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-accent-dark transition-colors duration-300"
+      >
+        Create Account
+      </Link>
+    </div>
+  ) : (
+    // NOT SIGNED IN OPTIONS
+    <div className="flex items-center space-x-4">
+      <Link
+        href="/auth/signin"
+        className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
+      >
+        Log in
+      </Link>
+      <Link
+        href="/auth/signup"
+        className="rounded-md bg-accent px-3 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-accent-dark transition-colors duration-300"
+      >
+        Sign up
+      </Link>
+    </div>
+  )}
+</div>
         <div className="flex lg:hidden">
           <button
             type="button"
@@ -182,39 +205,57 @@ export default function Navbar() {
                   </a>
                 ))}
               </div>
-              <div className="py-6">
-                {isSignedIn || isGuest ? (
-                  <>
-                    <Link
-                      href="/home"
-                      className="flex items-center px-3 py-2 text-base/7 font-semibold text-foreground hover:bg-black-light rounded-md"
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="flex w-full items-center px-3 py-2 text-base/7 font-semibold text-foreground hover:bg-black-light rounded-md"
-                    >
-                      Sign Out
-                    </button>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <Link
-                      href="/auth/signin"
-                      className="text-center px-4 py-2 text-base/7 font-semibold text-foreground hover:text-white border border-gray-700 rounded-lg transition-colors"
-                    >
-                      Log in
-                    </Link>
-                    <Link
-                      href="/auth/signup"
-                      className="text-center px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors"
-                    >
-                      Sign up
-                    </Link>
-                  </div>
-                )}
-              </div>
+          <div className="py-6">
+  {isSignedIn ? (
+    // SIGNED-IN USER OPTIONS
+    <>
+      <Link
+        href="/home"
+        className="flex items-center px-3 py-2 text-base/7 font-semibold text-foreground hover:bg-black-light rounded-md"
+      >
+        Dashboard
+      </Link>
+      <button
+        onClick={handleSignOut}
+        className="flex w-full items-center px-3 py-2 text-base/7 font-semibold text-foreground hover:bg-black-light rounded-md"
+      >
+        Sign Out
+      </button>
+    </>
+  ) : isGuest ? (
+    // GUEST USER OPTIONS - No sign out button
+    <>
+      <Link
+        href="/home"
+        className="flex items-center px-3 py-2 text-base/7 font-semibold text-foreground hover:bg-black-light rounded-md"
+      >
+        Dashboard
+      </Link>
+      <Link
+        href="/auth/signup"
+        className="flex items-center px-3 py-2 text-base/7 font-semibold text-foreground hover:bg-accent/20 rounded-md"
+      >
+        Create Account
+      </Link>
+    </>
+  ) : (
+    // NOT SIGNED IN OPTIONS
+    <div className="grid grid-cols-2 gap-2 pt-2">
+      <Link
+        href="/auth/signin"
+        className="text-center px-4 py-2 text-base/7 font-semibold text-foreground hover:text-white border border-gray-700 rounded-lg transition-colors"
+      >
+        Log in
+      </Link>
+      <Link
+        href="/auth/signup"
+        className="text-center px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors"
+      >
+        Sign up
+      </Link>
+    </div>
+  )}
+</div>
             </div>
           </div>
         </DialogPanel>

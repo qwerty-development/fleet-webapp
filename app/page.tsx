@@ -41,32 +41,43 @@ export default function Home() {
   const { isGuest, setGuestMode, clearGuestMode } = useGuestUser();
   const router = useRouter();
 
-  // Handle guest mode from URL query parameter
-  useEffect(() => {
-    const handleGuestModeFromQuery = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const guestParam = urlParams.get("guest");
-      if (guestParam === "true" && !isSignedIn && !isGuest) {
-        await setGuestMode(true);
-        router.push("/home");
-      }
-    };
-    handleGuestModeFromQuery();
-  }, [isSignedIn, isGuest, setGuestMode, router]);
+useEffect(() => {
+  const handleGuestModeFromQuery = async () => {
+    if (typeof window === 'undefined') return;
 
-  // Redirect authenticated or guest users away from the landing page
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (isSignedIn) {
-      if (profile?.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/home");
-      }
-    } else if (isGuest) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const guestParam = urlParams.get("guest");
+
+    if (guestParam === "true" && !isSignedIn && !isGuest) {
+      await setGuestMode(true);
+
+      // Remove the URL parameter without redirecting
+      const url = new URL(window.location.href);
+      url.searchParams.delete('guest');
+      window.history.replaceState({}, '', url.toString());
+
+      // Do not redirect to /home
+    }
+  };
+
+  if (isLoaded) {
+    handleGuestModeFromQuery();
+  }
+}, [isLoaded, isSignedIn, isGuest, setGuestMode]);
+
+useEffect(() => {
+  if (!isLoaded) return;
+
+  if (isSignedIn) {
+    // Redirect signed-in users based on role
+    if (profile?.role === "admin") {
+      router.push("/admin");
+    } else {
       router.push("/home");
     }
-  }, [isLoaded, isSignedIn, isGuest, profile, router]);
+  }
+
+}, [isLoaded, isSignedIn, profile, router]);
 
   // Local state for scroll tracking and splash screen
   const [scrollY, setScrollY] = useState(0);
