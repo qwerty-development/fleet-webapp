@@ -43,7 +43,7 @@ interface NotificationSettings {
 }
 
 export default function ProfilePage() {
-  const { user, profile, isLoaded, isSignedIn, updateUserProfile, updatePassword, signOut } = useAuth();
+  const { user, profile, isLoaded, updateUserProfile, updatePassword, signOut,refreshSession } = useAuth();
   const { isGuest, clearGuestMode } = useGuestUser();
   const router = useRouter();
   const supabase = createClient();
@@ -136,6 +136,7 @@ const handleUpdateProfile = async () => {
     setTimeout(() => {
       setUpdateSuccess(false);
     }, 3000);
+    await refreshSession(); // Assuming refreshSession function exists in your AuthContext
   } catch (error: any) {
     console.error('Error updating profile:', error);
     // Handle both direct errors and error objects

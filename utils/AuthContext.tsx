@@ -24,7 +24,7 @@ interface AuthContextProps {
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
   googleSignIn: () => Promise<void>;
   refreshSession: () => Promise<void>;
-  updateUserProfile: (data: Partial<UserProfile>) => Promise<{ error: Error | null }>;
+  updateUserProfile: any;
   updateUserRole: (userId: string, newRole: string) => Promise<{ error: Error | null }>;
 }
 
@@ -497,41 +497,75 @@ const updatePassword = async ({
     }
   };
 
-  // Update User Profile
-  const updateUserProfile = async (data: Partial<UserProfile>) => {
-    try {
-      if (!user) throw new Error('No user is signed in');
 
-      // Update the user metadata in Supabase Auth if name is provided
-      if (data.name) {
-        const { error: authUpdateError } = await supabase.auth.updateUser({
-          data: { name: data.name }
-        });
+const updateUserProfile = async (data: Partial<UserProfile>) => {
+  try {
+    if (!user) throw new Error('No user is signed in');
 
-        if (authUpdateError) {
-          console.error('Error updating auth user metadata:', authUpdateError);
-        }
+    // Step 1: Log the update attempt for troubleshooting
+    console.log('Profile update initiated:', {
+      userId: user.id,
+      updateData: data,
+      timestamp: new Date().toISOString()
+    });
+
+    // Step 2: Update user metadata in Supabase Auth
+    // This will automatically trigger the database sync to public.users table
+    const { data: authUpdateData, error: authUpdateError } = await supabase.auth.updateUser({
+      data: {
+        name: data.name,  // Primary field used by the trigger
+        full_name: data.name  // Backup field for compatibility
       }
+    });
 
-      // Update the profile in the database
-      const { error } = await supabase
-        .from('users')
-        .update(data)
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Update the local profile state
-      if (profile) {
-        setProfile({ ...profile, ...data });
-      }
-
-      return { error: null };
-    } catch (error: any) {
-      console.error('Update profile error:', error);
-      return { error };
+    if (authUpdateError) {
+      console.error('Error updating auth user metadata:', authUpdateError);
+      throw authUpdateError;
     }
-  };
+
+    console.log('Auth user metadata successfully updated');
+
+    // Step 3: Fetch the updated profile to verify changes and update local state
+    const { data: updatedProfile, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching updated profile:', fetchError);
+      throw fetchError;
+    }
+
+    // Step 4: Update the local profile state with the latest data
+    if (profile) {
+      setProfile(updatedProfile as UserProfile);
+    }
+
+    // Step 5: Return success response with updated data
+    return {
+      error: null,
+      data: updatedProfile
+    };
+
+  } catch (error: any) {
+    // Step 6: Error handling
+    console.error('Profile update failed:', error);
+
+    // Provide a more specific error message if available
+    let errorMessage = 'Failed to update profile. Please try again.';
+    if (error.message) {
+      errorMessage = error.message;
+    }
+
+    return {
+      error: {
+        original: error,
+        message: errorMessage
+      }
+    };
+  }
+};
 
   // Update User Role
   const updateUserRole = async (userId: string, newRole: string) => {
