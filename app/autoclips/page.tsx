@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Navbar from "@/components/home/Navbar";
 import { createClient } from "@/utils/supabase/client";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import AutoClipCard from "@/components/autoclips/AutoClipCard";
 import { useSearchParams } from 'next/navigation';
@@ -45,10 +47,14 @@ const AutoClipsContent = () => {
   const [clips, setClips] = useState<AutoClip[]>([]);
   const [currentClipIndex, setCurrentClipIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [likedClips, setLikedClips] = useState<number[]>([]);
   const clipContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
   const observer = useRef<IntersectionObserver | null>(null);
+  const viewedClips = useRef<Set<number>>(new Set());
   const searchParams = useSearchParams();
+
+  // Auth integration
+  const { user, isSignedIn } = useAuth();
+  const { isGuest, guestId } = useGuestUser();
 
   const supabase = createClient();
 
@@ -81,12 +87,14 @@ const AutoClipsContent = () => {
             .eq("id", clip.car_id)
             .single();
 
-          // Safely parse JSON fields with error handling
-          let likedUsers = [];
-          let viewedUsers = [];
+          // Safely parse liked_users and viewed_users arrays
+          let likedUsers: string[] = [];
+          let viewedUsers: string[] = [];
 
           try {
-            if (clip.liked_users && typeof clip.liked_users === 'string' && clip.liked_users.trim() !== '') {
+            if (Array.isArray(clip.liked_users)) {
+              likedUsers = clip.liked_users;
+            } else if (typeof clip.liked_users === 'string' && clip.liked_users.trim() !== '') {
               likedUsers = JSON.parse(clip.liked_users);
             }
           } catch (e) {
@@ -94,7 +102,9 @@ const AutoClipsContent = () => {
           }
 
           try {
-            if (clip.viewed_users && typeof clip.viewed_users === 'string' && clip.viewed_users.trim() !== '') {
+            if (Array.isArray(clip.viewed_users)) {
+              viewedUsers = clip.viewed_users;
+            } else if (typeof clip.viewed_users === 'string' && clip.viewed_users.trim() !== '') {
               viewedUsers = JSON.parse(clip.viewed_users);
             }
           } catch (e) {
@@ -103,7 +113,6 @@ const AutoClipsContent = () => {
 
           return {
             ...clip,
-            dealership_id: clip.dealership_id,
             dealership_name: dealershipData?.name || "Unknown Dealership",
             dealership_logo: dealershipData?.logo || "/placeholder-logo.png",
             car_make: carData?.make || "Unknown",
@@ -160,8 +169,11 @@ const AutoClipsContent = () => {
             const index = parseInt(entry.target.getAttribute('data-index') || '0');
             setCurrentClipIndex(index);
 
-            // Update view count when a clip becomes visible
-            updateViewCount(index);
+            // Track view when clip becomes visible
+            const clipId = clips[index]?.id;
+            if (clipId) {
+              trackClipView(clipId);
+            }
           }
         });
       },
@@ -182,73 +194,98 @@ const AutoClipsContent = () => {
     };
   }, [clips.length]);
 
-  // Update view count for a clip
-  const updateViewCount = async (index: number) => {
-    const clip = clips[index];
-    if (!clip) return;
+  // Track view count for a clip using RPC
+  const trackClipView = useCallback(async (clipId: number) => {
+    // Skip if clip has already been viewed in this session
+    if (viewedClips.current.has(clipId)) return;
+
+    // Get appropriate user ID
+    const userId = isGuest
+      ? `guest_${guestId}`
+      : (user?.id || null);
+
+    // Skip if no user ID is available
+    if (!userId) return;
 
     try {
-      // In a real app, you would check if the user has already viewed the clip
-      // For demo purposes, we'll just increment the view count
+      // Call the RPC function
+      const { error } = await supabase.rpc('track_autoclip_view', {
+        clip_id: clipId,
+        user_id: userId
+      });
 
-      // Update in state
-      const updatedClips = [...clips];
-      updatedClips[index] = {
-        ...updatedClips[index],
-        views: updatedClips[index].views + 1
-      };
-      setClips(updatedClips);
+      if (error) throw error;
 
-      // Update in database (would include user tracking in a real app)
-      await supabase
-        .from("auto_clips")
-        .update({ views: clip.views + 1 })
-        .eq("id", clip.id);
-    } catch (error) {
-      console.error("Error updating view count:", error);
+      // Mark clip as viewed in this session
+      viewedClips.current.add(clipId);
+
+      // Update the view count in the state
+      setClips(prev =>
+        prev.map(clip =>
+          clip.id === clipId
+            ? { ...clip, views: (clip.views || 0) + 1 }
+            : clip
+        )
+      );
+    } catch (err) {
+      console.error('Error tracking view:', err);
     }
-  };
+  }, [isGuest, guestId, user, supabase]);
 
-  // Handle like/unlike clip
-  const toggleLike = async (clipId: number) => {
+  // Handle like/unlike clip using RPC
+  const toggleLike = useCallback(async (clipId: number) => {
+    // Get appropriate user ID
+    const userId = isGuest
+      ? `guest_${guestId}`
+      : (user?.id || null);
+
+    // Skip if no user ID is available
+    if (!userId) return;
+
     try {
-      if (likedClips.includes(clipId)) {
-        // Unlike
-        setLikedClips(likedClips.filter(id => id !== clipId));
+      // Call the RPC function that handles the toggle
+      const { data: newLikesCount, error } = await supabase.rpc(
+        'toggle_autoclip_like',
+        {
+          clip_id: clipId,
+          user_id: userId
+        }
+      );
 
-        // Update clip in state to show decreased like count
-        setClips(prevClips =>
-          prevClips.map(clip =>
-            clip.id === clipId ? { ...clip, likes: clip.likes - 1 } : clip
-          )
-        );
+      if (error) throw error;
 
-        // Update in database (would include user tracking in a real app)
-        await supabase
-          .from("auto_clips")
-          .update({ likes: clips.find(c => c.id === clipId)!.likes - 1 })
-          .eq("id", clipId);
-      } else {
-        // Like
-        setLikedClips([...likedClips, clipId]);
+      // Update the clip in state with new likes count and liked_users
+      setClips(prev =>
+        prev.map(clip => {
+          if (clip.id === clipId) {
+            const isCurrentlyLiked = clip.liked_users?.includes(userId);
+            const updatedLikedUsers = isCurrentlyLiked
+              ? (clip.liked_users || []).filter(id => id !== userId)
+              : [...(clip.liked_users || []), userId];
 
-        // Update clip in state to show increased like count
-        setClips(prevClips =>
-          prevClips.map(clip =>
-            clip.id === clipId ? { ...clip, likes: clip.likes + 1 } : clip
-          )
-        );
-
-        // Update in database (would include user tracking in a real app)
-        await supabase
-          .from("auto_clips")
-          .update({ likes: clips.find(c => c.id === clipId)!.likes + 1 })
-          .eq("id", clipId);
-      }
-    } catch (error) {
-      console.error("Error updating like status:", error);
+            return {
+              ...clip,
+              likes: newLikesCount as number,
+              liked_users: updatedLikedUsers
+            };
+          }
+          return clip;
+        })
+      );
+    } catch (err) {
+      console.error('Error toggling like:', err);
     }
-  };
+  }, [isGuest, guestId, user, supabase]);
+
+  // Check if a clip is liked by the current user
+  const isClipLiked = useCallback((clip: AutoClip) => {
+    const userId = isGuest
+      ? `guest_${guestId}`
+      : (user?.id || null);
+
+    if (!userId || !clip.liked_users) return false;
+    return clip.liked_users.includes(userId);
+  }, [isGuest, guestId, user]);
 
   // Navigate to previous clip
   const goToPrevClip = () => {
@@ -320,8 +357,8 @@ const AutoClipsContent = () => {
                       clip={clip}
                       isActive={index === currentClipIndex}
                       isFullscreen={true}
-                      onLikeToggle={toggleLike}
-                      isLiked={likedClips.includes(clip.id)}
+                      onLikeToggle={() => toggleLike(clip.id)}
+                      isLiked={isClipLiked(clip)}
                     />
                   </div>
                 ))}
