@@ -7,7 +7,7 @@ import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import AutoClipCard from "@/components/autoclips/AutoClipCard";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface AutoClip {
   id: number;
@@ -156,44 +156,6 @@ const AutoClipsContent = () => {
     fetchClips();
   }, [fetchClips]);
 
-  // Set up Intersection Observer to detect which clip is in view
-  useEffect(() => {
-    // Initialize an array of refs for each clip
-    clipContainerRefs.current = clipContainerRefs.current.slice(0, clips.length);
-
-    // Set up intersection observer
-    observer.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = parseInt(entry.target.getAttribute('data-index') || '0');
-            setCurrentClipIndex(index);
-
-            // Track view when clip becomes visible
-            const clipId = clips[index]?.id;
-            if (clipId) {
-              trackClipView(clipId);
-            }
-          }
-        });
-      },
-      { threshold: 0.6 } // Clip is considered in view when 60% visible
-    );
-
-    // Start observing all clip containers
-    clipContainerRefs.current.forEach((ref, index) => {
-      if (ref && observer.current) {
-        observer.current.observe(ref);
-      }
-    });
-
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-    };
-  }, [clips.length]);
-
   // Track view count for a clip using RPC
   const trackClipView = useCallback(async (clipId: number) => {
     // Skip if clip has already been viewed in this session
@@ -232,12 +194,60 @@ const AutoClipsContent = () => {
     }
   }, [isGuest, guestId, user, supabase]);
 
+  // Set up Intersection Observer to detect which clip is in view
+  useEffect(() => {
+    // Initialize an array of refs for each clip
+    clipContainerRefs.current = clipContainerRefs.current.slice(0, clips.length);
+
+    // Set up intersection observer
+    observer.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.getAttribute('data-index') || '0');
+            setCurrentClipIndex(index);
+
+            // Track view when clip becomes visible
+            const clipId = clips[index]?.id;
+            if (clipId) {
+              trackClipView(clipId);
+            }
+          }
+        });
+      },
+      { threshold: 0.6 } // Clip is considered in view when 60% visible
+    );
+
+    // Start observing all clip containers
+    clipContainerRefs.current.forEach((ref, index) => {
+      if (ref && observer.current) {
+        observer.current.observe(ref);
+      }
+    });
+
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [clips.length, trackClipView]);
+
+
+
+  // State for auth modal
+  const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
+
   // Handle like/unlike clip using RPC
   const toggleLike = useCallback(async (clipId: number) => {
-    // Get appropriate user ID
-    const userId = isGuest
-      ? `guest_${guestId}`
-      : (user?.id || null);
+    // Check if user is signed in (not a guest)
+    if (isGuest || !isSignedIn) {
+      // Show auth modal instead of liking
+      setIsAuthModalVisible(true);
+      return;
+    }
+
+    // Get user ID for authenticated user
+    const userId = user?.id;
 
     // Skip if no user ID is available
     if (!userId) return;
@@ -275,17 +285,18 @@ const AutoClipsContent = () => {
     } catch (err) {
       console.error('Error toggling like:', err);
     }
-  }, [isGuest, guestId, user, supabase]);
+  }, [isGuest, isSignedIn, user, supabase]);
 
   // Check if a clip is liked by the current user
   const isClipLiked = useCallback((clip: AutoClip) => {
-    const userId = isGuest
-      ? `guest_${guestId}`
-      : (user?.id || null);
+    // Guests can't like clips, so always return false for guests
+    if (isGuest || !isSignedIn) return false;
+
+    const userId = user?.id;
 
     if (!userId || !clip.liked_users) return false;
     return clip.liked_users.includes(userId);
-  }, [isGuest, guestId, user]);
+  }, [isGuest, isSignedIn, user]);
 
   // Navigate to previous clip
   const goToPrevClip = () => {
@@ -328,6 +339,21 @@ const AutoClipsContent = () => {
     window.addEventListener('resize', getNavbarHeight);
     return () => window.removeEventListener('resize', getNavbarHeight);
   }, []);
+
+  // Navigation for sign in functionality
+  const router = useRouter();
+  const handleSignIn = useCallback(() => {
+    // Close the modal
+    setIsAuthModalVisible(false);
+
+    // Navigate to sign in page
+    router.push('/auth/signin');
+  }, [router]);
+
+  // Handler for closing the modal
+  const handleCloseModal = () => {
+    setIsAuthModalVisible(false);
+  };
 
   return (
     <div className="h-screen bg-black flex flex-col">
@@ -375,6 +401,43 @@ const AutoClipsContent = () => {
             </div>
           </div>
         )}
+
+        {/* Authentication Required Modal */}
+        {isAuthModalVisible && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 m-4 max-w-sm w-full shadow-2xl animate-fade-in">
+              <div className="flex flex-col items-center text-center">
+                {/* Lock Icon */}
+                <div className="bg-accent/10 p-4 rounded-full mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-2">Sign In Required</h3>
+                <p className="text-gray-400 mb-6">
+                  Please sign in to like autoclips and track your favorites.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  <button
+                    onClick={handleSignIn}
+                    className="flex-1 bg-accent hover:bg-accent-dark text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={handleCloseModal}
+                    className="flex-1 border border-gray-700 text-gray-300 hover:bg-gray-800 py-3 px-6 rounded-lg font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Hidden scrollbar styles */}
@@ -393,6 +456,15 @@ const AutoClipsContent = () => {
           margin: 0;
           padding: 0;
           overflow: hidden;
+        }
+
+        /* Animation for modal fade-in */
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
     </div>
