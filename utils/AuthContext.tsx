@@ -77,6 +77,11 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
       async (event, currentSession) => {
         console.log('Auth state change event:', event);
 
+        if(event=='USER_UPDATED'){
+          router.refresh();
+          window.location.reload();
+        }
+
         if (currentSession) {
           setSession(currentSession);
           setUser(currentSession.user);
@@ -420,28 +425,46 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
   };
 
   // Update Password
-  const updatePassword = async ({ currentPassword, newPassword }: { currentPassword: string, newPassword: string }) => {
-    try {
-      // First verify the current password by attempting to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user?.email || '',
-        password: currentPassword,
-      });
+// Update Password
+const updatePassword = async ({
+  currentPassword,
+  newPassword,
+}: {
+  currentPassword: string;
+  newPassword: string;
+}) => {
+  try {
+    // Verify the current password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email || "",
+      password: currentPassword,
+    });
 
-      if (signInError) throw new Error('Current password is incorrect');
-
-      // If verification succeeded, update to the new password
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
-      return { error: null };
-    } catch (error: any) {
-      console.error('Update password error:', error);
-      return { error };
+    if (signInError) {
+      console.error("Current password verification failed:", signInError);
+      return { error: new Error("Current password is incorrect") };
     }
-  };
+
+    // Update to the new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    window.location.reload();
+
+    if (updateError) {
+      console.error("Password update failed:", updateError);
+      return { error: updateError };
+    }
+
+    console.log("Password updated successfully");
+    return { error: null };
+  } catch (error: any) {
+    console.error("Update password error:", error);
+    return { error };
+  }
+};
+
 
   // Verify OTP for email verification
   const verifyOtp = async (email: string, token: string) => {
