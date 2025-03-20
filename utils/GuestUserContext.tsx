@@ -54,7 +54,7 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (typeof window === 'undefined' || isInitialized) return;
 
     try {
-      console.log('GuestUserContext: Initializing...');
+
 
       // Check localStorage first
       const storedIsGuest = localStorage.getItem('isGuestUser');
@@ -64,17 +64,14 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const cookieIsGuest = getCookie('isGuestUser');
       const cookieGuestId = getCookie('guestUserId');
 
-      console.log('GuestUserContext: Found stored values:', {
-        localStorage: { isGuest: storedIsGuest, guestId: storedGuestId },
-        cookies: { isGuest: cookieIsGuest, guestId: cookieGuestId }
-      });
+
 
       // Use either localStorage or cookie values, preferring localStorage
       const isGuestActive = storedIsGuest === 'true' || cookieIsGuest === 'true';
       const userGuestId = storedGuestId || cookieGuestId;
 
       if (isGuestActive && userGuestId) {
-        console.log('GuestUserContext: Setting guest mode from stored values');
+
         setIsGuest(true);
         setGuestId(userGuestId);
 
@@ -88,27 +85,27 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.error('GuestUserContext: Error loading guest state:', error);
     } finally {
       setIsInitialized(true);
-      console.log('GuestUserContext: Initialization complete');
+
     }
   }, [isInitialized]);
 
   // Set guest mode
   const setGuestMode = useCallback(async (isActive: boolean): Promise<string | null> => {
-    console.log('GuestUserContext: setGuestMode called with', isActive);
+
 
     if (typeof window === 'undefined') {
-      console.log('GuestUserContext: Window not available, returning null');
+
       return null;
     }
 
     try {
       // Generate new ID if needed, or use existing one
       const id = isActive ? (guestId || uuidv4()) : null;
-      console.log('GuestUserContext: Using guest ID:', id);
+
 
       // Update storage mechanisms
       if (isActive && id) {
-        console.log('GuestUserContext: Setting storage values');
+
 
         // Set localStorage (client-side)
         localStorage.setItem('isGuestUser', 'true');
@@ -118,7 +115,7 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCookie('isGuestUser', 'true');
         setCookie('guestUserId', id);
       } else {
-        console.log('GuestUserContext: Clearing storage values');
+
 
         // Clear localStorage
         localStorage.removeItem('isGuestUser');
@@ -130,7 +127,7 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Update state
-      console.log('GuestUserContext: Updating state');
+
       setIsGuest(isActive);
       setGuestId(id);
 
@@ -144,16 +141,16 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Clear guest mode
   const clearGuestMode = useCallback(async (): Promise<void> => {
-    console.log('GuestUserContext: clearGuestMode called');
+
 
     if (typeof window === 'undefined') {
-      console.log('GuestUserContext: Window not available, returning');
+
       return;
     }
 
     try {
       // Clear all storage mechanisms
-      console.log('GuestUserContext: Clearing storage values');
+
 
       // Clear localStorage
       localStorage.removeItem('isGuestUser');
@@ -163,8 +160,7 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       deleteCookie('isGuestUser');
       deleteCookie('guestUserId');
 
-      // Update state
-      console.log('GuestUserContext: Updating state');
+
       setIsGuest(false);
       setGuestId(null);
     } catch (error) {
@@ -203,7 +199,7 @@ export const GuestUserProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Log state changes during development
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('GuestUserContext: State updated:', { isGuest, guestId });
+
     }
   }, [isGuest, guestId]);
 

@@ -22,10 +22,11 @@ interface AuthContextProps {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (params: { currentPassword: string, newPassword: string }) => Promise<{ error: Error | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
-  googleSignIn: () => Promise<void>;
+
   refreshSession: () => Promise<void>;
   updateUserProfile: any;
   updateUserRole: (userId: string, newRole: string) => Promise<{ error: Error | null }>;
+signInWithIdToken: any
 }
 
 export interface UserProfile {
@@ -251,28 +252,43 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     }
   };
 
-  // Google Sign In
-  const googleSignIn = async () => {
-    try {
-      if (isGuest) {
-        await clearGuestMode();
-      }
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
 
-      if (error) throw error;
+const signInWithIdToken = async ({
+  provider,
+  token
+}: {
+  provider: 'google' | 'apple' | 'facebook',
+  token: string
+}) => {
+  try {
+    console.log(`Signing in with ${provider} ID token`);
 
-      // The OAuth sign-in process will redirect the user away from the current page
-      // and eventually back to the callback URL, so we don't need to handle navigation here
-    } catch (error) {
-      console.error('Google sign in error:', error);
+    if (isGuest) {
+      await clearGuestMode();
     }
-  };
+
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider,
+      token,
+    });
+
+    if (error) {
+      console.error(`${provider} ID token sign-in error:`, error);
+      throw error;
+    }
+
+    if (data.user) {
+      await fetchUserProfile(data.user.id);
+    }
+
+    return { data, error: null };
+  } catch (error: any) {
+    console.error(`${provider} ID token sign-in error:`, error);
+    return { data: null, error };
+  }
+};
+
 
   // Email/Password Sign In
   const signIn = async ({ email, password }: SignInCredentials) => {
@@ -613,10 +629,10 @@ const updateUserProfile = async (data: Partial<UserProfile>) => {
         resetPassword,
         updatePassword,
         verifyOtp,
-        googleSignIn,
         refreshSession,
         updateUserProfile,
-        updateUserRole
+        updateUserRole,
+          signInWithIdToken,
       }}
     >
       {children}
