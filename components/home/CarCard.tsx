@@ -9,11 +9,11 @@ import {
   MapPinIcon,
   TruckIcon
 } from '@heroicons/react/24/outline';
-import { Car } from '@/types';
+
 import FavoriteButton from './FavoriteButton';
 
 interface CarCardProps {
-  car: Car;
+  car: any;
   isDealer?: boolean;
 }
 

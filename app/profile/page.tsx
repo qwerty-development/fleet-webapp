@@ -43,7 +43,17 @@ interface NotificationSettings {
 }
 
 export default function ProfilePage() {
-  const { user, profile, isLoaded, updateUserProfile, updatePassword, signOut,refreshSession } = useAuth();
+const {
+  user,
+  profile,
+  isLoaded,
+  updateUserProfile,
+  updatePassword,
+  signOut,
+  refreshSession,
+  isSigningOut,
+  signOutError
+} = useAuth();
   const { isGuest, clearGuestMode } = useGuestUser();
   const router = useRouter();
   const supabase = createClient();
@@ -252,17 +262,26 @@ const handleChangePassword = async () => {
       [key]: !prev[key]
     }));
   };
-
-  // Handler for sign out
-  const handleSignOut = async () => {
+// TO:
+const handleSignOut = async () => {
+  try {
     if (isGuest) {
       await clearGuestMode();
+      router.push('/');
     } else {
-      await signOut();
+      // Use enhanced signOut with options
+      await signOut({
+        forceRedirect: false,
+        redirectUrl: '/',
+        clearAllData: true
+      });
+      // No need to navigate manually - the signOut function handles it
     }
-
-    router.push('/');
-  };
+  } catch (error) {
+    console.error('Error during sign-out:', error);
+    // Error will be captured in signOutError state from AuthContext
+  }
+};
 
   // Handler for guest to sign in
   const handleSignIn = () => {
@@ -482,14 +501,30 @@ const handleChangePassword = async () => {
             </div>
 
             {/* Sign Out Button (Only show for non-guest users) */}
-            {!isGuest && (
-              <button
-                onClick={handleSignOut}
-                className="w-full mt-8 p-4 border border-accent text-accent hover:bg-accent/10 font-medium rounded-xl transition-colors"
-              >
-                Sign Out
-              </button>
-            )}
+           {!isGuest && (
+  <div className="w-full mt-8">
+    {signOutError && (
+      <div className="mb-3 text-sm text-center text-red-500 bg-red-500/10 rounded-lg py-2 px-3 border border-red-500/20">
+        {signOutError}
+      </div>
+    )}
+    <button
+      onClick={handleSignOut}
+      disabled={isSigningOut}
+      className="w-full p-4 border border-accent text-accent hover:bg-accent/10 font-medium rounded-xl transition-colors disabled:opacity-70 flex justify-center items-center"
+    >
+      {isSigningOut ? (
+        <>
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Signing Out...
+        </>
+      ) : "Sign Out"}
+    </button>
+  </div>
+)}
           </div>
         </div>
       </main>
