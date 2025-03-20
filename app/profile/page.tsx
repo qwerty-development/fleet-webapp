@@ -23,7 +23,7 @@ import { createClient } from '@/utils/supabase/client';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 
-// Dynamically import Navbar to avoid SSR issues with localStorage
+// Dynamically import Navbarr to avoid SSR issues with localStorage
 const Navbar = dynamic(() => import('@/components/home/Navbar'), { ssr: false });
 
 // Default profile image
