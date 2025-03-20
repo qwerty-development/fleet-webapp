@@ -254,14 +254,27 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
 
 
 
+// Improved implementation with better typing and error handling
 const signInWithIdToken = async ({
   provider,
   token
 }: {
   provider: 'google' | 'apple' | 'facebook',
   token: string
-}) => {
+}): Promise<{
+  data: any,
+  error: Error | null,
+  errorType?: 'auth' | 'network' | 'unknown'
+}> => {
   try {
+    if (!token || token.trim() === '') {
+      return {
+        data: null,
+        error: new Error('Invalid authentication token'),
+        errorType: 'auth'
+      };
+    }
+
     console.log(`Signing in with ${provider} ID token`);
 
     if (isGuest) {
@@ -275,17 +288,23 @@ const signInWithIdToken = async ({
 
     if (error) {
       console.error(`${provider} ID token sign-in error:`, error);
-      throw error;
+
+      // Categorize error types for better handling
+      const errorType = error.message?.includes('network')
+        ? 'network'
+        : 'auth';
+
+      return { data: null, error, errorType };
     }
 
-    if (data.user) {
+    if (data?.user) {
       await fetchUserProfile(data.user.id);
     }
 
     return { data, error: null };
   } catch (error: any) {
     console.error(`${provider} ID token sign-in error:`, error);
-    return { data: null, error };
+    return { data: null, error, errorType: 'unknown' };
   }
 };
 
