@@ -43,7 +43,17 @@ interface NotificationSettings {
 }
 
 export default function ProfilePage() {
-  const { user, profile, isLoaded, isSignedIn, updateUserProfile, updatePassword, signOut } = useAuth();
+const {
+  user,
+  profile,
+  isLoaded,
+  updateUserProfile,
+  updatePassword,
+  signOut,
+  refreshSession,
+  isSigningOut,
+  signOutError
+} = useAuth();
   const { isGuest, clearGuestMode } = useGuestUser();
   const router = useRouter();
   const supabase = createClient();
@@ -67,6 +77,9 @@ export default function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+const [passwordSuccess, setPasswordSuccess] = useState('');
+const [passwordError, setPasswordError] = useState('');
 
   // Notification preferences
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
@@ -104,81 +117,95 @@ export default function ProfilePage() {
   }, [user, profile, isGuest]);
 
   // Handler for profile update
-  const handleUpdateProfile = async () => {
-    if (isGuest) return;
+const handleUpdateProfile = async () => {
+  if (isGuest) return;
 
-    setIsLoading(true);
-    setUpdateError('');
-    setUpdateSuccess(false);
+  setIsLoading(true);
+  setUpdateError('');
+  setUpdateSuccess(false);
 
-    try {
-      // Create full name from first and last name
-      const fullName = `${firstName} ${lastName}`.trim();
+  try {
+    // Create full name from first and last name
+    const fullName = `${firstName} ${lastName}`.trim();
 
-      // Update user profile
-      const { error } = await updateUserProfile({
-        name: fullName
-      });
+    // Update user profile
+    const { error } = await updateUserProfile({
+      name: fullName
+    });
 
-      if (error) throw error;
-
-      setUpdateSuccess(true);
-      setIsEditMode(false);
-
-      // Reset success message after 3 seconds
-      setTimeout(() => {
-        setUpdateSuccess(false);
-      }, 3000);
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      setUpdateError(error.message || 'Failed to update profile. Please try again.');
-    } finally {
-      setIsLoading(false);
+    // Check for error in the returned object
+    if (error) {
+      // Extract the error message from the returned error object
+      throw error;
     }
-  };
+
+    setUpdateSuccess(true);
+    setIsEditMode(false);
+
+    // Reset success message after 3 seconds
+    setTimeout(() => {
+      setUpdateSuccess(false);
+    }, 3000);
+    await refreshSession(); // Assuming refreshSession function exists in your AuthContext
+  } catch (error: any) {
+    console.error('Error updating profile:', error);
+    // Handle both direct errors and error objects
+    setUpdateError(error.message || (error.error?.message) || 'Failed to update profile. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Handler for changing password
-  const handleChangePassword = async () => {
-    if (isGuest) return;
+const handleChangePassword = async () => {
+  if (isGuest) return;
 
-    if (newPassword !== confirmPassword) {
-      setUpdateError('New passwords do not match.');
-      return;
-    }
+  if (newPassword !== confirmPassword) {
+    setPasswordError("New passwords do not match.");
+    return;
+  }
 
-    if (newPassword.length < 8) {
-      setUpdateError('Password must be at least 8 characters long.');
-      return;
-    }
+  if (newPassword.length < 8) {
+    setPasswordError("Password must be at least 8 characters long.");
+    return;
+  }
 
-    setIsLoading(true);
-    setUpdateError('');
+  setIsPasswordLoading(true);
+  setPasswordError('');
+  setPasswordSuccess('');
 
-    try {
-      const { error } = await updatePassword({
-        currentPassword,
-        newPassword
-      });
+  try {
+    const { error } = await updatePassword({ currentPassword, newPassword });
+    console.log("updatePassword returned:", error);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setUpdateSuccess(true);
+    setPasswordSuccess("Password updated successfully.");
+    // Clear password fields on success
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+
+    // Ensure loading state is reset before closing modal
+    setIsPasswordLoading(false);
+
+    // Auto-close modal after a short delay
+    setTimeout(() => {
       setIsChangePasswordMode(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-
-      // Reset success message after 3 seconds
-      setTimeout(() => {
-        setUpdateSuccess(false);
-      }, 3000);
-    } catch (error: any) {
-      console.error('Error changing password:', error);
-      setUpdateError(error.message || 'Failed to change password. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setPasswordSuccess('');
+    }, 2000);
+  } catch (error: any) {
+    console.error("Error in handleChangePassword:", error);
+    setPasswordError(
+      error.message ||
+      (error.error?.message) ||
+      "Failed to change password. Please try again."
+    );
+    // Always reset loading state in error case
+    setIsPasswordLoading(false);
+  }
+  // Remove the finally block since we're handling both success and error cases explicitly
+};
 
   // Handler for profile image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -235,17 +262,26 @@ export default function ProfilePage() {
       [key]: !prev[key]
     }));
   };
-
-  // Handler for sign out
-  const handleSignOut = async () => {
+// TO:
+const handleSignOut = async () => {
+  try {
     if (isGuest) {
       await clearGuestMode();
+      router.push('/');
     } else {
-      await signOut();
+      // Use enhanced signOut with options
+      await signOut({
+        forceRedirect: false,
+        redirectUrl: '/',
+        clearAllData: true
+      });
+      // No need to navigate manually - the signOut function handles it
     }
-
-    router.push('/');
-  };
+  } catch (error) {
+    console.error('Error during sign-out:', error);
+    // Error will be captured in signOutError state from AuthContext
+  }
+};
 
   // Handler for guest to sign in
   const handleSignIn = () => {
@@ -302,7 +338,7 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={() => router.push('/')}
-                className="mt-4 text-white/80 hover:text-white"
+                className="mt-4 text-white hover:text-white"
               >
                 Return to Home
               </button>
@@ -345,11 +381,7 @@ export default function ProfilePage() {
                   </label>
                 )}
 
-                {isImageUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                    <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-white rounded-full"></div>
-                  </div>
-                )}
+
               </div>
 
               <h1 className="text-2xl font-bold text-white">
@@ -430,26 +462,7 @@ export default function ProfilePage() {
                 <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
               </button>
 
-              {/* Notification Settings Button */}
-              <button
-                onClick={() => !isGuest && setIsNotificationSettingsVisible(true)}
-                className={`w-full flex items-center p-4 rounded-xl transition-colors ${
-                  isGuest
-                    ? "bg-black-light border border-gray-800 opacity-75"
-                    : "bg-black-medium border border-gray-800 hover:border-accent"
-                }`}
-              >
-                <div className="p-3 bg-accent/10 rounded-xl">
-                  <BellIcon className="h-6 w-6 text-accent" />
-                </div>
-                <div className="ml-4 text-left">
-                  <p className="font-medium text-white">Notifications</p>
-                  <p className="text-sm text-gray-400">
-                    {isGuest ? "Sign in to manage notifications" : "Customize your notification preferences"}
-                  </p>
-                </div>
-                <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
-              </button>
+
             </div>
 
             {/* Support Section */}
@@ -488,14 +501,30 @@ export default function ProfilePage() {
             </div>
 
             {/* Sign Out Button (Only show for non-guest users) */}
-            {!isGuest && (
-              <button
-                onClick={handleSignOut}
-                className="w-full mt-8 p-4 border border-accent text-accent hover:bg-accent/10 font-medium rounded-xl transition-colors"
-              >
-                Sign Out
-              </button>
-            )}
+           {!isGuest && (
+  <div className="w-full mt-8">
+    {signOutError && (
+      <div className="mb-3 text-sm text-center text-red-500 bg-red-500/10 rounded-lg py-2 px-3 border border-red-500/20">
+        {signOutError}
+      </div>
+    )}
+    <button
+      onClick={handleSignOut}
+      disabled={isSigningOut}
+      className="w-full p-4 border border-accent text-accent hover:bg-accent/10 font-medium rounded-xl transition-colors disabled:opacity-70 flex justify-center items-center"
+    >
+      {isSigningOut ? (
+        <>
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Signing Out...
+        </>
+      ) : "Sign Out"}
+    </button>
+  </div>
+)}
           </div>
         </div>
       </main>
@@ -661,148 +690,159 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      {/* Change Password Modal */}
-      <AnimatePresence>
-        {isChangePasswordMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+<AnimatePresence>
+  {isChangePasswordMode && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-black-medium border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-white">Change Password</h2>
+          <button
+            onClick={() => setIsChangePasswordMode(false)}
+            className="text-gray-400 hover:text-white"
+            disabled={isPasswordLoading}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-black-medium border border-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-white">Change Password</h2>
-                <button
-                  onClick={() => setIsChangePasswordMode(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">Current Password</label>
-                  <div className="relative">
-                    <input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
-                      placeholder="Current password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
-                    >
-                      {showCurrentPassword ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">New Password</label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
-                      placeholder="New password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
-                    >
-                      {showNewPassword ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters</p>
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">Confirm New Password</label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
-                      placeholder="Confirm new password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
-                    >
-                      {showConfirmPassword ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setIsChangePasswordMode(false)}
-                  className="flex-1 p-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-black-light transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleChangePassword}
-                  disabled={isLoading}
-                  className="flex-1 p-3 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Updating...
-                    </>
-                  ) : "Update Password"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+        {/* Inline feedback messages */}
+        {passwordSuccess && (
+          <div className="bg-green-900/30 border border-green-800 text-green-400 px-4 py-3 rounded-lg mb-4">
+            {passwordSuccess}
+          </div>
         )}
-      </AnimatePresence>
+        {passwordError && (
+          <div className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg mb-4">
+            {passwordError}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {/* Current Password Input */}
+          <div>
+            <label className="block text-gray-400 text-sm mb-1">Current Password</label>
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={isPasswordLoading}
+                className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                placeholder="Current password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
+                disabled={isPasswordLoading}
+              >
+                {showCurrentPassword ? (
+                  // SVG icon for visible password
+                  <svg xmlns="http://www.w3.org/2000/svg" /* ... */></svg>
+                ) : (
+                  // SVG icon for hidden password
+                  <svg xmlns="http://www.w3.org/2000/svg" /* ... */></svg>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* New Password Input */}
+          <div>
+            <label className="block text-gray-400 text-sm mb-1">New Password</label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={isPasswordLoading}
+                className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                placeholder="New password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
+                disabled={isPasswordLoading}
+              >
+                {showNewPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" /* ... */></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" /* ... */></svg>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Password must be at least 8 characters</p>
+          </div>
+
+          {/* Confirm New Password Input */}
+          <div>
+            <label className="block text-gray-400 text-sm mb-1">Confirm New Password</label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isPasswordLoading}
+                className="w-full p-3 pr-10 bg-black-light border border-gray-700 rounded-lg focus:border-accent focus:ring-1 focus:ring-accent text-white"
+                placeholder="Confirm new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300"
+                disabled={isPasswordLoading}
+              >
+                {showConfirmPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" /* ... */></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" /* ... */></svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={() => setIsChangePasswordMode(false)}
+            disabled={isPasswordLoading}
+            className="flex-1 p-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-black-light transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleChangePassword}
+            disabled={isPasswordLoading}
+            className="flex-1 p-3 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors disabled:opacity-70 flex justify-center items-center"
+          >
+            {isPasswordLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Updating...
+              </>
+            ) : (
+              "Update Password"
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
       {/* Notification Settings Modal */}
       <AnimatePresence>

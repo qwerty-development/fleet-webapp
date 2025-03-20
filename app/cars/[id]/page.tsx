@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarIcon,
@@ -20,6 +20,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/client";
 import DealershipCarsSection from "@/components/dealerships/DealershipCarsSection";
+import FavoriteButton from "@/components/home/FavoriteButton";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
 
 // Updated Car interface to match your global types
 export interface Car {
@@ -57,6 +60,8 @@ export interface Car {
     latitude?: number;
     longitude?: number;
   };
+  likes?: number;
+  views?: number;
 }
 
 // Helper: Get the logo URL
@@ -155,18 +160,92 @@ const ImageThumbnail: React.FC<{
 // Main component for the car details page
 export default function CarDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { user, isSignedIn } = useAuth();
+  const { isGuest, guestId } = useGuestUser();
   const [car, setCar] = useState<Car | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
   const thumbnailsRef = useRef<HTMLDivElement>(null);
+  const viewTracked = useRef<boolean>(false);
+  const supabase = createClient();
+
+  // Track car view
+// Modify the trackCarView function in the car detail page component
+const trackCarView = useCallback(async (carId: string) => {
+  if (viewTracked.current) return;
+
+  try {
+    const userId = isGuest ? `guest_${guestId}` : (user?.id || 'anonymous');
+
+    const { data, error } = await supabase.rpc("track_car_view", {
+      car_id: parseInt(carId),
+      user_id: userId,
+    });
+
+    if (error) {
+      console.error("Error tracking car view:", error);
+      return;
+    }
+
+    if (data !== null && car) {
+      // Update car state with new view count
+      setCar(prevCar => prevCar ? {...prevCar, views: data} : null);
+    }
+
+    viewTracked.current = true;
+  } catch (error) {
+    console.error("Error in trackCarView:", error);
+  }
+}, [isGuest, guestId, user, supabase, car]);
+
+  // Track call button clicks
+  const trackCallClick = useCallback(async (carId: string) => {
+    try {
+      const userId = isGuest ? `guest_${guestId}` : (user?.id || 'anonymous');
+
+      const { data, error } = await supabase.rpc("track_car_call", {
+        car_id: parseInt(carId),
+        user_id: userId,
+      });
+
+      if (error) {
+        console.error("Error tracking call click:", error);
+        return;
+      }
+
+      console.log(`Call count updated: ${data}`);
+    } catch (error) {
+      console.error("Error tracking call click:", error);
+    }
+  }, [isGuest, guestId, user, supabase]);
+
+  // Track WhatsApp button clicks
+  const trackWhatsAppClick = useCallback(async (carId: string) => {
+    try {
+      const userId = isGuest ? `guest_${guestId}` : (user?.id || 'anonymous');
+
+      const { data, error } = await supabase.rpc("track_car_whatsapp", {
+        car_id: parseInt(carId),
+        user_id: userId,
+      });
+
+      if (error) {
+        console.error("Error tracking WhatsApp click:", error);
+        return;
+      }
+
+      console.log(`WhatsApp count updated: ${data}`);
+    } catch (error) {
+      console.error("Error tracking WhatsApp click:", error);
+    }
+  }, [isGuest, guestId, user, supabase]);
 
   // Fetch car data
   useEffect(() => {
     const fetchCarData = async () => {
       try {
         setIsLoading(true);
-        const supabase = createClient();
 
         // Fetch car details
         const { data: carData, error: carError } = await supabase
@@ -226,7 +305,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           images: images,
           features: features,
           // Add dealership info from the joined table
-          dealership_id :carData.dealerships?.id,
+          dealership_id: carData.dealerships?.id,
           dealership_name: carData.dealerships?.name,
           dealership_logo: carData.dealerships?.logo,
           dealership_phone: carData.dealerships?.phone,
@@ -246,7 +325,14 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     if (params.id) {
       fetchCarData();
     }
-  }, [params.id, router]);
+  }, [params.id, router, supabase]);
+
+  // Track car view when the page loads and car data is available
+  useEffect(() => {
+    if (car && !viewTracked.current) {
+      trackCarView(car.id);
+    }
+  }, [car, trackCarView]);
 
   // Navigation controls for the carousel
   const navigateCarousel = (direction: "prev" | "next") => {
@@ -300,10 +386,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
       const scrollPosition = carouselRef.current.scrollLeft;
       const itemWidth = carouselRef.current.clientWidth;
       const index = Math.round(scrollPosition / itemWidth);
-      
+
       if (index !== activeImageIndex) {
         setActiveImageIndex(index);
-        
+
         // Also scroll the thumbnail into view
         if (thumbnailsRef.current) {
           const thumbnail = thumbnailsRef.current.children[index] as HTMLElement;
@@ -318,9 +404,20 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
+  // Handler for likes update
+  const handleLikesUpdate = (newLikes: number) => {
+    if (car) {
+      setCar(prev => prev ? ({ ...prev, likes: newLikes }) : null);
+    }
+  };
+
   // Action handlers
   const handleCall = () => {
     if (!car) return;
+
+    // Track the call click
+    trackCallClick(car.id);
+
     const phone = car.dealerships?.phone || car.dealership_phone;
     if (phone) {
       window.open(`tel:${phone}`);
@@ -348,6 +445,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
   const handleWhatsApp = () => {
     if (!car) return;
+
+    // Track the WhatsApp click
+    trackWhatsAppClick(car.id);
+
     const phone = car.dealerships?.phone || car.dealership_phone;
     if (phone) {
       const message = `Hi, I'm interested in the ${car.year} ${car.make} ${
@@ -416,7 +517,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
           {/* Thumbnail gallery at the bottom */}
           {car.images.length > 1 && (
-            <div 
+            <div
               ref={thumbnailsRef}
               className="flex gap-2 overflow-x-auto py-2 px-4 bg-gray-900 scrollbar-hide"
               style={{ scrollBehavior: "smooth" }}
@@ -451,6 +552,25 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               </button>
             </>
           )}
+
+          {/* Favorite Button - Top Right */}
+          <div className="absolute top-4 right-16 z-10">
+            <FavoriteButton
+              carId={Number(car.id)}
+              initialLikes={car.likes || 0}
+              onLikesUpdate={handleLikesUpdate}
+              size="lg"
+            />
+          </div>
+
+          {/* View Count Badge */}
+          <div className="absolute top-4 left-16 bg-black/70 px-3 py-1 rounded-full text-sm flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            {car.views || 0}
+          </div>
 
           {/* Image counter */}
           <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full text-sm">
@@ -607,8 +727,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                   className="p-3 bg-green-600 rounded-full hover:bg-green-500 transition-colors"
                   aria-label="WhatsApp"
                 >
-                  <svg 
-                    viewBox="0 0 32 32" 
+                  <svg
+                    viewBox="0 0 32 32"
                     className="h-5 w-5 fill-current"
                     xmlns="http://www.w3.org/2000/svg"
                   >
@@ -640,10 +760,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
         </div>
+
+        {/* More Cars from this Dealership Section */}
         <DealershipCarsSection dealershipID={car.dealership_id} currentCarId={params.id} />
-
       </div>
-
 
       {/* Padding at the bottom for spacing */}
       <div className="h-8"></div>

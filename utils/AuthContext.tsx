@@ -16,16 +16,18 @@ interface AuthContextProps {
   profile: UserProfile | null;
   isLoaded: boolean;
   isSignedIn: boolean;
+  isSigningOut: boolean;
+  signOutError: string | null;
   signIn: (credentials: SignInCredentials) => Promise<{ error: Error | null }>;
   signUp: (credentials: SignUpCredentials) => Promise<{ error: Error | null, needsEmailVerification: boolean }>;
-  signOut: () => Promise<void>;
+  signOut: (options?: SignOutOptions) => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (params: { currentPassword: string, newPassword: string }) => Promise<{ error: Error | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
-  googleSignIn: () => Promise<void>;
   refreshSession: () => Promise<void>;
-  updateUserProfile: (data: Partial<UserProfile>) => Promise<{ error: Error | null }>;
+  updateUserProfile: any;
   updateUserRole: (userId: string, newRole: string) => Promise<{ error: Error | null }>;
+  signInWithIdToken: any;
 }
 
 export interface UserProfile {
@@ -51,6 +53,12 @@ interface SignUpCredentials {
   role?: string;
 }
 
+interface SignOutOptions {
+  forceRedirect?: boolean;
+  redirectUrl?: string;
+  clearAllData?: boolean;
+}
+
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const useAuth = () => {
@@ -66,8 +74,71 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const { isGuest, clearGuestMode } = useGuestUser();
   const router = useRouter();
+
+  // Helper to clear all auth-related local storage items
+  const clearLocalStorage = () => {
+    try {
+      const authItemKeys = [
+        'supabase.auth.token',
+        'sb-refresh-token',
+        'sb-access-token',
+        'supabase.auth.refreshToken',
+        'supabase.auth.expires_at',
+        'supabase.auth.user'
+      ];
+
+      authItemKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Failed to remove ${key} from localStorage`, e);
+        }
+      });
+
+      // Clear any items that match a pattern (handles version differences)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') ||
+            key.includes('supabase') ||
+            key.includes('auth')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn(`Failed to remove ${key} from localStorage`, e);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to clear localStorage items', e);
+    }
+  };
+
+  // Helper to clear authentication cookies
+  const clearAuthCookies = () => {
+    try {
+      // Identify all potential auth-related cookies
+      const cookiesToClear = document.cookie
+        .split(';')
+        .map(cookie => cookie.trim())
+        .filter(cookie =>
+          cookie.startsWith('sb-') ||
+          cookie.startsWith('supabase-auth-') ||
+          cookie.includes('auth')
+        );
+
+      // Clear each cookie by setting expiration to past date
+      cookiesToClear.forEach(cookie => {
+        const cookieName = cookie.split('=')[0];
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}; SameSite=Lax`;
+      });
+    } catch (e) {
+      console.warn('Failed to clear cookies', e);
+    }
+  };
 
   // Set up auth state listener
   useEffect(() => {
@@ -76,6 +147,11 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('Auth state change event:', event);
+
+        if(event=='USER_UPDATED'){
+          router.refresh();
+          window.location.reload();
+        }
 
         if (currentSession) {
           setSession(currentSession);
@@ -246,26 +322,57 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     }
   };
 
-  // Google Sign In
-  const googleSignIn = async () => {
+  // Improved implementation with better typing and error handling
+  const signInWithIdToken = async ({
+    provider,
+    token
+  }: {
+    provider: 'google' | 'apple' | 'facebook',
+    token: string
+  }): Promise<{
+    data: any,
+    error: Error | null,
+    errorType?: 'auth' | 'network' | 'unknown'
+  }> => {
     try {
+      if (!token || token.trim() === '') {
+        return {
+          data: null,
+          error: new Error('Invalid authentication token'),
+          errorType: 'auth'
+        };
+      }
+
+      console.log(`Signing in with ${provider} ID token`);
+
       if (isGuest) {
         await clearGuestMode();
       }
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider,
+        token,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`${provider} ID token sign-in error:`, error);
 
-      // The OAuth sign-in process will redirect the user away from the current page
-      // and eventually back to the callback URL, so we don't need to handle navigation here
-    } catch (error) {
-      console.error('Google sign in error:', error);
+        // Categorize error types for better handling
+        const errorType = error.message?.includes('network')
+          ? 'network'
+          : 'auth';
+
+        return { data: null, error, errorType };
+      }
+
+      if (data?.user) {
+        await fetchUserProfile(data.user.id);
+      }
+
+      return { data, error: null };
+    } catch (error: any) {
+      console.error(`${provider} ID token sign-in error:`, error);
+      return { data: null, error, errorType: 'unknown' };
     }
   };
 
@@ -391,16 +498,119 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     }
   };
 
-  // Sign Out
-  const signOut = async () => {
+  // Enhanced Sign Out with better error handling and improved performance
+  const signOut = async (options?: SignOutOptions) => {
+    // Default options
+    const defaultOptions = {
+      forceRedirect: false,
+      redirectUrl: '/',
+      clearAllData: true
+    };
+
+    const opts = { ...defaultOptions, ...options };
+
+    // Prevent multiple simultaneous sign-out attempts
+    if (isSigningOut) {
+      console.warn('Sign-out already in progress');
+      return;
+    }
+
+    let signOutAttemptCompleted = false;
+    let navigationAttempted = false;
+
     try {
-      await supabase.auth.signOut();
+      // Set loading state
+      setIsSigningOut(true);
+      setSignOutError(null);
+
+      // Create a timeout promise to prevent hanging on network issues
+      const timeoutId = setTimeout(() => {
+        if (!signOutAttemptCompleted) {
+          console.warn('Sign-out request timed out, proceeding with cleanup');
+          throw new Error('Sign-out request timed out');
+        }
+      }, 5000);
+
+      try {
+        // Attempt Supabase sign-out
+        await supabase.auth.signOut({ scope: opts.clearAllData ? 'global' : 'local' });
+        console.log('Supabase sign-out successful');
+      } catch (error) {
+        console.error('Supabase sign-out API error:', error);
+        // Continue with cleanup even if API call fails
+      } finally {
+        signOutAttemptCompleted = true;
+        clearTimeout(timeoutId);
+      }
+
+      // Clear local state in specific order to prevent UI flashes
       setSession(null);
       setUser(null);
       setProfile(null);
-      router.push('/');
+
+      // Clean up storage and cookies
+      if (opts.clearAllData) {
+        clearLocalStorage();
+        clearAuthCookies();
+      }
+
+      // Ensure there are no remnants by directly modifying Supabase internal state
+      try {
+        (supabase.auth as any).setSession(null);
+        console.log('Successfully cleared Supabase internal session');
+      } catch (e) {
+        console.warn('Unable to directly clear Supabase session', e);
+      }
+
+      // Add a small delay before navigation to ensure clean-up completes
+      if (typeof window !== 'undefined' && !navigationAttempted) {
+        navigationAttempted = true;
+
+        setTimeout(() => {
+          try {
+            if (opts.forceRedirect) {
+              window.location.href = opts.redirectUrl;
+            } else {
+              router.push(opts.redirectUrl);
+            }
+            console.log('Navigation after sign-out successful');
+          } catch (navError) {
+            console.error('Navigation error after sign-out:', navError);
+            // Last resort: force redirect
+            window.location.href = opts.redirectUrl;
+          }
+        }, 100);
+      }
+
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('Sign-out error:', error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'An unknown error occurred during sign-out';
+
+      setSignOutError(errorMessage);
+
+      // Fall back to manual clean-up on error
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+
+      if (opts.clearAllData) {
+        clearLocalStorage();
+        clearAuthCookies();
+      }
+
+      // Force navigation as last resort if not already attempted
+      if (!navigationAttempted && opts.forceRedirect && typeof window !== 'undefined') {
+        window.location.href = opts.redirectUrl;
+      }
+    } finally {
+      // Reset loading state after a minimum duration to prevent UI flicker
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.document.body) {
+          setIsSigningOut(false);
+        }
+      }, 500);
     }
   };
 
@@ -420,25 +630,41 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
   };
 
   // Update Password
-  const updatePassword = async ({ currentPassword, newPassword }: { currentPassword: string, newPassword: string }) => {
+  const updatePassword = async ({
+    currentPassword,
+    newPassword,
+  }: {
+    currentPassword: string;
+    newPassword: string;
+  }) => {
     try {
-      // First verify the current password by attempting to sign in
+      // Verify the current password
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user?.email || '',
+        email: user?.email || "",
         password: currentPassword,
       });
 
-      if (signInError) throw new Error('Current password is incorrect');
+      if (signInError) {
+        console.error("Current password verification failed:", signInError);
+        return { error: new Error("Current password is incorrect") };
+      }
 
-      // If verification succeeded, update to the new password
-      const { error } = await supabase.auth.updateUser({
+      // Update to the new password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) throw error;
+      window.location.reload();
+
+      if (updateError) {
+        console.error("Password update failed:", updateError);
+        return { error: updateError };
+      }
+
+      console.log("Password updated successfully");
       return { error: null };
     } catch (error: any) {
-      console.error('Update password error:', error);
+      console.error("Update password error:", error);
       return { error };
     }
   };
@@ -474,39 +700,72 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     }
   };
 
-  // Update User Profile
   const updateUserProfile = async (data: Partial<UserProfile>) => {
     try {
       if (!user) throw new Error('No user is signed in');
 
-      // Update the user metadata in Supabase Auth if name is provided
-      if (data.name) {
-        const { error: authUpdateError } = await supabase.auth.updateUser({
-          data: { name: data.name }
-        });
+      // Step 1: Log the update attempt for troubleshooting
+      console.log('Profile update initiated:', {
+        userId: user.id,
+        updateData: data,
+        timestamp: new Date().toISOString()
+      });
 
-        if (authUpdateError) {
-          console.error('Error updating auth user metadata:', authUpdateError);
+      // Step 2: Update user metadata in Supabase Auth
+      // This will automatically trigger the database sync to public.users table
+      const { data: authUpdateData, error: authUpdateError } = await supabase.auth.updateUser({
+        data: {
+          name: data.name,  // Primary field used by the trigger
+          full_name: data.name  // Backup field for compatibility
         }
+      });
+
+      if (authUpdateError) {
+        console.error('Error updating auth user metadata:', authUpdateError);
+        throw authUpdateError;
       }
 
-      // Update the profile in the database
-      const { error } = await supabase
+      console.log('Auth user metadata successfully updated');
+
+      // Step 3: Fetch the updated profile to verify changes and update local state
+      const { data: updatedProfile, error: fetchError } = await supabase
         .from('users')
-        .update(data)
-        .eq('id', user.id);
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (error) throw error;
-
-      // Update the local profile state
-      if (profile) {
-        setProfile({ ...profile, ...data });
+      if (fetchError) {
+        console.error('Error fetching updated profile:', fetchError);
+        throw fetchError;
       }
 
-      return { error: null };
+      // Step 4: Update the local profile state with the latest data
+      if (profile) {
+        setProfile(updatedProfile as UserProfile);
+      }
+
+      // Step 5: Return success response with updated data
+      return {
+        error: null,
+        data: updatedProfile
+      };
+
     } catch (error: any) {
-      console.error('Update profile error:', error);
-      return { error };
+      // Step 6: Error handling
+      console.error('Profile update failed:', error);
+
+      // Provide a more specific error message if available
+      let errorMessage = 'Failed to update profile. Please try again.';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      return {
+        error: {
+          original: error,
+          message: errorMessage
+        }
+      };
     }
   };
 
@@ -550,16 +809,18 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
         profile,
         isLoaded,
         isSignedIn: !!user,
+        isSigningOut,
+        signOutError,
         signIn,
         signUp,
         signOut,
         resetPassword,
         updatePassword,
         verifyOtp,
-        googleSignIn,
         refreshSession,
         updateUserProfile,
-        updateUserRole
+        updateUserRole,
+        signInWithIdToken,
       }}
     >
       {children}

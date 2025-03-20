@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import GoogleAuthHandler from '@/components/auth/GoogleAuthHandler';
 
 export default function SignUpPage() {
-  const { signUp, googleSignIn } = useAuth();
+  const { signUp } = useAuth();
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -24,7 +25,6 @@ export default function SignUpPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Animation variants
   const containerVariants = {
@@ -132,23 +132,6 @@ export default function SignUpPage() {
     }
   };
 
-  // Handle Google sign up
-  const handleGoogleSignUp = async () => {
-    setIsGoogleLoading(true);
-    try {
-      await googleSignIn();
-      // The redirect will be handled by Supabase auth
-    } catch (err) {
-      console.error("Google sign up error:", err);
-      setErrors(prev => ({
-        ...prev,
-        general: "Failed to sign up with Google. Please try again."
-      }));
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light relative overflow-hidden">
       {/* Animated Background */}
@@ -205,6 +188,16 @@ export default function SignUpPage() {
 
           {!pendingVerification ? (
             <motion.div variants={itemVariants} className="space-y-4">
+              {/* Google Authentication Handler */}
+              <motion.div variants={itemVariants}>
+                <GoogleAuthHandler />
+                <div className="flex items-center my-4">
+                  <div className="flex-grow h-px bg-gray-700"></div>
+                  <span className="px-3 text-sm text-gray-400">OR</span>
+                  <div className="flex-grow h-px bg-gray-700"></div>
+                </div>
+              </motion.div>
+
               <div>
                 <input
                   type="text"
@@ -279,38 +272,6 @@ export default function SignUpPage() {
                     Creating Account...
                   </span>
                 ) : "Sign Up"}
-              </button>
-
-              <div className="flex items-center my-4">
-                <div className="flex-grow h-px bg-gray-700"></div>
-                <span className="px-3 text-sm text-gray-400">OR</span>
-                <div className="flex-grow h-px bg-gray-700"></div>
-              </div>
-
-              <button
-                onClick={handleGoogleSignUp}
-                disabled={isGoogleLoading}
-                className="w-full bg-black-medium border border-gray-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-black-light transition-colors duration-300 disabled:opacity-70 flex justify-center items-center"
-              >
-                {isGoogleLoading ? (
-                  <span className="flex justify-center items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Connecting...
-                  </span>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                      <path
-                        fill="currentColor"
-                        d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
-                      />
-                    </svg>
-                    Sign up with Google
-                  </>
-                )}
               </button>
 
               <div className="mt-6 text-center">

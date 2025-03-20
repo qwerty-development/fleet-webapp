@@ -18,18 +18,32 @@ const navItems = [
 const Navbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile, isSignedIn, signOut } = useAuth();
+const { user, profile, isSignedIn, signOut, isSigningOut, signOutError } = useAuth();
   const { isGuest, clearGuestMode } = useGuestUser();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const handleSignOut = async () => {
+const handleSignOut = async () => {
+  try {
+    // Close user menu when sign-out process begins
+    setUserMenuOpen(false);
+
     if (isGuest) {
       await clearGuestMode();
+      router.push("/");
     } else {
-      await signOut();
+      // Use enhanced signOut with options
+      await signOut({
+        forceRedirect: false,
+        redirectUrl: '/',
+        clearAllData: true
+      });
+      // No manual navigation needed - handled by signOut function
     }
-    router.push("/");
-  };
+  } catch (error) {
+    console.error('Error during sign-out:', error);
+    // Error is captured in signOutError state from AuthContext
+  }
+};
 
   return (
     <nav className="bg-black dark:bg-neutral-900 shadow-md fixed top-0 inset-x-0 z-50">
@@ -96,12 +110,28 @@ const Navbar: React.FC = () => {
             Profile
           </Link>
           <div className="border-t border-gray-700 my-1"></div>
-          <button
-            onClick={handleSignOut}
-            className="flex w-full items-center px-4 py-2 text-sm text-gray-300 hover:bg-black-light hover:text-white transition-colors"
-          >
-            Sign Out
-          </button>
+          <div className="w-full">
+  {signOutError && (
+    <div className="mx-4 mb-2 text-xs text-red-500 bg-red-500/10 p-1 rounded border border-red-500/20 text-center">
+      Failed to sign out
+    </div>
+  )}
+  <button
+    onClick={handleSignOut}
+    disabled={isSigningOut}
+    className="flex w-full items-center justify-center px-4 py-2 text-sm text-gray-300 hover:bg-black-light hover:text-white transition-colors disabled:opacity-70"
+  >
+    {isSigningOut ? (
+      <>
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Signing Out...
+      </>
+    ) : "Sign Out"}
+  </button>
+</div>
         </div>
       )}
     </div>

@@ -3,8 +3,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { 
-  MapPinIcon, 
+import {
+  MapPinIcon,
   PhoneIcon,
   CalendarIcon,
   InformationCircleIcon,
@@ -52,38 +52,38 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AdminDealershipsPage() {
   const supabase = createClient();
-  
+
   // State variables
   const [dealerships, setDealerships] = useState<Dealership[]>([]);
   const [allDealerships, setAllDealerships] = useState<Dealership[]>([]);
   const [expiredDealerships, setExpiredDealerships] = useState<Dealership[]>([]);
   const [nearExpiringDealerships, setNearExpiringDealerships] = useState<Dealership[]>([]);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  
+
   const [selectedDealership, setSelectedDealership] = useState<Dealership | null>(null);
   const [isDealershipModalOpen, setIsDealershipModalOpen] = useState(false);
-  
+
   const [selectedDealerships, setSelectedDealerships] = useState<number[]>([]);
   const [bulkAction, setBulkAction] = useState<string | null>(null);
   const [extendMonths, setExtendMonths] = useState(1);
   const [showBulkActionConfirm, setShowBulkActionConfirm] = useState(false);
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [subscriptionStats, setSubscriptionStats] = useState({
     active: 0,
     expiring: 0,
     expired: 0
   });
-  
+
   const [dealershipFormData, setDealershipFormData] = useState<any>({
     name: '',
     location: '',
@@ -93,33 +93,33 @@ export default function AdminDealershipsPage() {
     subscription_end_date: '',
     logo: ''
   });
-  
+
   const [file, setFile] = useState<File | null>(null);
   const [isBulkDrawerOpen, setIsBulkDrawerOpen] = useState(false);
-  
+
   // Fetch all dealerships for stats and overview
   const fetchAllDealerships = useCallback(async () => {
     try {
       setError(null);
-      
+
       const { data, error } = await supabase
         .from('dealerships')
         .select('*, cars(id)');
-        
+
       if (error) throw error;
-      
+
       // Process data to count cars per dealership
       const dealershipsWithCarCount = data?.map(d => ({
         ...d,
         cars_listed: d.cars ? d.cars.length : 0
       })) || [];
-      
+
       setAllDealerships(dealershipsWithCarCount);
-      
+
       // Calculate subscription stats
       const now = new Date();
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       const stats = dealershipsWithCarCount.reduce(
         (acc, d) => {
           const endDate = new Date(d.subscription_end_date);
@@ -130,14 +130,14 @@ export default function AdminDealershipsPage() {
         },
         { active: 0, expiring: 0, expired: 0 }
       );
-      
+
       setSubscriptionStats(stats);
-      
+
       // Set expired and near-expiring dealerships
       setExpiredDealerships(
         dealershipsWithCarCount.filter(d => new Date(d.subscription_end_date) < now)
       );
-      
+
       setNearExpiringDealerships(
         dealershipsWithCarCount.filter(d => {
           const endDate = new Date(d.subscription_end_date);
@@ -149,41 +149,41 @@ export default function AdminDealershipsPage() {
       setError('Failed to fetch dealership overview data.');
     }
   }, []);
-  
+
   // Fetch dealerships with pagination and filtering
   const fetchDealerships = useCallback(async () => {
     setIsLoading(true);
     try {
       setError(null);
-      
+
       let query = supabase
         .from('dealerships')
         .select('*, cars(id)', { count: 'exact' })
         .order(sortBy, { ascending: sortOrder === 'asc' });
-      
+
       // Apply search filter if exists
       if (searchQuery) {
         query = query.or(
           `name.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`
         );
       }
-      
+
       // Pagination
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
-      
+
       query = query.range(from, to);
-      
+
       const { data, count, error } = await query;
-      
+
       if (error) throw error;
-      
+
       // Process data to count cars per dealership
       const dealershipsWithCarCount = data?.map(d => ({
         ...d,
         cars_listed: d.cars ? d.cars.length : 0
       })) || [];
-      
+
       setDealerships(dealershipsWithCarCount);
       setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
     } catch (err: any) {
@@ -193,35 +193,35 @@ export default function AdminDealershipsPage() {
       setIsLoading(false);
     }
   }, [currentPage, sortBy, sortOrder, searchQuery]);
-  
+
   // Initial data fetch
   useEffect(() => {
     fetchAllDealerships();
   }, [fetchAllDealerships]);
-  
+
   useEffect(() => {
     fetchDealerships();
   }, [fetchDealerships]);
-  
+
   // Handle sorting
   const handleSort = useCallback((column: string) => {
     setSortBy(column);
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   }, []);
-  
+
   // Handle search
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1);
     fetchDealerships();
   }, [fetchDealerships]);
-  
+
   // Get subscription status
   const getSubscriptionStatus = useCallback((endDate: string) => {
     const now = new Date();
     const subscriptionEnd = new Date(endDate);
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
+
     if (subscriptionEnd < now) {
       return { status: 'Expired', colorClass: 'text-rose-500 bg-rose-500/10 border-rose-500/30' };
     } else if (subscriptionEnd <= thirtyDaysFromNow) {
@@ -230,17 +230,17 @@ export default function AdminDealershipsPage() {
       return { status: 'Active', colorClass: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30' };
     }
   }, []);
-  
+
   // Format subscription end date
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-  
+
   // Open dealership edit modal
   const openDealershipModal = useCallback((dealership: Dealership) => {
     setSelectedDealership(dealership);
@@ -255,37 +255,37 @@ export default function AdminDealershipsPage() {
     });
     setIsDealershipModalOpen(true);
   }, []);
-  
+
   // Handle dealership update form submission
   const handleUpdateDealership = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedDealership) return;
-    
+
     setIsActionLoading(true);
-    
+
     try {
       // If there's a new logo file, upload it first
       let logoUrl = dealershipFormData.logo;
-      
+
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `${selectedDealership.id}/${fileName}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('logos')
           .upload(filePath, file);
-          
+
         if (uploadError) throw uploadError;
-        
+
         const { data: publicUrlData } = supabase.storage
           .from('logos')
           .getPublicUrl(filePath);
-          
+
         logoUrl = publicUrlData.publicUrl;
       }
-      
+
       // Update dealership record
       const { error: updateError } = await supabase
         .from('dealerships')
@@ -299,18 +299,18 @@ export default function AdminDealershipsPage() {
           logo: logoUrl
         })
         .eq('id', selectedDealership.id);
-        
+
       if (updateError) throw updateError;
-      
+
       // Refresh data
       await fetchDealerships();
       await fetchAllDealerships();
-      
+
       // Reset form and close modal
       setIsDealershipModalOpen(false);
       setSelectedDealership(null);
       setFile(null);
-      
+
       // Show success message
       alert('Dealership updated successfully!');
     } catch (err: any) {
@@ -320,23 +320,23 @@ export default function AdminDealershipsPage() {
       setIsActionLoading(false);
     }
   };
-  
+
   // Handle bulk action execution
   const executeBulkAction = async () => {
     if (!bulkAction || selectedDealerships.length === 0) return;
-    
+
     setIsActionLoading(true);
     setShowBulkActionConfirm(false);
-    
+
     try {
       const currentDate = new Date();
       const updatePromises = selectedDealerships.map(async id => {
         const dealership = allDealerships.find(d => d.id === id);
         if (!dealership) return;
-        
+
         let updateData: any = {};
         let newCarStatus: 'available' | 'pending' = 'available';
-        
+
         if (bulkAction === 'extend') {
           const subscriptionEndDate = new Date(dealership.subscription_end_date);
           const newEndDate = new Date(
@@ -349,36 +349,36 @@ export default function AdminDealershipsPage() {
           updateData.subscription_end_date = currentDate.toISOString().split('T')[0];
           newCarStatus = 'pending';
         }
-        
+
         // Update dealership
         const { error: dealershipError } = await supabase
           .from('dealerships')
           .update(updateData)
           .eq('id', id);
-          
+
         if (dealershipError) throw dealershipError;
-        
+
         // Update car statuses
         const { error: carsError } = await supabase
           .from('cars')
           .update({ status: newCarStatus })
           .eq('dealership_id', id)
           .eq('status', bulkAction === 'extend' ? 'pending' : 'available');
-          
+
         if (carsError) throw carsError;
       });
-      
+
       await Promise.all(updatePromises);
-      
+
       // Refresh data
       await fetchDealerships();
       await fetchAllDealerships();
-      
+
       // Reset selections
       setSelectedDealerships([]);
       setBulkAction(null);
       setIsBulkDrawerOpen(false);
-      
+
       // Show success message
       alert(`Subscription ${bulkAction === 'extend' ? 'extended' : 'ended'} for selected dealerships and car statuses updated!`);
     } catch (err: any) {
@@ -391,26 +391,26 @@ export default function AdminDealershipsPage() {
 
   // Toggle selection of a dealership
   const toggleDealershipSelection = (id: number) => {
-    setSelectedDealerships(prev => 
-      prev.includes(id) 
-        ? prev.filter(dealershipId => dealershipId !== id) 
+    setSelectedDealerships(prev =>
+      prev.includes(id)
+        ? prev.filter(dealershipId => dealershipId !== id)
         : [...prev, id]
     );
   };
-  
+
   // Reset bulk action form
   const resetBulkActionForm = () => {
     setBulkAction(null);
     setExtendMonths(1);
   };
-  
+
   // Handle file input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
   };
-  
+
   // Subscription stats chart data
   const chartData = {
     labels: ['Active', 'Expiring Soon', 'Expired'],
@@ -435,7 +435,7 @@ export default function AdminDealershipsPage() {
       }
     ]
   };
-  
+
   // Chart options
   const chartOptions = {
     responsive: true,
@@ -452,11 +452,11 @@ export default function AdminDealershipsPage() {
       }
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
       <AdminNavbar />
-      
+
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto pb-16">
           <div className="">
@@ -469,7 +469,7 @@ export default function AdminDealershipsPage() {
               decisions
             </p>
           </div>
-            
+
             <div className="mt-4 md:mt-0 flex items-center gap-2">
               {selectedDealerships.length > 0 && (
                 <button
@@ -482,7 +482,7 @@ export default function AdminDealershipsPage() {
               )}
             </div>
           </div>
-          
+
           {/* Stats Overview */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Subscription Chart */}
@@ -492,7 +492,7 @@ export default function AdminDealershipsPage() {
                 <Pie data={chartData} options={chartOptions} />
               </div>
             </div>
-            
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 gap-4">
               <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
@@ -506,7 +506,7 @@ export default function AdminDealershipsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
@@ -518,7 +518,7 @@ export default function AdminDealershipsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
@@ -532,7 +532,7 @@ export default function AdminDealershipsPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Expired Dealerships */}
           {expiredDealerships.length > 0 && (
             <div className="mb-8">
@@ -589,7 +589,7 @@ export default function AdminDealershipsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Expiring Soon Dealerships */}
           {nearExpiringDealerships.length > 0 && (
             <div className="mb-8">
@@ -646,7 +646,7 @@ export default function AdminDealershipsPage() {
               </div>
             </div>
           )}
-          
+
           {/* Search and Filters */}
           <div className="mb-6">
             <form onSubmit={handleSearch} className="relative mb-4">
@@ -670,7 +670,7 @@ export default function AdminDealershipsPage() {
                 </button>
               )}
             </form>
-            
+
             {/* Sort Buttons */}
             <div className="flex flex-wrap gap-2 mb-4">
               <button
@@ -686,7 +686,7 @@ export default function AdminDealershipsPage() {
                   sortOrder === 'asc' ? <ChevronUpIcon className="h-4 w-4 ml-1" /> : <ChevronDownIcon className="h-4 w-4 ml-1" />
                 )}
               </button>
-              
+
               <button
                 onClick={() => handleSort('location')}
                 className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -700,7 +700,7 @@ export default function AdminDealershipsPage() {
                   sortOrder === 'asc' ? <ChevronUpIcon className="h-4 w-4 ml-1" /> : <ChevronDownIcon className="h-4 w-4 ml-1" />
                 )}
               </button>
-              
+
               <button
                 onClick={() => handleSort('subscription_end_date')}
                 className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -714,7 +714,7 @@ export default function AdminDealershipsPage() {
                  sortOrder === 'asc' ? <ChevronUpIcon className="h-4 w-4 ml-1" /> : <ChevronDownIcon className="h-4 w-4 ml-1" />
                 )}
               </button>
-              
+
               <button
                 onClick={() => handleSort('cars_listed')}
                 className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -730,7 +730,7 @@ export default function AdminDealershipsPage() {
               </button>
             </div>
           </div>
-          
+
           {/* Dealerships List */}
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
@@ -741,7 +741,7 @@ export default function AdminDealershipsPage() {
               <XCircleIcon className="h-12 w-12 text-rose-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">Error Loading Dealerships</h3>
               <p className="text-gray-400 mb-6">{error}</p>
-              <button 
+              <button
                 onClick={() => fetchDealerships()}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white transition-colors"
               >
@@ -755,8 +755,8 @@ export default function AdminDealershipsPage() {
               </svg>
               <h3 className="text-xl font-semibold text-white mb-2">No Dealerships Found</h3>
               <p className="text-gray-400">
-                {searchQuery 
-                  ? "No dealerships match your search criteria. Try a different search term." 
+                {searchQuery
+                  ? "No dealerships match your search criteria. Try a different search term."
                   : "No dealerships available. Try adding a new dealership."}
               </p>
             </div>
@@ -764,9 +764,9 @@ export default function AdminDealershipsPage() {
             <div className="space-y-4">
               {dealerships.map(dealership => {
                 const { status, colorClass } = getSubscriptionStatus(dealership.subscription_end_date);
-                
+
                 return (
-                  <div 
+                  <div
                     key={dealership.id}
                     className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300 cursor-pointer"
                     onClick={() => openDealershipModal(dealership)}
@@ -784,10 +784,10 @@ export default function AdminDealershipsPage() {
                             }}
                           />
                         </div>
-                        
+
                         {dealership.logo ? (
-                          <img 
-                            src={dealership.logo} 
+                          <img
+                            src={dealership.logo}
                             alt={dealership.name}
                             className="w-10 h-10 rounded-full object-cover bg-gray-700"
                           />
@@ -798,7 +798,7 @@ export default function AdminDealershipsPage() {
                             </svg>
                           </div>
                         )}
-                        
+
                         <div className="ml-3 min-w-0 flex-1">
                           <h3 className="text-white font-semibold text-lg">{dealership.name}</h3>
                           <div className="flex items-center">
@@ -806,7 +806,7 @@ export default function AdminDealershipsPage() {
                             <p className="text-gray-400 text-sm truncate">{dealership.location}</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex flex-col items-end">
                           <div className="bg-indigo-500/80 px-2 py-1 rounded-full text-xs text-white mb-2">
                             {dealership.cars_listed} cars
@@ -816,19 +816,19 @@ export default function AdminDealershipsPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex items-center text-gray-300">
                           <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm">{dealership.phone}</span>
                         </div>
-                        
+
                         <div className="flex items-center text-gray-300">
                           <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm">Ends: {formatDate(dealership.subscription_end_date)}</span>
                         </div>
                       </div>
-                      
+
                       <div className="mt-4 flex justify-end">
                         <button
                           onClick={(e) => {
@@ -845,32 +845,32 @@ export default function AdminDealershipsPage() {
                   </div>
                 );
               })}
-              
+
               {/* Pagination */}
               <div className="flex justify-between items-center py-4">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   className={`flex items-center px-4 py-2 rounded-lg text-sm ${
-                    currentPage === 1 
-                      ? 'bg-gray-700/80 text-gray-400 cursor-not-allowed' 
+                    currentPage === 1
+                      ? 'bg-gray-700/80 text-gray-400 cursor-not-allowed'
                       : 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
                   }`}
                 >
                   <ChevronLeftIcon className="h-4 w-4 mr-1" />
                   Previous
                 </button>
-                
+
                 <span className="text-gray-300 text-sm">
                   Page {currentPage} of {totalPages || 1}
                 </span>
-                
+
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || totalPages === 0}
                   className={`flex items-center px-4 py-2 rounded-lg text-sm ${
                     currentPage === totalPages || totalPages === 0
-                      ? 'bg-gray-700/80 text-gray-400 cursor-not-allowed' 
+                      ? 'bg-gray-700/80 text-gray-400 cursor-not-allowed'
                       : 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
                   }`}
                 >
@@ -882,7 +882,7 @@ export default function AdminDealershipsPage() {
           )}
         </div>
       </div>
-      
+
       {/* Dealership Edit Modal */}
       <Transition appear show={isDealershipModalOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={() => setIsDealershipModalOpen(false)}>
@@ -916,22 +916,22 @@ export default function AdminDealershipsPage() {
                   >
                     Edit Dealership
                   </Dialog.Title>
-                  
+
                   {selectedDealership && (
                     <form onSubmit={handleUpdateDealership} className="space-y-4">
                       {/* Logo Upload */}
                       <div className="flex flex-col items-center justify-center mb-4">
                         <div className="relative w-24 h-24 mb-2">
                           {file ? (
-                            <img 
-                              src={URL.createObjectURL(file)} 
-                              alt="New logo" 
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt="New logo"
                               className="w-24 h-24 rounded-full object-cover"
                             />
                           ) : dealershipFormData.logo ? (
-                            <img 
-                              src={dealershipFormData.logo} 
-                              alt={dealershipFormData.name} 
+                            <img
+                              src={dealershipFormData.logo}
+                              alt={dealershipFormData.name}
                               className="w-24 h-24 rounded-full object-cover"
                             />
                           ) : (
@@ -942,7 +942,7 @@ export default function AdminDealershipsPage() {
                             </div>
                           )}
                         </div>
-                        
+
                         <label className="flex items-center justify-center px-4 py-2 bg-gray-700 text-gray-300 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
                           <PhotoIcon className="h-5 w-5 mr-2" />
                           Change Logo
@@ -954,7 +954,7 @@ export default function AdminDealershipsPage() {
                           />
                         </label>
                       </div>
-                    
+
                       {/* Dealership Name */}
                       <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-1">
@@ -969,7 +969,7 @@ export default function AdminDealershipsPage() {
                           required
                         />
                       </div>
-                      
+
                       {/* Location */}
                       <div>
                         <label htmlFor="location" className="block text-sm font-medium text-gray-400 mb-1">
@@ -989,7 +989,7 @@ export default function AdminDealershipsPage() {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Phone */}
                       <div>
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-400 mb-1">
@@ -1009,7 +1009,7 @@ export default function AdminDealershipsPage() {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Coordinates */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -1024,7 +1024,7 @@ export default function AdminDealershipsPage() {
                             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="latitude" className="block text-sm font-medium text-gray-400 mb-1">
                             Latitude
@@ -1038,7 +1038,7 @@ export default function AdminDealershipsPage() {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Subscription End Date */}
                       <div>
                         <label htmlFor="subscription_end_date" className="block text-sm font-medium text-gray-400 mb-1">
@@ -1058,7 +1058,7 @@ export default function AdminDealershipsPage() {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Submit and Cancel Buttons */}
                       <div className="flex justify-end space-x-3 mt-6">
                         <button
@@ -1068,7 +1068,7 @@ export default function AdminDealershipsPage() {
                         >
                           Cancel
                         </button>
-                        
+
                         <button
                           type="submit"
                           disabled={isActionLoading}
@@ -1092,7 +1092,7 @@ export default function AdminDealershipsPage() {
           </div>
         </Dialog>
       </Transition>
-      
+
       {/* Bulk Action Slide Over */}
       <Transition appear show={isBulkDrawerOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={() => setIsBulkDrawerOpen(false)}>
@@ -1107,7 +1107,7 @@ export default function AdminDealershipsPage() {
           >
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
           </Transition.Child>
-          
+
           <div className="fixed inset-0 overflow-hidden">
             <div className="absolute inset-0 overflow-hidden">
               <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
@@ -1125,7 +1125,7 @@ export default function AdminDealershipsPage() {
                       <div className="px-4 sm:px-6">
                         <div className="flex items-start justify-between">
                           <Dialog.Title className="text-lg font-semibold text-white">
-                            Bulk Actions 
+                            Bulk Actions
                             <span className="ml-2 bg-indigo-500/30 text-indigo-300 text-xs py-1 px-2 rounded-full">
                               {selectedDealerships.length} selected
                             </span>
@@ -1159,7 +1159,7 @@ export default function AdminDealershipsPage() {
                               <option value="end">End Subscription</option>
                             </select>
                           </div>
-                          
+
                           {bulkAction === 'extend' && (
                             <div>
                               <label htmlFor="extend-months" className="block text-sm font-medium text-gray-400 mb-2">
@@ -1176,14 +1176,14 @@ export default function AdminDealershipsPage() {
                               />
                             </div>
                           )}
-                          
+
                           <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
                             <h4 className="text-white font-medium mb-2">Selected Dealerships</h4>
                             <div className="max-h-64 overflow-y-auto space-y-2">
                               {selectedDealerships.map(id => {
                                 const dealership = allDealerships.find(d => d.id === id);
                                 if (!dealership) return null;
-                                
+
                                 return (
                                   <div key={id} className="flex justify-between items-center">
                                     <div className="text-gray-300">{dealership.name}</div>
@@ -1198,7 +1198,7 @@ export default function AdminDealershipsPage() {
                               })}
                             </div>
                           </div>
-                          
+
                           <div className="flex justify-between space-x-3">
                             <button
                               type="button"
@@ -1211,7 +1211,7 @@ export default function AdminDealershipsPage() {
                             >
                               Clear Selection
                             </button>
-                            
+
                             <button
                               type="button"
                               disabled={!bulkAction || selectedDealerships.length === 0 || isActionLoading}
@@ -1238,7 +1238,7 @@ export default function AdminDealershipsPage() {
           </div>
         </Dialog>
       </Transition>
-      
+
       {/* Bulk Action Confirmation Dialog */}
       <Transition appear show={showBulkActionConfirm} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={() => setShowBulkActionConfirm(false)}>
@@ -1271,14 +1271,14 @@ export default function AdminDealershipsPage() {
                       <ExclamationTriangleIcon className="h-6 w-6 text-amber-500" />
                     </div>
                   </div>
-                  
+
                   <Dialog.Title
                     as="h3"
                     className="text-lg font-medium text-white text-center"
                   >
                     Confirm Action
                   </Dialog.Title>
-                  
+
                   <div className="mt-3">
                     <p className="text-sm text-gray-300 text-center">
                       {bulkAction === 'extend' ? (
@@ -1287,7 +1287,7 @@ export default function AdminDealershipsPage() {
                         `You're about to end the subscription for ${selectedDealerships.length} dealership(s).`
                       )}
                     </p>
-                    
+
                     <p className="text-sm text-amber-400 mt-2 text-center">
                       This will also change the status of their cars to {bulkAction === 'extend' ? 'available' : 'pending'}.
                     </p>
@@ -1301,7 +1301,7 @@ export default function AdminDealershipsPage() {
                     >
                       Cancel
                     </button>
-                    
+
                     <button
                       type="button"
                       className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
@@ -1316,7 +1316,7 @@ export default function AdminDealershipsPage() {
           </div>
         </Dialog>
       </Transition>
-      
+
       {/* Loading Overlay */}
       {isActionLoading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -1331,7 +1331,7 @@ export default function AdminDealershipsPage() {
 }
 
 // Build a component for making a single tag with icon and text
-export function StatusTag({ status, colorClass, icon }: { status: string; colorClass: string; icon?: React.ReactNode }) {
+function StatusTag({ status, colorClass, icon }: { status: string; colorClass: string; icon?: React.ReactNode }) {
   return (
     <div className={`px-2 py-1 rounded-full text-xs border ${colorClass} inline-flex items-center`}>
       {icon && <span className="mr-1">{icon}</span>}
@@ -1341,31 +1341,31 @@ export function StatusTag({ status, colorClass, icon }: { status: string; colorC
 }
 
 // Component for dealership card in lists
-export function DealershipCard({ 
-  dealership, 
-  isSelected, 
-  onSelect, 
+export function DealershipCard({
+  dealership,
+  isSelected,
+  onSelect,
   onClick,
   getSubscriptionStatus
-}: { 
-  dealership: Dealership; 
-  isSelected: boolean; 
-  onSelect: (id: number) => void; 
+}: {
+  dealership: Dealership;
+  isSelected: boolean;
+  onSelect: (id: number) => void;
   onClick: (dealership: Dealership) => void;
   getSubscriptionStatus: (date: string) => { status: string; colorClass: string };
 }) {
   const { status, colorClass } = getSubscriptionStatus(dealership.subscription_end_date);
-  
+
   // Format date nicely
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-  
+
   return (
     <div
       className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl min-w-[300px] flex-shrink-0 hover:border-gray-600 transition-all duration-200 cursor-pointer"
@@ -1389,18 +1389,18 @@ export function DealershipCard({
             {dealership.cars_listed} cars
           </div>
         </div>
-        
+
         <div className="space-y-2 mt-2">
           <div className="flex items-center">
             <MapPinIcon className="h-4 w-4 text-gray-400 mr-2" />
             <span className="text-gray-300 text-sm">{dealership.location}</span>
           </div>
-          
+
           <div className="flex items-center">
             <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
             <span className="text-gray-300 text-sm">{dealership.phone}</span>
           </div>
-          
+
           <div className="flex items-center">
             <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
             <span className={`text-sm ${status === 'Expired' ? 'text-rose-400' : status === 'Expiring Soon' ? 'text-amber-400' : 'text-gray-300'}`}>
@@ -1408,11 +1408,11 @@ export function DealershipCard({
               {formatDate(dealership.subscription_end_date)}
             </span>
           </div>
-          
+
           <div className="flex items-center">
-            <StatusTag 
-              status={status} 
-              colorClass={colorClass} 
+            <StatusTag
+              status={status}
+              colorClass={colorClass}
               icon={
                 status === 'Active' ? (
                   <CheckCircleIcon className="h-3 w-3" />
@@ -1421,7 +1421,7 @@ export function DealershipCard({
                 ) : (
                   <XCircleIcon className="h-3 w-3" />
                 )
-              } 
+              }
             />
           </div>
         </div>
@@ -1432,7 +1432,7 @@ export function DealershipCard({
 
 /**
  * Subscription Manager Component - This could be extracted for reuse
- * 
+ *
  * This component handles subscription extension/termination functionality
  */
 export function SubscriptionManager({
@@ -1444,24 +1444,24 @@ export function SubscriptionManager({
 }) {
   const [months, setMonths] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const extendSubscription = async () => {
     if (months < 1) return;
-    
+
     setIsProcessing(true);
     try {
       const currentEndDate = new Date(dealership.subscription_end_date);
       const now = new Date();
-      
+
       // If subscription has expired, start from today, otherwise extend from current end date
       const startDate = currentEndDate < now ? now : currentEndDate;
-      
+
       // Add the specified number of months
       const newEndDate = new Date(startDate);
       newEndDate.setMonth(newEndDate.getMonth() + months);
-      
+
       await onUpdate(dealership, newEndDate.toISOString().split('T')[0]);
-      
+
       // Reset after success
       setMonths(1);
     } catch (error) {
@@ -1470,10 +1470,10 @@ export function SubscriptionManager({
       setIsProcessing(false);
     }
   };
-  
+
   const endSubscription = async () => {
     if (!confirm("Are you sure you want to end this subscription immediately?")) return;
-    
+
     setIsProcessing(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -1484,11 +1484,11 @@ export function SubscriptionManager({
       setIsProcessing(false);
     }
   };
-  
+
   return (
     <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
       <h3 className="text-white font-medium mb-3">Subscription Management</h3>
-      
+
       <div className="mb-4">
         <div className="flex items-center mb-2">
           <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
@@ -1496,7 +1496,7 @@ export function SubscriptionManager({
             Current End Date: {new Date(dealership.subscription_end_date).toLocaleDateString()}
           </span>
         </div>
-        
+
         <div className="flex items-center">
           <StatusTag
             status={
@@ -1516,7 +1516,7 @@ export function SubscriptionManager({
           />
         </div>
       </div>
-      
+
       <div className="flex flex-col space-y-2">
         <div className="flex">
           <input
@@ -1542,7 +1542,7 @@ export function SubscriptionManager({
             )}
           </button>
         </div>
-        
+
         <button
           onClick={endSubscription}
           disabled={isProcessing || new Date(dealership.subscription_end_date) < new Date()}

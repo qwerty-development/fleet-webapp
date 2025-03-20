@@ -15,9 +15,11 @@
     "@heroicons/react": "^2.2.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "@tanstack/react-query": "^5.69.0",
     "chart.js": "^4.4.8",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.4.10",
+    "google-one-tap": "^1.0.6",
     "next": "14.2.24",
     "react": "^18",
     "react-blur": "^1.1.1",
@@ -28,6 +30,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/google-one-tap": "^1.2.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
