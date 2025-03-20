@@ -237,101 +237,100 @@ const CarCard: React.FC<CarCardProps> = ({
           </div>
         </div>
 
-
-
         {/* Dealership Info */}
         <div className="p-4 bg-neutral-800 border-t border-gray-700">
-
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="h-10 w-10">
-              <img
-                src={car.dealerships.logo || getLogoUrl(car.make, isLightMode)}
-                alt={car.dealerships.name || car.make}
-                className="w-full h-full rounded-full object-cover border border-gray-700"
-              />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-10 w-10">
+                <img
+                  src={
+                    car.dealerships.logo || getLogoUrl(car.make, isLightMode)
+                  }
+                  alt={car.dealerships.name || car.make}
+                  className="w-full h-full rounded-full object-cover border border-gray-700"
+                />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-gray-100 font-semibold text-sm truncate max-w-[150px]">
+                  {car.dealerships.name}
+                </h3>
+                {car.dealerships.location && (
+                  <p className="text-gray-400 text-xs truncate max-w-[150px]">
+                    {car.dealerships.location.split(",")[0]}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="ml-3">
-              <h3 className="text-gray-100 font-semibold text-sm truncate max-w-[150px]">
-                {car.dealerships.name}
-              </h3>
-              {car.dealerships.location && (
-                <p className="text-gray-400 text-xs truncate max-w-[150px]">
-                  {car.dealerships.location.split(",")[0]}
-                </p>
+
+            <div className="flex space-x-3">
+              {car.dealerships.phone && (
+                <ActionButton
+                  icon={<PhoneIcon className="h-5 w-5" />}
+                  onClick={handleCall}
+                  label="Call"
+                />
               )}
-            </div>
-          </div>
-
-          <div className="flex space-x-3">
-            {car.dealerships.phone && (
               <ActionButton
-                icon={<PhoneIcon className="h-5 w-5" />}
-                onClick={handleCall}
-                label="Call"
+                icon={<ShareIcon className="h-5 w-5" />}
+                onClick={handleShare}
+                label="Share"
               />
-            )}
-            <ActionButton
-              icon={<ShareIcon className="h-5 w-5" />}
-              onClick={handleShare}
-              label="Share"
-            />
+            </div>
           </div>
         </div>
       </div>
-      </div>
-
-
 
       {/* Desktop Layout */}
-      <div className="hidden md:block">
-        <Link href={`/cars/${car.id}`} className="block relative group">
-          {/* Image with hover scale effect */}
-          <div
-            className="relative bg-neutral-800 overflow-hidden w-full rounded-b-3xl transition-transform duration-300 group-hover:scale-105"
-            style={{ aspectRatio: "16/9" }}
-          >
-            <img
-              src={car.images[0]}
-              alt={`${car.make} ${car.model}`}
-              className="w-full h-full object-cover"
-            />
-            {/* Price badge */}
-            <div className="absolute top-4 right-4 z-20">
-              <div className="bg-accent px-5 py-3 rounded-2xl shadow-lg">
-                <span className="text-white text-xl font-bold md:text-2xl">
-                  ${car.price.toLocaleString()}
-                </span>
+      <div className="hidden bg-yellow-300 md:flex md:flex-col h-full justify-between">
+        <div id="container_klshi_abel_grid" className="bg-blue-100 h-full">
+          <Link href={`/cars/${car.id}`} className="block relative group">
+            {/* Image with hover scale effect */}
+            <div
+              className="relative bg-neutral-800 overflow-hidden w-full rounded-b-3xl transition-transform duration-300 group-hover:scale-100"
+              style={{ aspectRatio: "16/9" }}
+            >
+              <img
+                src={car.images[0]}
+                alt={`${car.make} ${car.model}`}
+                className="w-full h-full object-cover"
+              />
+              {/* Price badge */}
+              <div className="absolute top-4 right-4 z-20">
+                <div className="bg-accent px-5 py-3 rounded-2xl shadow-lg">
+                  <span className="text-white text-xl font-bold md:text-2xl">
+                    ${car.price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Car Info */}
+          <div className="flex items-center px-6 pt-5 pb-3">
+            <div className="h-16 w-16 mr-4 flex-shrink-0">
+              <img
+                src={getLogoUrl(car.make, isLightMode)}
+                alt={car.make}
+                className="drop-shadow-md"
+              />
+            </div>
+            <div>
+              <h2 className="text-white text-2xl font-bold">
+                {car.make} {car.model}
+              </h2>
+              <div className="flex items-center mt-1">
+                <CalendarIcon className="h-4 w-4 text-accent mr-1" />
+                <span className="text-gray-300 text-sm">{car.year}</span>
               </div>
             </div>
           </div>
-        </Link>
-
-        {/* Car Info */}
-        <div className="flex items-center px-6 pt-5 pb-3">
-          <div className="h-16 w-16 mr-4 flex-shrink-0">
-            <img
-              src={getLogoUrl(car.make, isLightMode)}
-              alt={car.make}
-              className="drop-shadow-md"
-            />
-          </div>
-          <div>
-            <h2 className="text-white text-2xl font-bold">
-              {car.make} {car.model}
-            </h2>
-            <div className="flex items-center mt-1">
-              <CalendarIcon className="h-4 w-4 text-accent mr-1" />
-              <span className="text-gray-300 text-sm">{car.year}</span>
-            </div>
-          </div>
         </div>
 
-
-
         {/* Specifications grid */}
-        <div className="px-6 py-4 border-t border-neutral-800 flex-grow">
+        <div
+          id="specs_grid"
+          className="px-6 py-4  bg-blue-300 h-full border-t border-neutral-800 flex-grow"
+        >
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <SpecItem
               icon={<ClockIcon className="h-5 w-5 text-accent" />}
@@ -432,7 +431,11 @@ const CarCard: React.FC<CarCardProps> = ({
         </div>
 
         {/* Dealership Info */}
-        <div className="p-5 bg-gradient-to-b from-neutral-800 to-neutral-900 border-t border-gray-700 rounded-b-3xl">
+        <div
+          id="dealer_info"
+          className="p-5 bg-blue-500 h-full border-t border-gray-700 rounded-b-3xl"
+          // className="p-5 bg-gradient-to-b from-neutral-800 to-neutral-900 border-t border-gray-700 rounded-b-3xl"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between">
             <div className="flex items-center mb-3 sm:mb-0">
               <div className="h-14 w-14 flex-shrink-0">
