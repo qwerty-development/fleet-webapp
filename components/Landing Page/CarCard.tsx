@@ -136,7 +136,7 @@ const CarCard: React.FC<CarCardProps> = ({
   return (
     <div
       ref={cardRef}
-      className="rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col h-full bg-neutral-900/90 backdrop-blur-sm"
+      className="rounded-3xl h-full shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col bg-neutral-900/90 backdrop-blur-sm"
       style={{
         transform: "translateY(20px)",
         opacity: 0,
@@ -281,8 +281,9 @@ const CarCard: React.FC<CarCardProps> = ({
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden bg-yellow-300 md:flex md:flex-col h-full justify-between">
-        <div id="container_klshi_abel_grid" className="bg-blue-100 h-full">
+      <div className="hidden  md:flex md:flex-col h-full justify-between">
+      {/* <div className="hidden bg-yellow-300 md:flex md:flex-col h-full justify-between"> */}
+        <div id="container_klshi_abel_grid" className=" h-full">
           <Link href={`/cars/${car.id}`} className="block relative group">
             {/* Image with hover scale effect */}
             <div
@@ -329,7 +330,7 @@ const CarCard: React.FC<CarCardProps> = ({
         {/* Specifications grid */}
         <div
           id="specs_grid"
-          className="px-6 py-4  bg-blue-300 h-full border-t border-neutral-800 flex-grow"
+          className="px-6 py-4   h-full border-t border-neutral-800 flex-grow"
         >
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <SpecItem
@@ -433,8 +434,7 @@ const CarCard: React.FC<CarCardProps> = ({
         {/* Dealership Info */}
         <div
           id="dealer_info"
-          className="p-5 bg-blue-500 h-full border-t border-gray-700 rounded-b-3xl"
-          // className="p-5 bg-gradient-to-b from-neutral-800 to-neutral-900 border-t border-gray-700 rounded-b-3xl"
+          className="p-5 bg-gradient-to-b from-neutral-800 to-neutral-900 border-t border-gray-700 rounded-b-3xl"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between">
             <div className="flex items-center mb-3 sm:mb-0">
