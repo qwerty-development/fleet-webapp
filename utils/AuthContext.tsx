@@ -417,6 +417,19 @@ const signUp = async ({ email, password, name, role = 'user' }: SignUpCredential
       await clearGuestMode();
     }
 
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingUser) {
+      return {
+        error: new Error('An account with this email already exists. Please sign in instead.'),
+        needsEmailVerification: false
+      };
+    }
+
     // Use email_otp flow instead of default magic link
     const { data, error } = await supabase.auth.signUp({
       email,
