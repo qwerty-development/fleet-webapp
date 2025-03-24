@@ -31,7 +31,7 @@ const DEFAULT_PROFILE_IMAGE = "";
 
 // Support contact information
 const WHATSAPP_NUMBER = "81972024";
-const SUPPORT_EMAIL = "support@example.com";
+const SUPPORT_EMAIL = "mark@fleetapp.me";
 const EMAIL_SUBJECT = "Support Request";
 
 // Notification settings type
