@@ -30,6 +30,7 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isPageReady, setIsPageReady] = useState(false);
 
   // Check if already signed in on mount
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function SignInPage() {
         setIsAuthenticated(true);
         router.push('/home');
       }
+      setIsPageReady(true);
     };
 
     checkAuthStatus();
@@ -46,24 +48,23 @@ export default function SignInPage() {
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        delayChildren: 0.3,
-        staggerChildren: 0.2
+        duration: 0.4,
+        when: "beforeChildren",
+        staggerChildren: 0.05
       }
     }
   };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { opacity: 0 },
     visible: {
-      y: 0,
       opacity: 1,
-      transition: { duration: 0.6 }
+      transition: { duration: 0.3 }
     }
   };
 
@@ -190,52 +191,48 @@ export default function SignInPage() {
     return null;
   }
 
+  // Add a placeholder loading state to maintain consistent height
+  if (!isPageReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light">
+        <div className="w-full max-w-md h-[500px] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light relative overflow-hidden">
-      {/* Background animation */}
+      {/* Background animation - using static opacity to prevent layout shifts */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(20)].map((_, i) => (
-          <motion.div
+          <div
             key={i}
             className="absolute rounded-full bg-accent/10"
-            initial={{
-              x: `${Math.random() * 100}%`,
-              y: `${Math.random() * 100}%`,
-              scale: Math.random() * 0.5 + 0.5,
-              opacity: Math.random() * 0.3 + 0.1,
-            }}
-            animate={{
-              y: [
-                `${Math.random() * 100}%`,
-                `${Math.random() * 100}%`,
-                `${Math.random() * 100}%`
-              ],
-              opacity: [0.1, 0.2, 0.1],
-            }}
-            transition={{
-              duration: Math.random() * 20 + 20,
-              repeat: Infinity,
-              repeatType: "reverse",
-            }}
             style={{
               width: `${Math.random() * 30 + 10}px`,
               height: `${Math.random() * 30 + 10}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              opacity: 0.15,
               filter: "blur(8px)",
+              transform: `scale(${Math.random() * 0.5 + 0.5})`,
             }}
           />
         ))}
       </div>
 
-      {/* Content container */}
+      {/* Content container with fixed height minimum */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="z-10 container mx-auto px-4 py-16 max-w-md"
+        className="z-10 container mx-auto px-4 py-16 max-w-md min-h-[500px] flex items-center"
       >
         <motion.div
           variants={itemVariants}
-          className="bg-background/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8 shadow-lg"
+          className="bg-background/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8 shadow-lg w-full"
         >
           <motion.h1
             variants={itemVariants}
@@ -244,8 +241,11 @@ export default function SignInPage() {
             Sign In
           </motion.h1>
 
-          {/* Google Auth Handler */}
-          <motion.div variants={itemVariants}>
+          {/* Google Auth Handler - wrapped in placeholder div with min-height */}
+          <motion.div
+            variants={itemVariants}
+            className="min-h-[56px]"
+          >
             <GoogleAuthHandler />
           </motion.div>
 
@@ -256,14 +256,16 @@ export default function SignInPage() {
               <div className="flex-grow h-px bg-gray-700"></div>
             </div>
 
-            {/* General error message */}
-            {error && (
-              <div className="p-3 bg-red-900/20 border border-red-800/40 rounded-lg">
-                <p className="text-red-400 text-sm text-center">{error}</p>
-              </div>
-            )}
+            {/* Error message area with minimum height to prevent layout shift */}
+            <div className="min-h-[28px]">
+              {error && (
+                <div className="p-3 bg-red-900/20 border border-red-800/40 rounded-lg">
+                  <p className="text-red-400 text-sm text-center">{error}</p>
+                </div>
+              )}
+            </div>
 
-            {/* Email input */}
+            {/* Email input with fixed error message space */}
             <div>
               <input
                 type="email"
@@ -275,12 +277,14 @@ export default function SignInPage() {
                 onChange={(e) => setEmailAddress(e.target.value)}
                 disabled={isLoading || isGuestLoading}
               />
-              {emailError && (
-                <p className="mt-1 text-sm text-accent">{emailError}</p>
-              )}
+              <div className="min-h-[20px]">
+                {emailError && (
+                  <p className="mt-1 text-sm text-accent">{emailError}</p>
+                )}
+              </div>
             </div>
 
-            {/* Password input */}
+            {/* Password input with fixed error message space */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -304,9 +308,11 @@ export default function SignInPage() {
                   <EyeIcon className="h-5 w-5 text-gray-400" />
                 )}
               </button>
-              {passwordError && (
-                <p className="mt-1 text-sm text-accent">{passwordError}</p>
-              )}
+              <div className="min-h-[20px]">
+                {passwordError && (
+                  <p className="mt-1 text-sm text-accent">{passwordError}</p>
+                )}
+              </div>
             </div>
 
             {/* Sign In Button */}
