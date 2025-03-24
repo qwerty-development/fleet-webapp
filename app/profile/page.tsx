@@ -30,7 +30,7 @@ const Navbar = dynamic(() => import('@/components/home/Navbar'), { ssr: false })
 const DEFAULT_PROFILE_IMAGE = "";
 
 // Support contact information
-const WHATSAPP_NUMBER = "81972024";
+const WHATSAPP_NUMBER = "+961 81972024";
 const SUPPORT_EMAIL = "mark@fleetapp.me";
 const EMAIL_SUBJECT = "Support Request";
 
