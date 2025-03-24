@@ -49,13 +49,69 @@ export default function SignInPage() {
     }
   };
 
-  const onSignInPress = async () => {
-    // Existing sign-in logic...
+const onSignInPress = async () => {
+    let hasError = false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailAddress) {
+      setEmailError("Email is required");
+      hasError = true;
+    } else if (!emailRegex.test(emailAddress)) {
+      setEmailError("Please enter a valid email address");
+      hasError = true;
+    } else {
+      setEmailError("");
+    }
+
+    if (!password) {
+      setPasswordError("Password is required");
+      hasError = true;
+    } else {
+      setPasswordError("");
+    }
+
+    if (hasError) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await signIn({
+        email: emailAddress,
+        password,
+      });
+
+      if (error) {
+        setEmailError(error.message || "Sign in failed. Please try again.");
+      } else {
+        router.push('/home');
+      }
+    } catch (err: any) {
+      console.error(JSON.stringify(err, null, 2));
+      setEmailError(err.message || "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGuestSignIn = async () => {
-    // Existing guest sign-in logic...
-  };
+  setIsGuestLoading(true);
+  try {
+    // 1. Set localStorage (for client-side detection)
+    const guestId = uuidv4(); // Make sure to import uuidv4 from 'uuid'
+    localStorage.setItem('isGuestUser', 'true');
+    localStorage.setItem('guestUserId', guestId);
+
+    // 2. Set a cookie (for server-side/middleware detection)
+    document.cookie = `isGuestUser=true; path=/; max-age=86400`; // 24 hours
+    document.cookie = `guestUserId=${guestId}; path=/; max-age=86400`;
+
+    // 3. Use URL parameter for first navigation (as fallback)
+    window.location.href = '/home?guest=true';
+  } catch (err) {
+    console.error("Guest mode error:", err);
+    setError("Failed to continue as guest. Please try again.");
+    setIsGuestLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light relative overflow-hidden">
