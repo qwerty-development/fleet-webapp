@@ -1,9 +1,6 @@
-// app/auth/signin/page.tsx
-
 'use client';
 
-import React, { useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/utils/AuthContext';
 import { useGuestUser } from '@/utils/GuestUserContext';
 import { useRouter } from 'next/navigation';
@@ -11,20 +8,41 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import GoogleAuthHandler from '@/components/auth/GoogleAuthHandler';
+import { createClient } from '@/utils/supabase/client';
 
 export default function SignInPage() {
   const { signIn } = useAuth();
   const { setGuestMode } = useGuestUser();
   const router = useRouter();
+  const supabase = createClient();
 
+  // Form state
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Error states
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+
+  // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check if already signed in on mount
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session) {
+        setIsAuthenticated(true);
+        router.push('/home');
+      }
+    };
+
+    checkAuthStatus();
+  }, [router]);
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
@@ -49,7 +67,13 @@ export default function SignInPage() {
     }
   };
 
-const onSignInPress = async () => {
+  const onSignInPress = async () => {
+    // Reset all error states
+    setError('');
+    setEmailError('');
+    setPasswordError('');
+
+    // Client-side validation
     let hasError = false;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -59,65 +83,147 @@ const onSignInPress = async () => {
     } else if (!emailRegex.test(emailAddress)) {
       setEmailError("Please enter a valid email address");
       hasError = true;
-    } else {
-      setEmailError("");
     }
 
     if (!password) {
       setPasswordError("Password is required");
       hasError = true;
-    } else {
-      setPasswordError("");
+    } else if (password.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      hasError = true;
     }
 
     if (hasError) return;
 
     setIsLoading(true);
-    try {
-      const { error } = await signIn({
-        email: emailAddress,
-        password,
-      });
 
-      if (error) {
-        setEmailError(error.message || "Sign in failed. Please try again.");
-      } else {
-        router.push('/home');
+    // Add timeout for network issues
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Sign in timed out. Please check your connection and try again.')), 15000)
+    );
+
+    try {
+      // Race against timeout
+      const result = await Promise.race([
+        signIn({
+          email: emailAddress,
+          password,
+        }),
+        timeoutPromise
+      ]) as any;
+
+      // Handle authentication response
+      if (result.error) {
+        // Route errors to appropriate fields based on type
+        if (result.errorType === 'email' || result.errorType === 'verification') {
+          setEmailError(result.error.message || "Invalid email address.");
+        } else if (result.errorType === 'password') {
+          setPasswordError(result.error.message || "Password is incorrect.");
+        } else if (result.errorType === 'credentials') {
+          // With credential errors, we don't know if it's email or password
+          // Set as general error instead of highlighting a specific field
+          setError(result.error.message || "Invalid email or password.");
+        } else {
+          // For unknown errors, show general error message
+          setError(result.error.message || "Authentication failed. Please try again.");
+        }
+        setIsLoading(false);
+        return;
       }
+
+      // Verification of authenticated state before navigation
+      // Add a small delay to ensure state has propagated
+      setTimeout(async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+
+          if (data?.session) {
+            // Successfully signed in - navigate to home page
+            router.push('/home');
+          } else {
+            setError("Sign in successful but session not established. Please try again.");
+            setIsLoading(false);
+          }
+        } catch (sessionError) {
+          console.error("Session verification error:", sessionError);
+          setError("Sign in appeared successful but couldn't verify session. Please try again.");
+          setIsLoading(false);
+        }
+      }, 500);
+
     } catch (err: any) {
-      console.error(JSON.stringify(err, null, 2));
-      setEmailError(err.message || "An error occurred. Please try again.");
-    } finally {
+      console.error("Sign in process error:", err);
+
+      // Handle timeout errors specifically
+      if (err.message && err.message.includes('timed out')) {
+        setError(err.message);
+      } else {
+        setError(err.message || "An unexpected error occurred. Please try again.");
+      }
       setIsLoading(false);
     }
   };
 
   const handleGuestSignIn = async () => {
-  setIsGuestLoading(true);
-  try {
-    // 1. Set localStorage (for client-side detection)
-    const guestId = uuidv4(); // Make sure to import uuidv4 from 'uuid'
-    localStorage.setItem('isGuestUser', 'true');
-    localStorage.setItem('guestUserId', guestId);
+    setIsGuestLoading(true);
+    setError('');
 
-    // 2. Set a cookie (for server-side/middleware detection)
-    document.cookie = `isGuestUser=true; path=/; max-age=86400`; // 24 hours
-    document.cookie = `guestUserId=${guestId}; path=/; max-age=86400`;
+    try {
+      const result = await setGuestMode(true);
 
-    // 3. Use URL parameter for first navigation (as fallback)
-    window.location.href = '/home?guest=true';
-  } catch (err) {
-    console.error("Guest mode error:", err);
-    setError("Failed to continue as guest. Please try again.");
-    setIsGuestLoading(false);
+      if (result) {
+        // Use router instead of direct location change
+        router.push('/home');
+      } else {
+        setError("Failed to activate guest mode. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("Guest mode error:", err);
+      setError("Failed to continue as guest. Please try again.");
+    } finally {
+      setIsGuestLoading(false);
+    }
+  };
+
+  // Prevent showing the sign-in page if already authenticated
+  if (isAuthenticated) {
+    return null;
   }
-};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light relative overflow-hidden">
       {/* Background animation */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Existing background animation code... */}
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-accent/10"
+            initial={{
+              x: `${Math.random() * 100}%`,
+              y: `${Math.random() * 100}%`,
+              scale: Math.random() * 0.5 + 0.5,
+              opacity: Math.random() * 0.3 + 0.1,
+            }}
+            animate={{
+              y: [
+                `${Math.random() * 100}%`,
+                `${Math.random() * 100}%`,
+                `${Math.random() * 100}%`
+              ],
+              opacity: [0.1, 0.2, 0.1],
+            }}
+            transition={{
+              duration: Math.random() * 20 + 20,
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+            style={{
+              width: `${Math.random() * 30 + 10}px`,
+              height: `${Math.random() * 30 + 10}px`,
+              filter: "blur(8px)",
+            }}
+          />
+        ))}
       </div>
 
       {/* Content container */}
@@ -138,7 +244,7 @@ const onSignInPress = async () => {
             Sign In
           </motion.h1>
 
-          {/* Google Auth Handler - works in both standard browsers and web views */}
+          {/* Google Auth Handler */}
           <motion.div variants={itemVariants}>
             <GoogleAuthHandler />
           </motion.div>
@@ -150,6 +256,13 @@ const onSignInPress = async () => {
               <div className="flex-grow h-px bg-gray-700"></div>
             </div>
 
+            {/* General error message */}
+            {error && (
+              <div className="p-3 bg-red-900/20 border border-red-800/40 rounded-lg">
+                <p className="text-red-400 text-sm text-center">{error}</p>
+              </div>
+            )}
+
             {/* Email input */}
             <div>
               <input
@@ -160,6 +273,7 @@ const onSignInPress = async () => {
                 placeholder="Email"
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
+                disabled={isLoading || isGuestLoading}
               />
               {emailError && (
                 <p className="mt-1 text-sm text-accent">{emailError}</p>
@@ -176,11 +290,13 @@ const onSignInPress = async () => {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading || isGuestLoading}
               />
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                disabled={isLoading || isGuestLoading}
               >
                 {showPassword ? (
                   <EyeSlashIcon className="h-5 w-5 text-gray-400" />
@@ -193,14 +309,10 @@ const onSignInPress = async () => {
               )}
             </div>
 
-            {error && (
-              <p className="text-center text-accent">{error}</p>
-            )}
-
             {/* Sign In Button */}
             <button
               onClick={onSignInPress}
-              disabled={isLoading}
+              disabled={isLoading || isGuestLoading}
               className="w-full bg-accent hover:bg-accent-dark text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300 disabled:opacity-70"
             >
               {isLoading ? (
@@ -217,7 +329,7 @@ const onSignInPress = async () => {
             {/* Guest Mode Button */}
             <button
               onClick={handleGuestSignIn}
-              disabled={isGuestLoading}
+              disabled={isLoading || isGuestLoading}
               className="w-full border border-accent text-accent hover:bg-accent/10 font-bold py-3 px-4 rounded-lg transition-colors duration-300 disabled:opacity-70"
             >
               {isGuestLoading ? (

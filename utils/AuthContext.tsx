@@ -376,39 +376,80 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     }
   };
 
-  // Email/Password Sign In
-  const signIn = async ({ email, password }: SignInCredentials) => {
-    try {
-      if (isGuest) {
-        await clearGuestMode();
-      }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
 
-      if (error) {
-        // Handle specific error types with more user-friendly messages
-        if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Invalid email or password. Please try again.');
-        } else if (error.message.includes('Email not confirmed')) {
-          throw new Error('Please confirm your email address before signing in.');
-        } else {
-          throw error;
-        }
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id);
-      }
-
-      return { error: null };
-    } catch (error: any) {
-      console.error('Sign in error:', error);
-      return { error };
+const signIn = async ({ email, password }: SignInCredentials) => {
+  try {
+    if (isGuest) {
+      await clearGuestMode();
     }
-  };
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      // Categorize errors for better UI handling
+      if (error.message.includes('Invalid login credentials')) {
+        return {
+          error: new Error('Invalid email or password. Please try again.'),
+          errorType: 'credentials'
+        };
+      } else if (error.message.includes('Email not confirmed')) {
+        return {
+          error: new Error('Please confirm your email address before signing in.'),
+          errorType: 'verification'
+        };
+      } else if (error.message.includes('Invalid email')) {
+        return {
+          error: new Error('Please enter a valid email address.'),
+          errorType: 'email'
+        };
+      } else if (error.message.toLowerCase().includes('password')) {
+        return {
+          error: new Error(error.message || 'Password is incorrect.'),
+          errorType: 'password'
+        };
+      } else {
+        return {
+          error,
+          errorType: 'unknown'
+        };
+      }
+    }
+
+    // Ensure profile is fetched and return success
+    if (data.user) {
+      try {
+        await fetchUserProfile(data.user.id);
+        return {
+          error: null,
+          user: data.user,
+          session: data.session
+        };
+      } catch (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        // Continue with sign-in even if profile fetch fails
+        return {
+          error: null,
+          user: data.user,
+          session: data.session,
+          profileError: true
+        };
+      }
+    }
+
+    return { error: null, user: data.user, session: data.session };
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    return {
+      error,
+      errorType: 'system',
+      message: error.message || 'An unexpected error occurred. Please try again.'
+    };
+  }
+};
 
 // Sign Up
 const signUp = async ({ email, password, name, role = 'user' }: SignUpCredentials) => {
