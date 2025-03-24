@@ -10,6 +10,7 @@ import { useGuestUser } from "@/utils/GuestUserContext";
 import HeroSection from "@/components/Landing Page/herosection";
 import Navbar from "@/components/Landing Page/navbar";
 import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
+import FeaturedCarsSection from "@/components/Landing Page/FeaturedCarsSection";
 
 // Dynamically import non-critical sections with loading placeholders
 const AboutSection = dynamic(
@@ -177,6 +178,7 @@ useEffect(() => {
             className="relative z-30"
             style={{ background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)" }}
           >
+            <FeaturedCarsSection/>
             <AboutSection />
             <AppShowcase />
             <MarqueeLogos />
