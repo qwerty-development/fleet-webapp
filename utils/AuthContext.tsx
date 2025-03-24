@@ -649,12 +649,13 @@ const signUp = async ({ email, password, name, role = 'user' }: SignUpCredential
         window.location.href = opts.redirectUrl;
       }
     } finally {
-      // Reset loading state after a minimum duration to prevent UI flicker
+
       setTimeout(() => {
         if (typeof window !== 'undefined' && window.document.body) {
           setIsSigningOut(false);
         }
       }, 500);
+      window.location.reload();
     }
   };
 
