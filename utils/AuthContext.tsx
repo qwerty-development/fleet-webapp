@@ -410,81 +410,28 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
     }
   };
 
-  // Sign Up
-  const signUp = async ({ email, password, name, role = 'user' }: SignUpCredentials) => {
-    try {
-      if (isGuest) {
-        await clearGuestMode();
-      }
+// Sign Up
+const signUp = async ({ email, password, name, role = 'user' }: SignUpCredentials) => {
+  try {
+    if (isGuest) {
+      await clearGuestMode();
+    }
 
-      // First, check if email already exists by attempting a passwordless sign-in
-      const { error: emailCheckError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,  // Don't create a new user, just check if email exists
-        }
-      });
-
-      // If there's no error with error code 'user-not-found', then the user exists
-      if (!emailCheckError || (emailCheckError && emailCheckError.message !== 'User not found')) {
-        return {
-          error: new Error('An account with this email already exists. Please sign in instead.'),
-          needsEmailVerification: false
-        };
-      }
-
-      // Proceed with signup if email doesn't exist
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-            role: role,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        // Handle specific error cases with clear messages
-        if (error.message?.includes('already registered')) {
-          return {
-            error: new Error('An account with this email already exists. Please sign in instead.'),
-            needsEmailVerification: false
-          };
-        }
-        throw error;
-      }
-
-      // Create user in users table with the same ID
-      if (data.user) {
-        const { error: upsertError } = await supabase.from('users').upsert([{
-          id: data.user.id,
+    // Use email_otp flow instead of default magic link
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
           name: name,
-          email: email,
-          favorite: [],
-          last_active: new Date().toISOString(),
-          timezone: 'UTC',
           role: role,
-        }], {
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
+        },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-        if (upsertError && upsertError.code !== '23505') {
-          console.error('Error creating user profile:', upsertError);
-        }
-      }
-
-      // Determine if email verification is needed
-      const needsEmailVerification = data.session === null;
-
-      return { error: null, needsEmailVerification };
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-
-      // Improve error messaging for specific cases
+    if (error) {
+      // Handle specific error cases with clear messages
       if (error.message?.includes('already registered') ||
           error.message?.includes('already in use') ||
           error.message?.includes('already exists')) {
@@ -493,10 +440,53 @@ export const AuthProvider = ({ children }: {children: React.ReactNode}) => {
           needsEmailVerification: false
         };
       }
-
-      return { error, needsEmailVerification: false };
+      throw error;
     }
-  };
+
+    // Create user in users table with the same ID
+    if (data.user) {
+      const { error: upsertError } = await supabase.from('users').upsert([{
+        id: data.user.id,
+        name: name,
+        email: email,
+        favorite: [],
+        last_active: new Date().toISOString(),
+        timezone: 'UTC',
+        role: role,
+      }], {
+        onConflict: 'id',
+        ignoreDuplicates: false
+      });
+
+      if (upsertError && upsertError.code !== '23505') {
+        console.error('Error creating user profile:', upsertError);
+      }
+    }
+
+    // Determine if email verification is needed - this will be true for OTP flow
+    const needsEmailVerification = data.session === null;
+
+    return {
+      error: null,
+      needsEmailVerification,
+      email: email // Return email for the OTP verification screen
+    };
+  } catch (error: any) {
+    console.error('Sign up error:', error);
+
+    // Improve error messaging for specific cases
+    if (error.message?.includes('already registered') ||
+        error.message?.includes('already in use') ||
+        error.message?.includes('already exists')) {
+      return {
+        error: new Error('An account with this email already exists. Please sign in instead.'),
+        needsEmailVerification: false
+      };
+    }
+
+    return { error, needsEmailVerification: false };
+  }
+};
 
   // Enhanced Sign Out with better error handling and improved performance
   const signOut = async (options?: SignOutOptions) => {
