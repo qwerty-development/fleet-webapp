@@ -24,6 +24,7 @@ export default function GoogleAuthHandler() {
   const buttonContainerRef = useRef<HTMLDivElement>(null);
   const customButtonRef = useRef<HTMLButtonElement>(null);
 
+
   // Track component state
   const [environmentInfo, setEnvironmentInfo] = useState<EnvironmentInfo>({
     isWebView: false,
@@ -37,6 +38,12 @@ export default function GoogleAuthHandler() {
     isInitialized: false,
     error: null
   });
+  useEffect(() => {
+  // Clean up navigation tracking when component unmounts
+  return () => {
+    sessionStorage.removeItem('google_auth_redirect_pending');
+  };
+}, []);
 
   const initAttempts = useRef(0);
   const maxAttempts = 5;
@@ -88,56 +95,134 @@ export default function GoogleAuthHandler() {
     };
   };
 
-  // Process credential response from Google
-  const handleCredentialResponse = async (response: any) => {
-    console.log('Google credential response received');
-
-    if (!response?.credential) {
+  const initNetworkStatusListener = () => {
+  // Set up network status detection
+  const updateNetworkStatus = () => {
+    if (!navigator.onLine) {
       setAuthState(prev => ({
         ...prev,
-        error: 'Invalid credential received from Google'
+        error: 'You appear to be offline. Please check your internet connection.'
       }));
+    } else {
+      // Clear network error if we're back online and there was a network error
+      setAuthState(prev => {
+        if (prev.error?.includes('offline') || prev.error?.includes('internet')) {
+          return { ...prev, error: null };
+        }
+        return prev;
+      });
+    }
+  };
+
+  // Initial check
+  updateNetworkStatus();
+
+  // Set up listeners for network status changes
+  window.addEventListener('online', updateNetworkStatus);
+  window.addEventListener('offline', updateNetworkStatus);
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('online', updateNetworkStatus);
+    window.removeEventListener('offline', updateNetworkStatus);
+  };
+};
+
+  // Process credential response from Google
+const handleCredentialResponse = async (response: any) => {
+  console.log('Google credential response received');
+
+  if (!response?.credential) {
+    setAuthState(prev => ({
+      ...prev,
+      error: 'Invalid credential received from Google'
+    }));
+    return;
+  }
+
+  try {
+    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    if (!signInWithIdToken) {
+      throw new Error('Authentication method not available');
+    }
+
+    // 1. Create an authentication promise
+    const authPromise = signInWithIdToken({
+      provider: 'google',
+      token: response.credential,
+    });
+
+    // 2. Create a timeout promise (15 seconds)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Authentication request timed out')), 15000)
+    );
+
+    // 3. Race the promises
+    const { data, error, errorType } = await Promise.race([
+      authPromise,
+      timeoutPromise
+    ]);
+
+    if (error) {
+      console.error('Error signing in with Google:', error);
+
+      // Set user-friendly error messages based on error type
+      let errorMessage = 'Failed to sign in with Google';
+      if (errorType === 'network') {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (errorType === 'auth') {
+        errorMessage = 'Authentication failed. Please try again.';
+      } else if (error.message?.includes('timed out')) {
+        errorMessage = 'Authentication request timed out. Please try again.';
+      }
+
+      setAuthState(prev => ({ ...prev, isLoading: false, error: errorMessage }));
       return;
     }
 
+    console.log('Successfully signed in with Google');
+
+    // 4. Flag for navigation tracking
+    sessionStorage.setItem('google_auth_redirect_pending', 'true');
+
+    // 5. Attempt primary navigation
     try {
-      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-
-      if (!signInWithIdToken) {
-        throw new Error('Authentication method not available');
-      }
-
-      const { data, error, errorType } = await signInWithIdToken({
-        provider: 'google',
-        token: response.credential,
-      });
-
-      if (error) {
-        console.error('Error signing in with Google:', error);
-
-        // Set user-friendly error messages based on error type
-        let errorMessage = 'Failed to sign in with Google';
-        if (errorType === 'network') {
-          errorMessage = 'Network error. Please check your connection and try again.';
-        } else if (errorType === 'auth') {
-          errorMessage = 'Authentication failed. Please try again.';
-        }
-
-        setAuthState(prev => ({ ...prev, isLoading: false, error: errorMessage }));
-        return;
-      }
-
-      console.log('Successfully signed in with Google');
       router.push('/home');
-    } catch (error: any) {
-      console.error('Error processing Google credential:', error);
+
+      // 6. Set a fallback timeout to check if navigation worked
+      setTimeout(() => {
+        // If we're still on this page after 1.5 seconds, use fallback navigation
+        if (sessionStorage.getItem('google_auth_redirect_pending') === 'true') {
+          console.log('Navigation fallback triggered after Google sign-in');
+          sessionStorage.removeItem('google_auth_redirect_pending');
+          window.location.href = '/home';
+        }
+      }, 1500);
+    } catch (navError) {
+      // If router.push fails, fall back to direct location change
+      console.error('Navigation error after Google sign-in:', navError);
+      window.location.href = '/home';
+    }
+  } catch (error: any) {
+    console.error('Error processing Google credential:', error);
+
+    // Specific handling for timeout errors
+    if (error.message?.includes('timed out')) {
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Authentication request timed out. Please try again later.'
+      }));
+    } else {
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
         error: 'Failed to process Google sign in. Please try again.'
       }));
     }
-  };
+  }
+};
 
   // Initialize Google Sign-In with better error handling
   const initializeGoogleAuth = () => {
@@ -295,7 +380,7 @@ export default function GoogleAuthHandler() {
       }));
       return;
     }
-
+    const networkCleanup = initNetworkStatusListener();
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
     // Load Google Identity Services script with timeout
@@ -355,6 +440,7 @@ export default function GoogleAuthHandler() {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.cancel();
       }
+       networkCleanup();
     };
   }, [GOOGLE_CLIENT_ID]);
 
