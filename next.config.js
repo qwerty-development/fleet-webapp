@@ -19,13 +19,13 @@ const nextConfig = {
               default-src 'self';
               script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com;
               style-src 'self' 'unsafe-inline';
-              connect-src 'self' https://*.supabase.co https://accounts.google.com https://apis.google.com;
+              connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://apis.google.com http://localhost:* http://127.0.0.1:*;
               img-src 'self' data: https: blob:;
               media-src 'self' https://*.supabase.co blob: data:;
               font-src 'self' data:;
               frame-src 'self' https://accounts.google.com;
               object-src 'self' https://*.supabase.co;
-              worker-src 'self' blob:;
+              worker-src 'self' blob: 'unsafe-inline';
             `.replace(/\s+/g, ' ').trim(),
           },
         ],
@@ -35,7 +35,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-   eslint: {
+  eslint: {
     ignoreDuringBuilds: true,
   },
 };
