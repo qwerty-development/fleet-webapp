@@ -240,6 +240,7 @@ const { signOut, isSigningOut, signOutError } = useAuth();
 
           {/* Mobile Logout Button */}
           <button
+            onClick={handleSignOut}
                        disabled={isSigningOut}
 
             className="flex items-center w-full px-4 py-3 mt-6 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
