@@ -471,7 +471,7 @@ const signIn = async ({ email, password }: SignInCredentials) => {
         session: data.session
       };
     }
-    window.location.reload();
+
     return { error: null, user: data.user, session: data.session };
 
   } catch (error: any) {

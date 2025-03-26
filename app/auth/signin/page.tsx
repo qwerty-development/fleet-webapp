@@ -132,25 +132,43 @@ export default function SignInPage() {
         return;
       }
 
-      // Verification of authenticated state before navigation
-      // Add a small delay to ensure state has propagated
-      setTimeout(async () => {
-        try {
-          const { data } = await supabase.auth.getSession();
+// In onSignInPress function, replace the setTimeout redirection with:
+setTimeout(async () => {
+  try {
+    const { data } = await supabase.auth.getSession();
 
-          if (data?.session) {
-            // Successfully signed in - navigate to home page
-            router.push('/home');
-          } else {
-            setError("Sign in successful but session not established. Please try again.");
-            setIsLoading(false);
+    if (data?.session) {
+      // Set loading false before navigation
+      setIsLoading(false);
+
+      // Implement robust navigation with fallback
+      try {
+        // Primary navigation method
+        router.push('/home');
+
+        // Fallback in case router.push doesn't trigger navigation
+        setTimeout(() => {
+          // Check if we're still on the signin page after attempt
+          if (window.location.href.includes('/auth/signin')) {
+            console.log('Router navigation fallback triggered');
+            window.location.href = '/home';
           }
-        } catch (sessionError) {
-          console.error("Session verification error:", sessionError);
-          setError("Sign in appeared successful but couldn't verify session. Please try again.");
-          setIsLoading(false);
-        }
-      }, 500);
+        }, 1000);
+      } catch (navError) {
+        console.error('Navigation error:', navError);
+        // Force navigation as last resort
+        window.location.href = '/home';
+      }
+    } else {
+      setError("Sign in successful but session not established. Please try again.");
+      setIsLoading(false);
+    }
+  } catch (sessionError) {
+    console.error("Session verification error:", sessionError);
+    setError("Sign in appeared successful but couldn't verify session. Please try again.");
+    setIsLoading(false);
+  }
+}, 500);
 
     } catch (err: any) {
       console.error("Sign in process error:", err);
