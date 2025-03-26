@@ -13,7 +13,9 @@ import {
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  BuildingStorefrontIcon
+  BuildingStorefrontIcon,
+  CurrencyDollarIcon,
+  DocumentCurrencyDollarIcon
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -63,6 +65,12 @@ const navItems: NavItem[] = [
     href: "/dealer/analytics",
     icon: ChartBarIcon,
     iconActive: ChartBarIconSolid
+  },
+  {
+    name: "Sales History",
+    href: "/dealer/saleshistory",
+    icon: CurrencyDollarIcon,
+    iconActive: DocumentCurrencyDollarIcon
   },
 ];
 
