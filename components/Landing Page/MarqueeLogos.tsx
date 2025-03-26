@@ -150,7 +150,7 @@ const MarqueeLogos: React.FC = () => {
           transition={{ duration: 0.8 }}
           className="mb-16 text-center"
         >
-          <motion.span 
+          <motion.span
             className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -162,7 +162,7 @@ const MarqueeLogos: React.FC = () => {
           <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mb-6">
             <span className="relative">
               Premium
-              <motion.span 
+              <motion.span
                 className="absolute -bottom-2 left-0 w-full h-1 bg-accent"
                 initial={{ width: 0 }}
                 whileInView={{ width: "100%" }}
@@ -237,14 +237,10 @@ const MarqueeLogos: React.FC = () => {
                 >
                   <div className="h-40 w-40 flex items-center justify-center">
                     <img
-                      src={dealer.logo || "/default-dealer-logo.png"}
+                      src={dealer.logo }
                       alt={dealer.name}
                       className="max-h-full max-w-full object-contain drop-shadow-lg"
-                      onError={(e) => {
-                        // Fallback if logo fails to load
-                        (e.target as HTMLImageElement).src =
-                          "/default-dealer-logo.png";
-                      }}
+
                     />
                   </div>
                   <p className="text-white text-lg mt-3 font-semibold text-center max-w-[150px]">
