@@ -152,36 +152,40 @@ useEffect(() => {
     }
   }, 10000); // 10 seconds timeout for auth loading
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, currentSession) => {
-      console.log('Auth state change event:', event);
+const { data: { subscription } } = supabase.auth.onAuthStateChange(
+  async (event, currentSession) => {
+    console.log('Auth state change event:', event);
 
-      if(event=='USER_UPDATED'){
-        router.refresh();
-      }
+    if (event === 'USER_UPDATED') {
+      router.refresh();
+    }
 
-      if (currentSession) {
-        setSession(currentSession);
-        setUser(currentSession.user);
+    if (currentSession) {
+      setSession(currentSession);
+      setUser(currentSession.user);
 
-        // Get user profile from the users table
-        if (currentSession.user && !isGuest) {
+      // Get user profile from the users table
+      if (currentSession.user && !isGuest) {
+        // Wrap the database call in a setTimeout to break the synchronous chain.
+        setTimeout(async () => {
           try {
             await fetchUserProfile(currentSession.user.id);
           } catch (error) {
             console.error('Error fetching user profile:', error);
             // Continue even if profile fetch fails
           }
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+        }, 0); // using a 0ms delay schedules this to run asynchronously.
       }
-
-      setIsLoaded(true);
+    } else if (event === 'SIGNED_OUT') {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
     }
-  );
+
+    setIsLoaded(true);
+  }
+);
+
 
   // Check for existing session on startup with timeout
   const loadSession = async () => {
