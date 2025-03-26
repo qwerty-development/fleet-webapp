@@ -20,6 +20,7 @@ import {
   HeartIcon,
   EyeIcon,
   StopCircleIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 import { Dialog, Transition } from "@headlessui/react";
@@ -73,6 +74,7 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<ProcessedUser | null>(null);
   const [userDetails, setUserDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isDealershipFormOpen, setIsDealershipFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +83,6 @@ export default function AdminUsersPage() {
     field: string;
     ascending: boolean;
   }>({
-    // Added explicit type here
     field: "createdAt",
     ascending: false,
   });
@@ -90,7 +91,6 @@ export default function AdminUsersPage() {
     role: string;
     status: string;
   }>({
-    // Added explicit type here
     role: "all",
     status: "all",
   });
@@ -163,15 +163,15 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-  
+
     try {
       // Simply fetch users from the users table
       const { data: usersList, error } = await supabase
         .from('users')
         .select('*');
-      
+
       if (error) throw error;
-      
+
       // Process the users directly from the table
       const processedUsers = usersList.map(user => ({
         id: user.id,
@@ -187,7 +187,7 @@ export default function AdminUsersPage() {
         banned: false,
         locked: false
       }));
-      
+
       setUsers(processedUsers);
       applyFiltersAndSort(processedUsers, filterConfig, sortConfig, search);
     } catch (err) {
@@ -197,8 +197,6 @@ export default function AdminUsersPage() {
       setIsLoading(false);
     }
   }, [filterConfig, sortConfig, search, supabase]);
-
-  
 
   // Fetch user's liked cars and viewed cars
   const fetchUserDetails = async (userId: string) => {
@@ -230,10 +228,25 @@ export default function AdminUsersPage() {
 
       if (userError && userError.code !== "PGRST116") throw userError;
 
+      // Check if user is a dealer and get dealership info
+      let dealershipInfo = null;
+      if (userInfo?.role === 'dealer') {
+        const { data: dealership, error: dealershipError } = await supabase
+          .from("dealerships")
+          .select("*")
+          .eq("user_id", userId)
+          .single();
+
+        if (!dealershipError) {
+          dealershipInfo = dealership;
+        }
+      }
+
       setUserDetails({
         likedCars: likedCars || [],
         viewedCars: viewedCars || [],
         userInfo: userInfo || {},
+        dealershipInfo: dealershipInfo
       });
     } catch (err: any) {
       console.error("Error fetching user details:", err);
@@ -242,6 +255,7 @@ export default function AdminUsersPage() {
         likedCars: [],
         viewedCars: [],
         userInfo: {},
+        dealershipInfo: null
       });
     }
   };
@@ -325,13 +339,39 @@ export default function AdminUsersPage() {
     }
   }, [users, filterConfig, sortConfig, search, applyFiltersAndSort]);
 
+  // Determine if a role transition is allowed
+  const isAllowedRoleTransition = (currentRole: string, newRole: string): boolean => {
+    // Define allowed transitions for each role
+    const allowedTransitions: Record<string, string[]> = {
+      'user': ['dealer', 'admin'],     // User can become dealer or admin
+      'admin': ['user'],               // Admin can only become user
+      'dealer': ['user']               // Dealer can only become user
+    };
+
+    // Check if the transition is allowed
+    return allowedTransitions[currentRole]?.includes(newRole) || false;
+  };
+
+  // Initialize dealership form with user data
+  const initializeDealershipForm = (user: ProcessedUser) => {
+    setDealershipForm({
+      name: `${user.firstName} ${user.lastName}'s Dealership`,
+      location: "",
+      phone: "",
+      subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    setSelectedUser(user);
+    setIsDealershipFormOpen(true);
+  };
+
   // Helper function to handle user role change
-  const handleSetRole = (user: ProcessedUser) => {
-    if (
-      user.user_metadata.role === "admin" ||
-      user.user_metadata.role === "dealer"
-    ) {
-      alert("Cannot modify admin or existing dealer roles.");
+  const handleSetRole = (user: ProcessedUser, targetRole: string) => {
+    const currentRole = user.user_metadata.role || 'user';
+
+    // Check if the role transition is allowed
+    if (!isAllowedRoleTransition(currentRole, targetRole)) {
+      alert(`Cannot change role from ${currentRole} to ${targetRole}.`);
       return;
     }
 
@@ -340,8 +380,31 @@ export default function AdminUsersPage() {
       return;
     }
 
-    setSelectedUser(user);
-    setIsDealershipFormOpen(true);
+    // Special handling for dealer role
+    if (targetRole === 'dealer') {
+      initializeDealershipForm(user);
+    } else {
+      // For other roles, use direct role update
+      confirmAction(user, targetRole === 'admin' ? 'make-admin' : 'make-user');
+    }
+  };
+
+  // Check for existing dealership
+  const checkExistingDealership = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from("dealerships")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return !!data; // Return true if dealership exists, false otherwise
+    } catch (err) {
+      console.error("Error checking existing dealership:", err);
+      return false;
+    }
   };
 
   // Validate dealership form
@@ -351,7 +414,8 @@ export default function AdminUsersPage() {
       newErrors.name = "Company name is required";
     if (!dealershipForm.location.trim())
       newErrors.location = "Location is required";
-    if (!dealershipForm.phone.trim()) newErrors.phone = "Phone is required";
+    if (!dealershipForm.phone.trim())
+      newErrors.phone = "Phone is required";
     if (!/^\d{8,}$/.test(dealershipForm.phone))
       newErrors.phone = "Invalid phone number";
     if (dealershipForm.subscriptionEndDate < new Date())
@@ -368,6 +432,8 @@ export default function AdminUsersPage() {
     if (!validateDealershipForm() || !selectedUser) {
       return;
     }
+
+    setIsActionLoading(true);
 
     // Optimistic update
     const previousUsers = [...users];
@@ -386,17 +452,12 @@ export default function AdminUsersPage() {
     );
 
     try {
-      // 1. Update user role in auth.users metadata
-      const { error: authUpdateError } =
-        await supabase.auth.admin.updateUserById(selectedUser.id, {
-          user_metadata: {
-            role: "dealer",
-            // Preserve existing metadata fields
-            ...(selectedUser.user_metadata || {}),
-          },
-        });
+      // 1. Check if dealership already exists for this user
+      const dealershipExists = await checkExistingDealership(selectedUser.id);
 
-      if (authUpdateError) throw authUpdateError;
+      if (dealershipExists) {
+        throw new Error("User already has a dealership associated with their account");
+      }
 
       // 2. Update user role in public.users table
       const { error: dbUpdateError } = await supabase
@@ -424,13 +485,14 @@ export default function AdminUsersPage() {
       alert("User has been promoted to dealer successfully.");
 
       // Refresh data
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
       // Rollback on error
       console.error("Error updating role:", err);
       setUsers(previousUsers);
       alert("Failed to update user role: " + err.message);
     } finally {
+      setIsActionLoading(false);
       setIsDealershipFormOpen(false);
       setSelectedUser(null);
 
@@ -446,27 +508,97 @@ export default function AdminUsersPage() {
 
   // Update user role
   const updateUserRole = async (userId: string, newRole: string) => {
+    setIsActionLoading(true);
+
     try {
-      // Just update the role in the users table
+      // Get current user role
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
+      const currentRole = userData?.role || 'user';
+
+      // Check if role transition is allowed
+      if (!isAllowedRoleTransition(currentRole, newRole)) {
+        throw new Error(`Cannot change role from ${currentRole} to ${newRole}.`);
+      }
+
+      // Special handling for dealer role
+      if (newRole === 'dealer') {
+        // Find the user in our state
+        const user = users.find(u => u.id === userId);
+        if (!user) throw new Error("User not found");
+
+        // Show dealership form to create dealership record
+        initializeDealershipForm(user);
+        return false; // Handled by form submission
+      }
+
+      // Handle demoting a dealer to user
+      if (currentRole === 'dealer' && newRole === 'user') {
+        // Check if there are cars associated with this dealership
+        const dealershipData = await supabase
+          .from('dealerships')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+
+        if (!dealershipData.error && dealershipData.data) {
+          const dealershipId = dealershipData.data.id;
+
+          // Check for active cars
+          const { count, error: countError } = await supabase
+            .from('cars')
+            .select('id', { count: 'exact', head: true })
+            .eq('dealership_id', dealershipId)
+            .eq('status', 'available');
+
+          if (!countError && count && count > 0) {
+            if (!confirm(`This dealer has ${count} active car listings. Changing to user will make these listings unavailable. Continue?`)) {
+              return false;
+            }
+
+            // Update all cars to pending status
+            await supabase
+              .from('cars')
+              .update({ status: 'pending' })
+              .eq('dealership_id', dealershipId)
+              .eq('status', 'available');
+          }
+        }
+      }
+
+      // Update user role in the database
       const { error } = await supabase
         .from('users')
         .update({ role: newRole })
         .eq('id', userId);
-  
+
       if (error) throw error;
-      
+
       // Refresh user list
-      fetchUsers();
+      await fetchUsers();
+
+      // Show success message
+      alert(`User role successfully changed to ${newRole}.`);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating user role:', err);
-      alert('Error updating user role');
+      alert(err.message || 'Error updating user role');
       return false;
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   // Ban or unban a user
   const toggleUserBan = async (userId: string, shouldBan: boolean) => {
+    setIsActionLoading(true);
+
     try {
       // Set ban duration
       const bannedUntil = shouldBan
@@ -481,7 +613,7 @@ export default function AdminUsersPage() {
       if (error) throw error;
 
       // Refresh the user list
-      fetchUsers();
+      await fetchUsers();
       return true;
     } catch (err: any) {
       console.error(`Error ${shouldBan ? "banning" : "unbanning"} user:`, err);
@@ -489,6 +621,8 @@ export default function AdminUsersPage() {
         `Error ${shouldBan ? "banning" : "unbanning"} user: ` + err.message
       );
       return false;
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -501,7 +635,7 @@ export default function AdminUsersPage() {
 
     switch (action) {
       case "make-dealer":
-        handleSetRole(user);
+        handleSetRole(user, "dealer");
         break;
 
       case "make-admin":
@@ -881,120 +1015,681 @@ export default function AdminUsersPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.id}
-                  onClick={() => handleUserClick(user)}
-                  className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300 cursor-pointer"
-                >
-                  <div className="p-5">
-                    <div className="flex items-center mb-4">
-                      <img
-                        src={user.imageUrl}
-                        alt={`${user.firstName} ${user.lastName}`}
-                        className="w-12 h-12 rounded-full object-cover border border-gray-700"
-                      />
-                      <div className="ml-3 min-w-0 flex-1">
-                        <h3 className="text-white font-semibold text-lg truncate">
-                          {user.firstName} {user.lastName}
-                        </h3>
-                        <p className="text-gray-400 text-sm truncate">
-                          {user.email}
-                        </p>
-                      </div>
-                      <div
-                        className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                          getUserStatus(user)
-                        )}`}
-                      >
-                        {getUserStatus(user)}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center">
-                        {user.user_metadata.role === "admin" ? (
-                          <ShieldCheckIcon className="h-4 w-4 text-purple-400 mr-1.5" />
-                        ) : user.user_metadata.role === "dealer" ? (
-                          <BriefcaseIcon className="h-4 w-4 text-blue-400 mr-1.5" />
-                        ) : (
-                          <UserIcon className="h-4 w-4 text-gray-400 mr-1.5" />
-                        )}
-                        <span
-                          className={`${getRoleBadgeColor(
-                            user.user_metadata.role || "user"
-                          )} px-2 py-0.5 rounded text-xs`}
+              {filteredUsers.map((user) => {
+                const currentRole = user.user_metadata.role || 'user';
+                return (
+                  <div
+                    key={user.id}
+                    onClick={() => handleUserClick(user)}
+                    className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="p-5">
+                      <div className="flex items-center mb-4">
+                        <img
+                          src={user.imageUrl}
+                          alt={`${user.firstName} ${user.lastName}`}
+                          className="w-12 h-12 rounded-full object-cover border border-gray-700"
+                        />
+                        <div className="ml-3 min-w-0 flex-1">
+                          <h3 className="text-white font-semibold text-lg truncate">
+                            {user.firstName} {user.lastName}
+                          </h3>
+                          <p className="text-gray-400 text-sm truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                        <div
+                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                            getUserStatus(user)
+                          )}`}
                         >
-                          {user.user_metadata.role || "user"}
-                        </span>
+                          {getUserStatus(user)}
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <ClockIcon className="h-4 w-4 text-gray-500 mr-1.5" />
-                        <span className="text-gray-400">
-                          {user.lastSignInAt
-                            ? new Date(user.lastSignInAt).toLocaleDateString()
-                            : "Never logged in"}
-                        </span>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center">
+                          {user.user_metadata.role === "admin" ? (
+                            <ShieldCheckIcon className="h-4 w-4 text-purple-400 mr-1.5" />
+                          ) : user.user_metadata.role === "dealer" ? (
+                            <BriefcaseIcon className="h-4 w-4 text-blue-400 mr-1.5" />
+                          ) : (
+                            <UserIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+                          )}
+                          <span
+                            className={`${getRoleBadgeColor(
+                              user.user_metadata.role || "user"
+                            )} px-2 py-0.5 rounded text-xs`}
+                          >
+                            {user.user_metadata.role || "user"}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <ClockIcon className="h-4 w-4 text-gray-500 mr-1.5" />
+                          <span className="text-gray-400">
+                            {user.lastSignInAt
+                              ? new Date(user.lastSignInAt).toLocaleDateString()
+                              : "Never logged in"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {(user.banned || user.locked) && (
+                        <div className="mt-3 bg-rose-500/10 p-3 rounded-lg">
+                          <p className="text-rose-400 text-sm">
+                            {user.banned
+                              ? "Account is banned"
+                              : "Account is locked"}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex flex-col gap-2 w-full">
+                        {/* Conditional button rendering based on allowed role transitions */}
+                        {currentRole === 'user' && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetRole(user, 'dealer');
+                              }}
+                              disabled={isActionLoading || user.banned || user.locked}
+                              className="w-full px-3 py-1.5 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isActionLoading ? (
+                                <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                              ) : (
+                                <BriefcaseIcon className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              Make Dealer
+                            </button>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetRole(user, 'admin');
+                              }}
+                              disabled={isActionLoading || user.banned || user.locked}
+                              className="w-full px-3 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isActionLoading ? (
+                                <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                              ) : (
+                                <ShieldCheckIcon className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              Make Admin
+                            </button>
+                          </>
+                        )}
+
+                        {currentRole === 'dealer' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetRole(user, 'user');
+                            }}
+                            disabled={true}
+                            className="w-full px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isActionLoading ? (
+                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <UserIcon className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Make User
+                          </button>
+                        )}
+
+                        {currentRole === 'admin' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetRole(user, 'user');
+                            }}
+                            disabled={isActionLoading || user.banned || user.locked}
+                            className="w-full px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isActionLoading ? (
+                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <UserIcon className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Make User
+                          </button>
+                        )}
+
+                        {/* Ban/Unban button */}
+                        {!user.banned ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmAction(user, 'ban-user');
+                            }}
+                            disabled={isActionLoading}
+                            className="w-full px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isActionLoading ? (
+                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <StopCircleIcon className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Ban User
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmAction(user, 'unban-user');
+                            }}
+                            disabled={isActionLoading}
+                            className="w-full px-3 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isActionLoading ? (
+                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Unban User
+                          </button>
+                        )}
                       </div>
                     </div>
-
-                    {(user.banned || user.locked) && (
-                      <div className="mt-3 bg-rose-500/10 p-3 rounded-lg">
-                        <p className="text-rose-400 text-sm">
-                          {user.banned
-                            ? "Account is banned"
-                            : "Account is locked"}
-                        </p>
-                      </div>
-                    )}
-
-<div className="mt-4 flex flex-col gap-2 w-full">
-  {user.user_metadata.role !== 'dealer' && (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        updateUserRole(user.id, 'dealer');
-      }}
-      className="w-full px-3 py-1.5 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center"
-    >
-      <BriefcaseIcon className="h-3.5 w-3.5 mr-1" />
-      Make Dealer
-    </button>
-  )}
-  
-  {user.user_metadata.role !== 'admin' && (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        updateUserRole(user.id, 'admin');
-      }}
-      className="w-full px-3 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center"
-    >
-      <ShieldCheckIcon className="h-3.5 w-3.5 mr-1" />
-      Make Admin
-    </button>
-  )}
-  
-  {(user.user_metadata.role === 'dealer' || user.user_metadata.role === 'admin') && (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        updateUserRole(user.id, 'user');
-      }}
-      className="w-full px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center"
-    >
-      <UserIcon className="h-3.5 w-3.5 mr-1" />
-      Make User
-    </button>
-  )}
-</div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+
+      {/* User Details Modal */}
+      <Transition appear show={isUserModalOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setIsUserModalOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                  {selectedUser && userDetails && (
+                    <>
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center">
+                          <img
+                            src={selectedUser.imageUrl}
+                            alt={`${selectedUser.firstName} ${selectedUser.lastName}`}
+                            className="w-16 h-16 rounded-full mr-4 border border-gray-700"
+                          />
+                          <div>
+                            <h3 className="text-xl font-bold text-white">
+                              {selectedUser.firstName} {selectedUser.lastName}
+                            </h3>
+                            <p className="text-gray-400">{selectedUser.email}</p>
+                            <div className="flex items-center mt-1">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(selectedUser.user_metadata.role || "user")}`}>
+                                {selectedUser.user_metadata.role || "user"}
+                              </span>
+                              <span className="text-xs ml-2 text-gray-400">
+                                Joined {formatDate(selectedUser.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setIsUserModalOpen(false)}
+                          className="text-gray-400 hover:text-white"
+                        >
+                          <XMarkIcon className="h-6 w-6" />
+                        </button>
+                      </div>
+
+                      {userDetails.dealershipInfo && (
+                        <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                          <h4 className="text-lg font-semibold text-white mb-2 flex items-center">
+                            <BriefcaseIcon className="h-5 w-5 mr-2 text-blue-400" />
+                            Dealership Information
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-gray-400 text-sm">Name</p>
+                              <p className="text-white">{userDetails.dealershipInfo.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Location</p>
+                              <p className="text-white">{userDetails.dealershipInfo.location}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Phone</p>
+                              <p className="text-white">{userDetails.dealershipInfo.phone}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Subscription Ends</p>
+                              <p className="text-white">
+                                {formatDate(userDetails.dealershipInfo.subscription_end_date)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-2 flex items-center">
+                            <HeartIcon className="h-5 w-5 mr-2 text-rose-400" />
+                            Liked Cars ({userDetails.likedCars?.length || 0})
+                          </h4>
+                          <div className="bg-gray-900/50 rounded-lg overflow-y-auto max-h-60">
+                            {userDetails.likedCars?.length > 0 ? (
+                              <div className="divide-y divide-gray-800">
+                                {userDetails.likedCars.map((car: any) => (
+                                  <div key={car.id} className="p-3 hover:bg-gray-800/50">
+                                    <div className="flex justify-between">
+                                      <div>
+                                        <p className="text-white font-medium">
+                                          {car.make} {car.model}
+                                        </p>
+                                        <p className="text-gray-400 text-sm">
+                                          {car.year} • ${car.price.toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <span className={`self-start px-2 py-0.5 text-xs rounded-full ${getStatusColor(car.status)}`}>
+                                        {car.status}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-4 text-center text-gray-400">
+                                No liked cars
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-2 flex items-center">
+                            <EyeIcon className="h-5 w-5 mr-2 text-blue-400" />
+                            Viewed Cars ({userDetails.viewedCars?.length || 0})
+                          </h4>
+                          <div className="bg-gray-900/50 rounded-lg overflow-y-auto max-h-60">
+                            {userDetails.viewedCars?.length > 0 ? (
+                              <div className="divide-y divide-gray-800">
+                                {userDetails.viewedCars.map((car: any) => (
+                                  <div key={car.id} className="p-3 hover:bg-gray-800/50">
+                                    <div className="flex justify-between">
+                                      <div>
+                                        <p className="text-white font-medium">
+                                          {car.make} {car.model}
+                                        </p>
+                                        <p className="text-gray-400 text-sm">
+                                          {car.year} • ${car.price.toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <span className={`self-start px-2 py-0.5 text-xs rounded-full ${getStatusColor(car.status)}`}>
+                                        {car.status}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-4 text-center text-gray-400">
+                                No viewed cars
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end space-x-3">
+                        <button
+                          onClick={() => setIsUserModalOpen(false)}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Dealership Creation Form Modal */}
+      <Transition appear show={isDealershipFormOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setIsDealershipFormOpen(false)}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                  <div className="flex justify-between items-center mb-4">
+                    <Dialog.Title
+                      as="h3"
+                      className="text-xl font-semibold text-white"
+                    >
+                      Create Dealership
+                    </Dialog.Title>
+                    <button
+                      onClick={() => setIsDealershipFormOpen(false)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <XMarkIcon className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  {selectedUser && (
+                    <div className="flex items-center mb-6 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                      <img
+                        src={selectedUser.imageUrl}
+                        alt={`${selectedUser.firstName} ${selectedUser.lastName}`}
+                        className="w-10 h-10 rounded-full mr-3"
+                      />
+                      <div>
+                        <p className="text-white font-medium">
+                          {selectedUser.firstName} {selectedUser.lastName}
+                        </p>
+                        <p className="text-gray-400 text-sm">{selectedUser.email}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleDealershipSubmit} className="space-y-4">
+                    <div>
+                      <label
+                        htmlFor="name"
+                        className="block text-sm font-medium text-gray-400 mb-1"
+                      >
+                        Dealership Name*
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        value={dealershipForm.name}
+                        onChange={(e) =>
+                          setDealershipForm({
+                            ...dealershipForm,
+                            name: e.target.value,
+                          })
+                        }
+                        className={`w-full px-3 py-2 bg-gray-700 border ${
+                          formErrors.name
+                            ? "border-rose-500"
+                            : "border-gray-600"
+                        } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                      />
+                      {formErrors.name && (
+                        <p className="text-rose-500 text-xs mt-1">
+                          {formErrors.name}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="location"
+                        className="block text-sm font-medium text-gray-400 mb-1"
+                      >
+                        Location*
+                      </label>
+                      <div className="relative">
+                        <MapPinIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+                        <input
+                          type="text"
+                          id="location"
+                          value={dealershipForm.location}
+                          onChange={(e) =>
+                            setDealershipForm({
+                              ...dealershipForm,
+                              location: e.target.value,
+                            })
+                          }
+                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${
+                            formErrors.location
+                              ? "border-rose-500"
+                              : "border-gray-600"
+                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                          placeholder="Enter dealership address"
+                        />
+                      </div>
+                      {formErrors.location && (
+                        <p className="text-rose-500 text-xs mt-1">
+                          {formErrors.location}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="phone"
+                        className="block text-sm font-medium text-gray-400 mb-1"
+                      >
+                        Phone Number*
+                      </label>
+                      <div className="relative">
+                        <PhoneIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+                        <input
+                          type="tel"
+                          id="phone"
+                          value={dealershipForm.phone}
+                          onChange={(e) =>
+                            setDealershipForm({
+                              ...dealershipForm,
+                              phone: e.target.value,
+                            })
+                          }
+                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${
+                            formErrors.phone
+                              ? "border-rose-500"
+                              : "border-gray-600"
+                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                          placeholder="e.g. 12345678"
+                        />
+                      </div>
+                      {formErrors.phone && (
+                        <p className="text-rose-500 text-xs mt-1">
+                          {formErrors.phone}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="subscriptionEndDate"
+                        className="block text-sm font-medium text-gray-400 mb-1"
+                      >
+                        Subscription End Date*
+                      </label>
+                      <div className="relative">
+                        <CalendarIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+                        <input
+                          type="date"
+                          id="subscriptionEndDate"
+                          value={dealershipForm.subscriptionEndDate.toISOString().split("T")[0]}
+                          onChange={(e) =>
+                            setDealershipForm({
+                              ...dealershipForm,
+                              subscriptionEndDate: new Date(e.target.value),
+                            })
+                          }
+                          min={new Date().toISOString().split("T")[0]}
+                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${
+                            formErrors.subscriptionEndDate
+                              ? "border-rose-500"
+                              : "border-gray-600"
+                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                        />
+                      </div>
+                      {formErrors.subscriptionEndDate && (
+                        <p className="text-rose-500 text-xs mt-1">
+                          {formErrors.subscriptionEndDate}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => setIsDealershipFormOpen(false)}
+                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                        disabled={isActionLoading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center"
+                        disabled={isActionLoading}
+                      >
+                        {isActionLoading ? (
+                          <>
+                            <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>Create Dealership</>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Confirmation Dialog */}
+      <Transition appear show={confirmActionOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setConfirmActionOpen(false)}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-white text-center mb-4"
+                  >
+                    Confirm Action
+                  </Dialog.Title>
+                  <div className="mt-2">
+                    <p className="text-gray-300 text-center">{getConfirmationMessage()}</p>
+                  </div>
+
+                  <div className="mt-6 flex justify-center space-x-4">
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                      onClick={() => setConfirmActionOpen(false)}
+                      disabled={isActionLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-4 py-2 ${
+                        pendingAction.action === "ban-user"
+                          ? "bg-rose-600 hover:bg-rose-700"
+                          : "bg-indigo-600 hover:bg-indigo-700"
+                      } text-white rounded-lg transition-colors flex items-center`}
+                      onClick={() => handleUserAction(pendingAction.action)}
+                      disabled={isActionLoading}
+                    >
+                      {isActionLoading ? (
+                        <>
+                          <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>Confirm</>
+                      )}
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Global loading overlay */}
+      {isActionLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-5 rounded-lg shadow-lg flex items-center">
+            <ArrowPathIcon className="h-6 w-6 text-indigo-500 mr-3 animate-spin" />
+            <p className="text-white">Processing...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
