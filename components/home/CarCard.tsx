@@ -55,7 +55,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
 
   // Handle missing logos
   const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = '/placeholder-logo.png';
+    e.currentTarget.src = '';
   };
 
   return (

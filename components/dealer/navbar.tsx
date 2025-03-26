@@ -2,31 +2,29 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname,useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   HomeIcon,
   ShoppingBagIcon,
-  UserGroupIcon,
-  BuildingOfficeIcon,
+  FilmIcon,
+  UserIcon,
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  BuildingStorefrontIcon
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
   ShoppingBagIcon as ShoppingBagIconSolid,
-  UserGroupIcon as UserGroupIconSolid,
-  BuildingOfficeIcon as BuildingOfficeIconSolid,
+  FilmIcon as FilmIconSolid,
+  UserIcon as UserIconSolid,
   ChartBarIcon as ChartBarIconSolid,
   Cog6ToothIcon as Cog6ToothIconSolid,
-  ListBulletIcon as ListBulletIcon
-
+  BuildingStorefrontIcon as BuildingStorefrontIconSolid
 } from "@heroicons/react/24/solid";
-
 import { useAuth } from "@/utils/AuthContext";
-import { useGuestUser } from "@/utils/GuestUserContext";
 
 interface NavItem {
   name: string;
@@ -38,68 +36,41 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     name: "Dashboard",
-    href: "/admin",
+    href: "/dealer",
     icon: HomeIcon,
     iconActive: HomeIconSolid
   },
   {
-    name: "Listings",
-    href: "/admin/listings",
+    name: "Inventory",
+    href: "/dealer/inventory",
     icon: ShoppingBagIcon,
     iconActive: ShoppingBagIconSolid
   },
   {
-    name: "Users",
-    href: "/admin/users",
-    icon: UserGroupIcon,
-    iconActive: UserGroupIconSolid
+    name: "Auto Clips",
+    href: "/dealer/autoclips",
+    icon: FilmIcon,
+    iconActive: FilmIconSolid
   },
   {
-    name: "Dealerships",
-    href: "/admin/dealerships",
-    icon: BuildingOfficeIcon,
-    iconActive: BuildingOfficeIconSolid
-  },
-  {
-    name: "Brands and Models",
-    href: "/admin/allcars",
-    icon: ListBulletIcon,
-    iconActive: ListBulletIcon
+    name: "Profile",
+    href: "/dealer/profile",
+    icon: UserIcon,
+    iconActive: UserIconSolid
   },
   {
     name: "Analytics",
-    href: "/admin/analytics",
+    href: "/dealer/analytics",
     icon: ChartBarIcon,
     iconActive: ChartBarIconSolid
   },
 ];
 
-const AdminNavbar: React.FC = () => {
+const DealerNavbar: React.FC = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-    const router = useRouter();
-const { signOut, isSigningOut, signOutError } = useAuth();
-  const { isGuest, clearGuestMode } = useGuestUser();
-
-
-  const handleSignOut = async () => {
-  try {
-
-
-      // Use enhanced signOut with options
-      await signOut({
-        forceRedirect: false,
-        redirectUrl: '/',
-        clearAllData: true
-      });
-      // No manual navigation needed - handled by signOut function
-    }
-   catch (error) {
-    console.error('Error during sign-out:', error);
-    // Error is captured in signOutError state from AuthContext
-  }
-};
+  const { signOut } = useAuth();
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -117,10 +88,29 @@ const { signOut, isSigningOut, signOutError } = useAuth();
 
   // Check if a nav item is active
   const isActive = (href: string) => {
-    if (href === '/admin') {
-      return pathname === '/admin';
+    if (href === '/dealer') {
+      return pathname === '/dealer';
     }
     return pathname.startsWith(href);
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+   try {
+
+
+      // Use enhanced signOut with options
+      await signOut({
+        forceRedirect: false,
+        redirectUrl: '/',
+        clearAllData: true
+      });
+      // No manual navigation needed - handled by signOut function
+    }
+   catch (error) {
+    console.error('Error during sign-out:', error);
+    // Error is captured in signOutError state from AuthContext
+  }
   };
 
   return (
@@ -130,9 +120,9 @@ const { signOut, isSigningOut, signOutError } = useAuth();
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center h-16 border-b border-gray-800">
-            <Link href="/admin" className="flex items-center">
-              <img src="/logo.png" alt="CarApp Admin" className="h-8 w-auto" />
-              <span className="ml-2 text-xl font-bold text-white">Admin</span>
+            <Link href="/dealer" className="flex items-center">
+              <img src="/logo.png" alt="Fleet Dealer Portal" className="h-8 w-auto" />
+              <span className="ml-2 text-xl font-bold text-white">Dealer Portal</span>
             </Link>
           </div>
 
@@ -164,8 +154,7 @@ const { signOut, isSigningOut, signOutError } = useAuth();
           {/* Logout Button */}
           <div className="p-4 border-t border-gray-800">
             <button
-                      onClick={handleSignOut}
-    disabled={isSigningOut}
+              onClick={handleLogout}
               className="flex items-center w-full px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
             >
               <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3" />
@@ -182,9 +171,9 @@ const { signOut, isSigningOut, signOutError } = useAuth();
         }`}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
-          <Link href="/admin" className="flex items-center">
-            <img src="/logo.png" alt="CarApp Admin" className="h-8 w-auto" />
-            <span className="ml-2 text-lg font-bold text-white">Admin</span>
+          <Link href="/dealer" className="flex items-center">
+            <img src="/logo.png" alt="Fleet Dealer" className="h-8 w-auto" />
+            <span className="ml-2 text-lg font-bold text-white">Dealer</span>
           </Link>
 
           <button
@@ -240,8 +229,7 @@ const { signOut, isSigningOut, signOutError } = useAuth();
 
           {/* Mobile Logout Button */}
           <button
-                       disabled={isSigningOut}
-
+            onClick={handleLogout}
             className="flex items-center w-full px-4 py-3 mt-6 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
             <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3" />
@@ -249,9 +237,8 @@ const { signOut, isSigningOut, signOutError } = useAuth();
           </button>
         </nav>
       </aside>
-
     </>
   );
 };
 
-export default AdminNavbar;
+export default DealerNavbar;

@@ -147,7 +147,7 @@ export default function AppShowcase() {
       className="py-12 bg-gradient-to-b relative text-white overflow-hidden"
     >
       <div className="absolute inset-0 -z-10 opacity-30">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-repeat opacity-20"></div>
+
 
         <motion.div
           className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-gradient-to-r from-accent to-accent-light opacity-20 blur-3xl"
@@ -182,7 +182,7 @@ export default function AppShowcase() {
           transition={{ duration: 0.8 }}
           className="mb-16 text-center"
         >
-          <motion.span 
+          <motion.span
             className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -193,8 +193,8 @@ export default function AppShowcase() {
           </motion.span>
           <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mb-6">
             <span className="relative">
-            Experience 
-              <motion.span 
+            Experience
+              <motion.span
                 className="absolute -bottom-2 left-0 w-full h-1 bg-accent"
                 initial={{ width: 0 }}
                 whileInView={{ width: "100%" }}

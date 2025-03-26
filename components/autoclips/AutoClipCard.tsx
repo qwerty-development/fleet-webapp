@@ -334,7 +334,7 @@ const AutoClipCard: React.FC<AutoClipCardProps> = ({
                   alt={clip.dealership_name}
                   className="w-full h-full rounded-full object-cover border border-gray-700"
                   onError={(e) =>
-                    (e.currentTarget.src = "/placeholder-logo.png")
+                    (e.currentTarget.src = '')
                   }
                 />
               </div>

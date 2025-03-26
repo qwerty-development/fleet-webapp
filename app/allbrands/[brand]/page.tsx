@@ -29,7 +29,7 @@ export default function BrandPage() {
   const params = useParams();
   const router = useRouter();
   const brand = decodeURIComponent(params.brand as string);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<string | null>(null);
   const [cars, setCars] = useState<Car[]>([]);
@@ -83,7 +83,7 @@ export default function BrandPage() {
   // Fetch cars from this brand
   const fetchCars = useCallback(async (page = 1) => {
     if (!brand) return;
-    
+
     if (page === 1) {
       setIsLoading(true);
     } else {
@@ -92,7 +92,7 @@ export default function BrandPage() {
 
     try {
       const normalizedBrand = brand.toLowerCase();
-      
+
       let queryBuilder = supabase
         .from("cars")
         .select(`*, dealerships (name, logo, location)`, { count: "exact" })
@@ -171,7 +171,7 @@ export default function BrandPage() {
           logo: "",
           location: "",
         };
-        
+
         // Make sure we're providing all required fields
         return {
           ...item,
@@ -240,7 +240,7 @@ export default function BrandPage() {
   };
 
   const handleBrandLogoError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = '/placeholder-logo.png';
+    e.currentTarget.src = '';
   };
 
   // Animation variants
@@ -275,7 +275,7 @@ export default function BrandPage() {
     <div className="min-h-screen flex flex-col bg-black">
       {/* Navbar */}
       <Navbar />
-      
+
       <div className="flex flex-1 pt-20">
         <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
           {/* Search bar and header */}
@@ -288,7 +288,7 @@ export default function BrandPage() {
               >
                 <ChevronLeftIcon className="h-5 w-5 text-white" />
               </button>
-              
+
               <div className="flex items-center">
                 <div className="w-12 h-12 mr-3 bg-gray-900 rounded-full flex items-center justify-center overflow-hidden">
                   <img
@@ -304,7 +304,7 @@ export default function BrandPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar
@@ -350,8 +350,8 @@ export default function BrandPage() {
                 No {displayBrandName} cars found
               </h3>
               <p className="text-gray-400 mb-4">
-                {searchQuery ? 
-                  "Try adjusting your search query to find more results." : 
+                {searchQuery ?
+                  "Try adjusting your search query to find more results." :
                   `We couldn't find any ${displayBrandName} cars available at the moment.`}
               </p>
               {searchQuery && (

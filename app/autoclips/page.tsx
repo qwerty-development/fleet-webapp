@@ -114,7 +114,7 @@ const AutoClipsContent = () => {
           return {
             ...clip,
             dealership_name: dealershipData?.name || "Unknown Dealership",
-            dealership_logo: dealershipData?.logo || "/placeholder-logo.png",
+            dealership_logo: dealershipData?.logo,
             car_make: carData?.make || "Unknown",
             car_model: carData?.model || "Model",
             car_year: carData?.year || null,

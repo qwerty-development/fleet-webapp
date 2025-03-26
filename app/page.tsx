@@ -73,6 +73,8 @@ useEffect(() => {
     // Redirect signed-in users based on role
     if (profile?.role === "admin") {
       router.push("/admin");
+    } else if(profile?.role==='dealer'){
+      router.push("/dealer");
     } else {
       router.push("/home");
     }

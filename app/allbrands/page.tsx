@@ -18,7 +18,7 @@ export default function AllBrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [filteredBrands, setFilteredBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const supabase = createClient();
 
   // Get logo URL function
@@ -52,7 +52,7 @@ export default function AllBrandsPage() {
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = '/placeholder-logo.png';
+    e.currentTarget.src = '';
   };
 
   // Fetch all brands and count available cars
@@ -101,13 +101,13 @@ export default function AllBrandsPage() {
   // Handle search
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    
+
     if (!query.trim()) {
       setFilteredBrands(brands);
       return;
     }
-    
-    const filtered = brands.filter(brand => 
+
+    const filtered = brands.filter(brand =>
       brand.name.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredBrands(filtered);
@@ -135,7 +135,7 @@ export default function AllBrandsPage() {
     <div className="min-h-screen flex flex-col bg-black">
       {/* Navbar */}
       <Navbar />
-      
+
       <div className="flex flex-1 pt-20">
         <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
           {/* Search bar */}
@@ -143,9 +143,9 @@ export default function AllBrandsPage() {
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl md:text-3xl font-bold text-white">All Car Brands</h1>
             </div>
-            <SearchBar 
-              searchQuery={searchQuery} 
-              onSearch={handleSearch} 
+            <SearchBar
+              searchQuery={searchQuery}
+              onSearch={handleSearch}
               className="w-full"
             />
           </div>
@@ -156,7 +156,7 @@ export default function AllBrandsPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : filteredBrands.length > 0 ? (
-            <motion.div 
+            <motion.div
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6"
               variants={containerVariants}
               initial="hidden"
@@ -167,9 +167,9 @@ export default function AllBrandsPage() {
                   <Link href={`/allbrands/${encodeURIComponent(brand.name.toLowerCase())}`}>
                     <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:border-accent hover:shadow-lg transition-all duration-300 flex flex-col items-center p-4">
                       <div className="w-20 h-20 p-2 bg-gray-900 rounded-full mb-3 flex items-center justify-center">
-                        <img 
-                          src={brand.logoUrl} 
-                          alt={brand.name} 
+                        <img
+                          src={brand.logoUrl}
+                          alt={brand.name}
                           className="max-w-full max-h-full object-contain"
                           onError={handleImageError}
                         />

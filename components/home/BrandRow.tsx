@@ -130,7 +130,7 @@ const BrandRow: React.FC<BrandRowProps> = ({
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       // Fallback if logo fails to load
-                      (e.target as HTMLImageElement).src = '/placeholder-logo.png';
+                      (e.target as HTMLImageElement).src = '';
                     }}
                   />
                 </div>

@@ -1,4 +1,3 @@
-// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from "@supabase/ssr";
@@ -14,6 +13,10 @@ const PROTECTED_ROUTES = [
 
 const ADMIN_ROUTES = [
   '/admin',
+];
+
+const DEALER_ROUTES = [
+  '/dealer',
 ];
 
 export async function middleware(request: NextRequest) {
@@ -58,10 +61,13 @@ export async function middleware(request: NextRequest) {
     pathname === route || pathname.startsWith(`${route}/`)
   );
 
+  const isDealerRoute = DEALER_ROUTES.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+
   // Check for auth session
   const { data: { session } } = await supabase.auth.getSession();
 
-  // ===== MODIFIED SECTION: IMPROVED GUEST MODE DETECTION =====
   // Check for guest mode in various ways (cookie or header)
   let isGuestMode = false;
 
@@ -88,7 +94,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
   }
-  // ===== END MODIFIED SECTION =====
 
   // Handle protected routes
   if (isProtectedRoute && !session && !isGuestMode) {
@@ -118,6 +123,30 @@ export async function middleware(request: NextRequest) {
     if (error || userData?.role !== 'admin') {
       console.log('User is not authorized to access admin routes:', session.user.id);
       // Redirect to home page if not admin
+      return NextResponse.redirect(new URL('/home', request.url));
+    }
+  }
+
+  // Handle dealer routes
+  if (isDealerRoute) {
+    if (!session) {
+      // If not authenticated at all, redirect to sign in
+      const redirectUrl = new URL('/auth/signin', request.url);
+      redirectUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Fetch user role from database
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    // Verify dealer role
+    if (error || userData?.role !== 'dealer') {
+      console.log('User is not authorized to access dealer routes:', session.user.id);
+      // Redirect to home page if not dealer
       return NextResponse.redirect(new URL('/home', request.url));
     }
   }

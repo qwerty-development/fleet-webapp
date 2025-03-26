@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { 
-  UserIcon, 
-  BuildingStorefrontIcon, 
+import {
+  UserIcon,
+  BuildingStorefrontIcon,
   ShieldCheckIcon,
   MagnifyingGlassIcon,
   VideoCameraIcon,
@@ -63,69 +63,69 @@ export default function FeaturesPage() {
   const [activeTab, setActiveTab] = useState<FeatureCategory>('users');
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
-  
+
   // Switch featured feature every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setFeaturedIndex(prev => (prev + 1) % features[activeTab].length);
     }, 5000);
-    
+
     return () => clearInterval(interval);
   }, [activeTab]);
-  
+
   // Track scroll for sticky header
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 100);
     };
-    
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-  
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { 
+    visible: {
       opacity: 1,
-      transition: { 
+      transition: {
         staggerChildren: 0.08
       }
     }
   };
-  
+
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { 
-      y: 0, 
+    visible: {
+      y: 0,
       opacity: 1,
       transition: { duration: 0.6, ease: "easeOut" }
     }
   };
-  
+
   const tabVariants = {
-    inactive: { 
-      backgroundColor: "rgb(17, 17, 17)", 
+    inactive: {
+      backgroundColor: "rgb(17, 17, 17)",
       color: "rgb(156, 163, 175)",
       scale: 0.97
     },
-    active: { 
-      backgroundColor: "#FF6A00", 
+    active: {
+      backgroundColor: "#FF6A00",
       color: "#ffffff",
       scale: 1,
       boxShadow: "0 0 20px rgba(255, 106, 0, 0.3)"
     }
   };
-  
+
   const featuredVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       transition: { duration: 0.8 }
     },
-    exit: { 
-      opacity: 0, 
+    exit: {
+      opacity: 0,
       y: -20,
       transition: { duration: 0.4 }
     }
@@ -207,7 +207,7 @@ export default function FeaturesPage() {
         color: "#34495e" // Navy
       }
     ],
-    
+
     dealerships: [
       {
         icon: <QueueListIcon className="w-6 h-6" />,
@@ -282,7 +282,7 @@ export default function FeaturesPage() {
         color: "#7f8c8d" // Gray
       }
     ],
-    
+
     administrators: [
       {
         icon: <UsersIcon className="w-6 h-6" />,
@@ -363,8 +363,8 @@ export default function FeaturesPage() {
     <div className="min-h-screen bg-gradient-to-b from-black to-black text-white overflow-hidden">
       {/* Animated background */}
       <div className="fixed inset-0 -z-10 opacity-30">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-repeat opacity-20"></div>
-        
+
+
         <motion.div
           className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-gradient-to-r from-accent to-accent-light opacity-20 blur-3xl"
           animate={{
@@ -397,9 +397,9 @@ export default function FeaturesPage() {
             </Link>
             <img src="logo.png" alt="Fleet Logo" className="h-10" />
           </div>
-          
+
           <div className="relative z-10">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
@@ -407,7 +407,7 @@ export default function FeaturesPage() {
             >
               <span className="relative inline-block">
                 Fleet <span className="text-accent">Features</span>
-                <motion.div 
+                <motion.div
                   className="absolute -bottom-2 left-0 h-1 bg-accent"
                   initial={{ width: 0 }}
                   animate={{ width: "100%" }}
@@ -415,8 +415,8 @@ export default function FeaturesPage() {
                 />
               </span>
             </motion.h1>
-            
-            <motion.p 
+
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
@@ -425,7 +425,7 @@ export default function FeaturesPage() {
               Explore the comprehensive set of tools and capabilities available on the Fleet platform,
               designed for car buyers, dealerships, and platform administrators
             </motion.p>
-            
+
             {/* Featured rotating feature */}
             <div className="max-w-4xl mx-auto relative h-32 sm:h-24 mb-16">
               <AnimatePresence mode="wait">
@@ -439,8 +439,8 @@ export default function FeaturesPage() {
                 >
                   <div className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-xl p-5 w-full">
                     <div className="flex items-center gap-4">
-                      <div 
-                        className="p-3 rounded-lg flex-shrink-0" 
+                      <div
+                        className="p-3 rounded-lg flex-shrink-0"
                         style={{ backgroundColor: `${features[activeTab][featuredIndex].color}20` }}
                       >
                         <div style={{ color: features[activeTab][featuredIndex].color }}>
@@ -485,7 +485,7 @@ export default function FeaturesPage() {
               <UserIcon className="w-5 h-5" />
               <span>For Car Buyers</span>
             </motion.button>
-            
+
             <motion.button
               onClick={() => setActiveTab('dealerships')}
               variants={tabVariants}
@@ -498,7 +498,7 @@ export default function FeaturesPage() {
               <BuildingStorefrontIcon className="w-5 h-5" />
               <span>For Dealerships</span>
             </motion.button>
-            
+
             <motion.button
               onClick={() => setActiveTab('administrators')}
               variants={tabVariants}
@@ -519,7 +519,7 @@ export default function FeaturesPage() {
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
           <AnimatePresence mode="wait">
-            <motion.div 
+            <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
@@ -531,14 +531,14 @@ export default function FeaturesPage() {
                 <motion.div
                   key={index}
                   variants={itemVariants}
-                  whileHover={{ 
-                    scale: 1.03, 
+                  whileHover={{
+                    scale: 1.03,
                     backgroundColor: `${feature.color}10`,
                     borderColor: `${feature.color}50`
                   }}
                   className="backdrop-blur-sm bg-black/30 rounded-xl p-6 border border-white/10 hover:shadow-xl transition-all duration-300"
                 >
-                  <div 
+                  <div
                     className="p-3 rounded-lg inline-block mb-4"
                     style={{ backgroundColor: `${feature.color}20` }}
                   >
@@ -563,7 +563,7 @@ export default function FeaturesPage() {
           animate={{ x: ["-100%", "100%"] }}
           transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
         />
-        
+
         <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -593,7 +593,7 @@ export default function FeaturesPage() {
                     </div>
                   </div>
                 </motion.a>
-                
+
                 <motion.a
                   href="#"
                   whileHover={{ scale: 1.05 }}
@@ -611,7 +611,7 @@ export default function FeaturesPage() {
                   </div>
                 </motion.a>
               </div>
-            
+
             </div>
           </motion.div>
         </div>

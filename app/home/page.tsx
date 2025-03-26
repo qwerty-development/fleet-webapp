@@ -145,6 +145,8 @@ export default function HomePage() {
     const redirectBasedOnRole = async () => {
       if (isSignedIn && profile?.role === "admin") {
         router.push("/admin");
+      }else if(isSignedIn && profile?.role === "dealer"){
+        router.push("/dealer");
       }
     };
 
@@ -636,8 +638,6 @@ export default function HomePage() {
                 <motion.div key={car.id} variants={itemVariants}>
                   <CarCard
                     car={car}
-                    isFavorite={false}
-                    onFavoritePress={() => {}}
                     isDealer={false}
                   />
                 </motion.div>
