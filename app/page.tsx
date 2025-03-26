@@ -5,29 +5,48 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
-
+import Hero from "@/components/Landing Page/Hero";
 // Critical sections load immediately
-import HeroSection from "@/components/Landing Page/herosection copy 2";
+import BentoGrid from "@/components/Landing Page/BentoGrid";
 import Navbar from "@/components/Landing Page/navbar";
 import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
+import DealerDetails from "@/components/Landing Page/DealerDetails";
 
 // Dynamically import non-critical sections with loading placeholders
-const AboutSection = dynamic(
-  () => import("@/components/Landing Page/about"),
-  { loading: () => <div className="min-h-screen flex items-center justify-center">Loading About...</div> }
-);
+const AboutSection = dynamic(() => import("@/components/Landing Page/about"), {
+  loading: () => (
+    <div className="min-h-screen flex items-center justify-center">
+      Loading About...
+    </div>
+  ),
+});
 const AppShowcase = dynamic(
   () => import("@/components/Landing Page/showcase"),
-  { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Showcase...</div> }
+  {
+    loading: () => (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading Showcase...
+      </div>
+    ),
+  }
 );
 const ContactSection = dynamic(
   () => import("@/components/Landing Page/contact"),
-  { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Contact...</div> }
+  {
+    loading: () => (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading Contact...
+      </div>
+    ),
+  }
 );
-const Footer = dynamic(
-  () => import("@/components/Landing Page/footer"),
-  { loading: () => <div className="min-h-screen flex items-center justify-center">Loading Footer...</div> }
-);
+const Footer = dynamic(() => import("@/components/Landing Page/footer"), {
+  loading: () => (
+    <div className="min-h-screen flex items-center justify-center">
+      Loading Footer...
+    </div>
+  ),
+});
 
 // Splash screen (client-side only)
 const WebSplashScreen = dynamic(
@@ -41,43 +60,42 @@ export default function Home() {
   const { isGuest, setGuestMode, clearGuestMode } = useGuestUser();
   const router = useRouter();
 
-useEffect(() => {
-  const handleGuestModeFromQuery = async () => {
-    if (typeof window === 'undefined') return;
+  useEffect(() => {
+    const handleGuestModeFromQuery = async () => {
+      if (typeof window === "undefined") return;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const guestParam = urlParams.get("guest");
+      const urlParams = new URLSearchParams(window.location.search);
+      const guestParam = urlParams.get("guest");
 
-    if (guestParam === "true" && !isSignedIn && !isGuest) {
-      await setGuestMode(true);
+      if (guestParam === "true" && !isSignedIn && !isGuest) {
+        await setGuestMode(true);
 
-      // Remove the URL parameter without redirecting
-      const url = new URL(window.location.href);
-      url.searchParams.delete('guest');
-      window.history.replaceState({}, '', url.toString());
+        // Remove the URL parameter without redirecting
+        const url = new URL(window.location.href);
+        url.searchParams.delete("guest");
+        window.history.replaceState({}, "", url.toString());
 
-      // Do not redirect to /home
+        // Do not redirect to /home
+      }
+    };
+
+    if (isLoaded) {
+      handleGuestModeFromQuery();
     }
-  };
+  }, [isLoaded, isSignedIn, isGuest, setGuestMode]);
 
-  if (isLoaded) {
-    handleGuestModeFromQuery();
-  }
-}, [isLoaded, isSignedIn, isGuest, setGuestMode]);
+  useEffect(() => {
+    if (!isLoaded) return;
 
-useEffect(() => {
-  if (!isLoaded) return;
-
-  if (isSignedIn) {
-    // Redirect signed-in users based on role
-    if (profile?.role === "admin") {
-      router.push("/admin");
-    } else {
-      router.push("/home");
+    if (isSignedIn) {
+      // Redirect signed-in users based on role
+      if (profile?.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/home");
+      }
     }
-  }
-
-}, [isLoaded, isSignedIn, profile, router]);
+  }, [isLoaded, isSignedIn, profile, router]);
 
   // Local state for scroll tracking and splash screen
   const [scrollY, setScrollY] = useState(0);
@@ -112,7 +130,9 @@ useEffect(() => {
   return (
     <>
       {/* Show splash screen on first visit */}
-      {showSplash && <WebSplashScreen onAnimationComplete={handleSplashComplete} />}
+      {showSplash && (
+        <WebSplashScreen onAnimationComplete={handleSplashComplete} />
+      )}
 
       {/* Hide main content while splash is active */}
       <div
@@ -124,7 +144,8 @@ useEffect(() => {
           <div
             className="absolute inset-0 bg-background"
             style={{
-              background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)",
+              background:
+                "linear-gradient(to bottom, #111111, #1a1a1a, #222222)",
             }}
           />
           <div
@@ -168,17 +189,24 @@ useEffect(() => {
         {/* Main Content - Simple Structure Without Parallax */}
         <main className="relative z-20">
           {/* Hero Section - No longer fixed */}
-          <section className="min-h-screen pt-0">
-            <HeroSection />
+          <section>
+            <Hero />
+          </section>
+          <section className="">
+            <BentoGrid />
           </section>
 
           {/* Content Sections */}
           <div
             className="relative z-30"
-            style={{ background: "linear-gradient(to bottom, #111111, #1a1a1a, #222222)" }}
+            style={{
+              background:
+                "linear-gradient(to bottom, #111111, #1a1a1a, #222222)",
+            }}
           >
-            <AboutSection />
             <AppShowcase />
+            <DealerDetails />
+            {/* <AboutSection /> */}
             <MarqueeLogos />
             <ContactSection />
             <Footer />
