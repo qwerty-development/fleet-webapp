@@ -13,6 +13,7 @@ interface Dealership {
   name: string;
   logo: string;
   count: number;
+  id: string; // Add id to Dealership interface
 }
 
 const MarqueeLogos: React.FC = () => {
@@ -56,68 +57,76 @@ const MarqueeLogos: React.FC = () => {
     }
   };
 
-  const fetchData = async () => {
-    setLoading(true);
 
-    // Fetch unique car brands and their counts
-    const { data: brandsData, error: brandsError } = await supabase
-      .from("cars")
-      .select("make")
-      .eq("status", "available");
+const fetchData = async () => {
+  setLoading(true);
 
-    if (brandsError) {
-      console.error("Error fetching brands:", brandsError);
-    } else if (brandsData) {
-      const brandCounts: Record<string, number> = {};
-      brandsData.forEach((car) => {
-        const brand = car.make;
-        brandCounts[brand] = (brandCounts[brand] || 0) + 1;
-      });
+  // Fetch unique car brands and their counts
+  const { data: brandsData, error: brandsError } = await supabase
+    .from("cars")
+    .select("make")
+    .eq("status", "available");
 
-      const brandsArray = Object.entries(brandCounts).map(([make, count]) => ({
-        make,
-        count,
-      }));
+  if (brandsError) {
+    console.error("Error fetching brands:", brandsError);
+  } else if (brandsData) {
+    const brandCounts: Record<string, number> = {};
+    brandsData.forEach((car) => {
+      const brand = car.make;
+      brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+    });
 
-      // Sort by count descending
-      setBrands(brandsArray.sort((a, b) => b.count - a.count));
-    }
+    const brandsArray = Object.entries(brandCounts).map(([make, count]) => ({
+      make,
+      count,
+    }));
 
-    // Fetch unique dealerships and their vehicle counts
-    const { data: dealersData, error: dealersError } = await supabase
-      .from("cars")
-      .select("dealerships (name, logo)")
-      .eq("status", "available");
+    // Sort by count descending
+    setBrands(brandsArray.sort((a, b) => b.count - a.count));
+  }
 
-    if (dealersError) {
-      console.error("Error fetching dealerships:", dealersError);
-    } else if (dealersData) {
-      const dealerCounts: Record<string, { count: number; logo: string }> = {};
+  // FIXED: Fetch dealerships directly from the dealerships table
+  const { data: dealersData, error: dealersError } = await supabase
+    .from("dealerships")
+    .select("name, logo, id"); // Include id in the select
 
-      dealersData.forEach((car: any) => {
-        if (car.dealerships) {
-          const { name, logo } = car.dealerships;
-          if (!dealerCounts[name]) {
-            dealerCounts[name] = { count: 0, logo };
-          }
-          dealerCounts[name].count += 1;
+  if (dealersError) {
+    console.error("Error fetching dealerships:", dealersError);
+  } else if (dealersData) {
+    // Now we need to count cars per dealership
+    const dealershipCounts = await Promise.all(
+      dealersData.map(async (dealer) => {
+        const { count, error } = await supabase
+          .from("cars")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "available")
+          .eq("dealership_id", dealer.id); // Assuming there's a dealership_id column
+
+        if (error) {
+          console.error(`Error counting cars for ${dealer.name}:`, error);
+          return {
+            name: dealer.name,
+            logo: dealer.logo,
+            count: 0,
+            id: dealer.id
+          };
         }
-      });
 
-      const dealersArray = Object.entries(dealerCounts).map(
-        ([name, { count, logo }]) => ({
-          name,
-          logo,
-          count,
-        })
-      );
+        return {
+          name: dealer.name,
+          logo: dealer.logo,
+          count: count || 0,
+          id: dealer.id
+        };
+      })
+    );
 
-      // Sort by count descending
-      setDealerships(dealersArray.sort((a, b) => b.count - a.count));
-    }
+    // Sort by count descending
+    setDealerships(dealershipCounts.sort((a, b) => b.count - a.count));
+  }
 
-    setLoading(false);
-  };
+  setLoading(false);
+};
 
   if (loading) {
     return (
