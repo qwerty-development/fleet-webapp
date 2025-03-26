@@ -471,8 +471,9 @@ const signIn = async ({ email, password }: SignInCredentials) => {
         session: data.session
       };
     }
-
+   router.push('/home');
     return { error: null, user: data.user, session: data.session };
+
   } catch (error: any) {
     console.error('Sign in error:', error);
 
