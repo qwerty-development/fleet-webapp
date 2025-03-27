@@ -369,13 +369,14 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(
     }
   };
 
-  // Improved implementation with better typing and error handling
-  const signInWithIdToken = async ({
+ const signInWithIdToken = async ({
     provider,
-    token
+    token,
+    nonce
   }: {
     provider: 'google' | 'apple' | 'facebook',
-    token: string
+    token: string,
+    nonce?: string // Required for Apple authentication
   }): Promise<{
     data: any,
     error: Error | null,
@@ -396,10 +397,18 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(
         await clearGuestMode();
       }
 
-      const { data, error } = await supabase.auth.signInWithIdToken({
+      // Create authentication parameters including nonce for Apple
+      const authParams: any = {
         provider,
         token,
-      });
+      };
+
+      // Add nonce for Apple authentication
+      if (provider === 'apple' && nonce) {
+        authParams.nonce = nonce;
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken(authParams);
 
       if (error) {
         console.error(`${provider} ID token sign-in error:`, error);

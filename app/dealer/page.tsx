@@ -534,76 +534,7 @@ export default function DealerDashboard() {
                 </div>
               )}
 
-              {/* Recent Listings */}
-              {recentListings.length > 0 && (
-                <div className="bg-gray-800/70 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 shadow-lg">
-                  <h3 className="text-xl font-semibold text-white mb-4">
-                    Recent Listings
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
-                          <th className="pb-2 font-medium">Car</th>
-                          <th className="pb-2 font-medium">Price</th>
-                          <th className="pb-2 font-medium">Status</th>
-                          <th className="pb-2 font-medium">Listed Date</th>
-                          <th className="pb-2 font-medium text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-800">
-                        {recentListings.map((car) => (
-                          <tr key={car.id} className="hover:bg-gray-800/50">
-                            <td className="py-3">
-                              <div>
-                                <p className="text-white font-medium">
-                                  {car.make} {car.model}
-                                </p>
-                                <p className="text-gray-400 text-xs">
-                                  {car.year}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="py-3 text-white">
-                              {formatCurrency(car.price)}
-                            </td>
-                            <td className="py-3">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                                  car.status
-                                )}`}
-                              >
-                                {car.status}
-                              </span>
-                            </td>
-                            <td className="py-3 text-gray-300 text-sm">
-                              {formatDate(car.listed_at)}
-                            </td>
-                            <td className="py-3 text-right">
-                              <button
-                                onClick={() =>
-                                  router.push(`/dealer/inventory/${car.id}`)
-                                }
-                                className="text-indigo-400 hover:text-indigo-300 text-sm"
-                              >
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-6 text-center">
-                    <button
-                      onClick={() => navigateToSection("inventory")}
-                      className="text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors"
-                    >
-                      View All Listings
-                    </button>
-                  </div>
-                </div>
-              )}
+
             </>
           )}
         </div>

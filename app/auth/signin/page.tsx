@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import GoogleAuthHandler from '@/components/auth/GoogleAuthHandler';
 import { createClient } from '@/utils/supabase/client';
+import AppleAuthHandler from '@/components/auth/AppleAuthHandler';
 
 export default function SignInPage() {
   const { signIn } = useAuth();
@@ -31,6 +32,58 @@ export default function SignInPage() {
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
+
+useEffect(() => {
+    // Check if we're on the error page with potential 405 error
+    if (window.location.pathname === '/auth/signin' &&
+        window.location.search.includes('next=')) {
+
+      // Detect if we have authentication cookies (more comprehensive check)
+      const hasAuthCookie = document.cookie.split(';').some(cookie => {
+        const trimmedCookie = cookie.trim();
+        return trimmedCookie.startsWith('sb-') ||
+               trimmedCookie.includes('supabase') ||
+               trimmedCookie.includes('access_token');
+      });
+
+      if (hasAuthCookie) {
+        console.log('Client-side failsafe: Detected authentication cookies, redirecting from signin page');
+        // Extract the intended destination from the next parameter
+        const params = new URLSearchParams(window.location.search);
+        const nextPath = params.get('next') || '/home';
+
+        // Strip URL encoding if present
+        const cleanDestination = nextPath.replace(/%2F/g, '/');
+
+        // Use history API to replace current URL to avoid adding to browser history
+        window.location.replace(cleanDestination);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+  // Extract and handle error from URL if present
+  const urlParams = new URLSearchParams(window.location.search);
+  const errorParam = urlParams.get('error');
+
+  if (errorParam) {
+    // Map error codes to user-friendly messages
+    const errorMessages = {
+      'authentication_failed': 'Authentication with Apple failed. Please try again.',
+      'missing_credentials': 'Authentication information was missing. Please try again.',
+      'default': 'An error occurred during sign in. Please try again.'
+    };
+
+    // Set appropriate error message
+    setError(errorMessages[errorParam] || errorMessages.default);
+
+    // Clean up URL without error parameter (prevent showing errors after page refresh)
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('error');
+    window.history.replaceState({}, document.title, newUrl.toString());
+  }
+}, []);
+
 
   // Check if already signed in on mount
   useEffect(() => {
@@ -265,6 +318,7 @@ setTimeout(async () => {
             className="min-h-[56px]"
           >
             <GoogleAuthHandler />
+            <AppleAuthHandler />
           </motion.div>
 
           <motion.div variants={itemVariants} className="space-y-4">

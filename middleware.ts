@@ -20,7 +20,47 @@ const DEALER_ROUTES = [
 ];
 
 export async function middleware(request: NextRequest) {
-  // Create a response object
+  // Get URL and method information
+  const { pathname } = request.nextUrl;
+  const requestMethod = request.method;
+
+  // CRITICAL FIX 1: Enhanced handling for Apple callback route
+  if (pathname === '/auth/callback') {
+    // Always add CORS headers for the callback route
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    };
+
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, { headers: corsHeaders, status: 200 });
+    }
+
+    // Handle POST requests from Apple Auth - skip remaining middleware
+    if (request.method === 'POST') {
+      console.log('Middleware: Allowing POST to /auth/callback');
+
+      // Add CORS headers but otherwise let the route handler process it
+      const response = NextResponse.next();
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+
+      return response;
+    }
+
+    // For GET requests to callback, add CORS headers
+    const response = NextResponse.next();
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+
+    return response;
+  }
+
+  // Create a response object for other routes
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -49,24 +89,31 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Get URL information
-  const { pathname } = request.nextUrl;
-
-  // Check if current route requires authentication
-  const isProtectedRoute = PROTECTED_ROUTES.some(route =>
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  const isAdminRoute = ADMIN_ROUTES.some(route =>
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  const isDealerRoute = DEALER_ROUTES.some(route =>
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
-
   // Check for auth session
   const { data: { session } } = await supabase.auth.getSession();
+
+  // Special case: Direct redirect from signin page with next parameter if already authenticated
+  if (pathname === '/auth/signin' && session) {
+    // If there's a 'next' parameter, redirect there
+    const nextPath = request.nextUrl.searchParams.get('next') || '/home';
+    console.log(`Middleware: Redirecting authenticated user from signin to ${nextPath}`);
+    return NextResponse.redirect(new URL(nextPath, request.url));
+  }
+
+  // CRITICAL FIX 2: Handle the edge case where user lands on signin page with auth cookies
+  // This specifically addresses the Apple Auth 405 issue
+  if (pathname === '/auth/signin' && request.nextUrl.searchParams.has('next')) {
+    // Check for auth cookies directly from the request
+    const hasSbCookie = request.cookies.getAll().some(cookie =>
+      cookie.name.startsWith('sb-') || cookie.name.includes('supabase')
+    );
+
+    if (hasSbCookie) {
+      console.log('Middleware: Detected auth cookies on signin page, redirecting to destination');
+      const destination = request.nextUrl.searchParams.get('next') || '/home';
+      return NextResponse.redirect(new URL(destination, request.url));
+    }
+  }
 
   // Check for guest mode in various ways (cookie or header)
   let isGuestMode = false;
@@ -94,6 +141,19 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
   }
+
+  // Check if current route requires authentication
+  const isProtectedRoute = PROTECTED_ROUTES.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  const isAdminRoute = ADMIN_ROUTES.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  const isDealerRoute = DEALER_ROUTES.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
 
   // Handle protected routes
   if (isProtectedRoute && !session && !isGuestMode) {
@@ -152,8 +212,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle auth routes - redirect to home if already authenticated
+  // CRITICAL FIX 3: Explicitly exclude the callback URL with more precise check
   const isAuthRoute = pathname.startsWith('/auth');
-  if (isAuthRoute && session) {
+  if (isAuthRoute && session && pathname !== '/auth/callback') {
     return NextResponse.redirect(new URL('/home', request.url));
   }
 
@@ -164,6 +225,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files, api routes, and _next
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|api/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import GuestModeHandler from "@/components/GuestModeHandler";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 const geistSans = localFont({
   src: "../public/fonts/GeistVF.woff",
@@ -26,6 +26,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
       <body
