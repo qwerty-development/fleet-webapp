@@ -33,20 +33,33 @@ export default function SignInPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
 
-   useEffect(() => {
-  // Check if we're on the error page with a 405 error
-  if (window.location.pathname === '/auth/signin' &&
-      window.location.search.includes('next=%2Fhome')) {
-    // Detect if we have authentication cookies
-    const hasAuthCookie = document.cookie.includes('sb-') ||
-                          document.cookie.includes('supabase');
+useEffect(() => {
+    // Check if we're on the error page with potential 405 error
+    if (window.location.pathname === '/auth/signin' &&
+        window.location.search.includes('next=')) {
 
-    if (hasAuthCookie) {
-      console.log('Detected authentication cookies, redirecting to home');
-      window.location.href = '/home';
+      // Detect if we have authentication cookies (more comprehensive check)
+      const hasAuthCookie = document.cookie.split(';').some(cookie => {
+        const trimmedCookie = cookie.trim();
+        return trimmedCookie.startsWith('sb-') ||
+               trimmedCookie.includes('supabase') ||
+               trimmedCookie.includes('access_token');
+      });
+
+      if (hasAuthCookie) {
+        console.log('Client-side failsafe: Detected authentication cookies, redirecting from signin page');
+        // Extract the intended destination from the next parameter
+        const params = new URLSearchParams(window.location.search);
+        const nextPath = params.get('next') || '/home';
+
+        // Strip URL encoding if present
+        const cleanDestination = nextPath.replace(/%2F/g, '/');
+
+        // Use history API to replace current URL to avoid adding to browser history
+        window.location.replace(cleanDestination);
+      }
     }
-  }
-}, []);
+  }, []);
 
   useEffect(() => {
   // Extract and handle error from URL if present

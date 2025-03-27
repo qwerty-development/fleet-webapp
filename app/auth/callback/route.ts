@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 
-// Add explicit exports for both HTTP methods
+// Handle standard OAuth code exchange (for non-Apple providers)
 export async function GET(request: NextRequest) {
-  // Handle standard OAuth code exchange (for non-Apple providers)
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
 
@@ -30,6 +29,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Handle Apple authentication POST callback
 export async function POST(request: NextRequest) {
   console.log('POST request received on /auth/callback');
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const code = formData.get('code') as string;
     const state = formData.get('state') as string;
 
-    // 3. Log received data for debugging (remove in production)
+    // 3. Log received data for debugging
     console.log('Authentication data received:', {
       hasIdToken: !!idToken,
       hasCode: !!code,
@@ -86,8 +86,61 @@ export async function POST(request: NextRequest) {
       console.log('Successfully authenticated with code');
     }
 
-    // 7. Create direct redirect to home after successful authentication
-    return NextResponse.redirect(new URL('/home', request.url));
+    // 7. CRITICAL FIX: Return HTML with JavaScript redirect instead of NextResponse.redirect
+    // This prevents the 405 error by ensuring the client initiates a fresh GET request
+    return new NextResponse(
+      `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Authentication Successful</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            flex-direction: column;
+          }
+          .loader {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #fff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <p>Authentication successful. Redirecting...</p>
+        <script>
+          // This ensures a clean redirect with proper method (GET)
+          window.location.href = '/home';
+        </script>
+      </body>
+      </html>
+      `,
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      }
+    );
   } catch (error) {
     // 8. Comprehensive error handling
     console.error('Error processing Apple authentication callback:', error);

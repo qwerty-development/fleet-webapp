@@ -23,31 +23,41 @@ export async function middleware(request: NextRequest) {
   // Get URL and method information
   const { pathname } = request.nextUrl;
   const requestMethod = request.method;
-if (pathname === '/auth/callback') {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': '*',
-  };
 
-  // Handle preflight requests
-  if (request.method === 'OPTIONS') {
-    return new NextResponse(null, { headers: corsHeaders, status: 200 });
-  }
+  // CRITICAL FIX 1: Enhanced handling for Apple callback route
+  if (pathname === '/auth/callback') {
+    // Always add CORS headers for the callback route
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    };
 
-  // Add CORS headers to all responses for this route
-  const response = NextResponse.next();
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value);
-  });
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, { headers: corsHeaders, status: 200 });
+    }
 
-  return response;
-}
-  // CRITICAL: Special exemption for callback route with POST method
-  if (pathname === '/auth/callback' && requestMethod === 'POST') {
-    console.log('Middleware: Allowing POST to /auth/callback');
-    // Skip all middleware processing for this specific route and method
-    return NextResponse.next();
+    // Handle POST requests from Apple Auth - skip remaining middleware
+    if (request.method === 'POST') {
+      console.log('Middleware: Allowing POST to /auth/callback');
+
+      // Add CORS headers but otherwise let the route handler process it
+      const response = NextResponse.next();
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+
+      return response;
+    }
+
+    // For GET requests to callback, add CORS headers
+    const response = NextResponse.next();
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+
+    return response;
   }
 
   // Create a response object for other routes
@@ -88,6 +98,21 @@ if (pathname === '/auth/callback') {
     const nextPath = request.nextUrl.searchParams.get('next') || '/home';
     console.log(`Middleware: Redirecting authenticated user from signin to ${nextPath}`);
     return NextResponse.redirect(new URL(nextPath, request.url));
+  }
+
+  // CRITICAL FIX 2: Handle the edge case where user lands on signin page with auth cookies
+  // This specifically addresses the Apple Auth 405 issue
+  if (pathname === '/auth/signin' && request.nextUrl.searchParams.has('next')) {
+    // Check for auth cookies directly from the request
+    const hasSbCookie = request.cookies.getAll().some(cookie =>
+      cookie.name.startsWith('sb-') || cookie.name.includes('supabase')
+    );
+
+    if (hasSbCookie) {
+      console.log('Middleware: Detected auth cookies on signin page, redirecting to destination');
+      const destination = request.nextUrl.searchParams.get('next') || '/home';
+      return NextResponse.redirect(new URL(destination, request.url));
+    }
   }
 
   // Check for guest mode in various ways (cookie or header)
@@ -187,7 +212,7 @@ if (pathname === '/auth/callback') {
   }
 
   // Handle auth routes - redirect to home if already authenticated
-  // IMPORTANT: Exclude callback route from this check entirely
+  // CRITICAL FIX 3: Explicitly exclude the callback URL with more precise check
   const isAuthRoute = pathname.startsWith('/auth');
   if (isAuthRoute && session && pathname !== '/auth/callback') {
     return NextResponse.redirect(new URL('/home', request.url));
