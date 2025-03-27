@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import GoogleAuthHandler from '@/components/auth/GoogleAuthHandler';
 import { createClient } from '@/utils/supabase/client';
+import AppleAuthHandler from '@/components/auth/AppleAuthHandler';
 
 export default function SignInPage() {
   const { signIn } = useAuth();
@@ -265,6 +266,7 @@ setTimeout(async () => {
             className="min-h-[56px]"
           >
             <GoogleAuthHandler />
+            <AppleAuthHandler />
           </motion.div>
 
           <motion.div variants={itemVariants} className="space-y-4">

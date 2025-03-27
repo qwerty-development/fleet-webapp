@@ -1,20 +1,45 @@
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { createAdminClient } from '@/utils/supabase/admin';
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') || '/home';
+export async function POST(request: NextRequest) {
+  try {
+    // Parse form data from Apple response
+    const formData = await request.formData();
 
-  if (code) {
+    // Extract critical values
+    const idToken = formData.get('id_token') as string;
+    const state = formData.get('state') as string;
+    const code = formData.get('code') as string;
+
+    if (!idToken) {
+      throw new Error('No ID token received from Apple');
+    }
+
+    // Get cookies for authentication
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Exchange the code for a session
-    await supabase.auth.exchangeCodeForSession(code);
-  }
+    // Use the token to sign in with Supabase
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: idToken,
+    });
 
-  // URL to redirect to after sign in process completes
-  return NextResponse.redirect(new URL(next, requestUrl));
+    if (error) {
+      console.error('Error signing in with Apple ID token:', error);
+      return NextResponse.redirect(
+        new URL(`/auth/signin?error=${encodeURIComponent('Authentication failed')}`, request.url)
+      );
+    }
+
+    // Successful authentication
+    return NextResponse.redirect(new URL('/home', request.url));
+  } catch (error) {
+    console.error('Apple callback error:', error);
+    return NextResponse.redirect(
+      new URL(`/auth/signin?error=${encodeURIComponent('Authentication process failed')}`, request.url)
+    );
+  }
 }
