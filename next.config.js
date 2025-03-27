@@ -28,6 +28,22 @@ const nextConfig = {
               worker-src 'self' blob: 'unsafe-inline';
             `.replace(/\s+/g, ' ').trim(),
           },
+           {
+            key: 'Accept',
+            value: 'application/json, application/x-www-form-urlencoded, text/html, */*',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
         ],
       },
     ];

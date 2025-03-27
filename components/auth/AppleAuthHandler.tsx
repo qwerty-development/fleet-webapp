@@ -5,30 +5,37 @@ import { useRouter } from 'next/navigation';
 
 export default function AppleRedirectAuthHandler() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const initiateAppleAuth = () => {
     try {
       setIsLoading(true);
+      setError(null);
 
-      // Generate a cryptographically secure state parameter
-      const generateSecureState = () => {
+      // Generate cryptographically secure state
+      const generateState = () => {
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
         return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
       };
 
-      // Build authentication parameters with precise structure
-      const clientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-      const state = generateSecureState();
+      const state = generateState();
 
-      // Store state for verification
+      // Store state in session storage for validation
       sessionStorage.setItem('apple_auth_state', state);
 
-      // Use explicit URL construction with required parameters in exact order
-      const appleAuthUrl =
+      // Get client ID from environment
+      const clientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
+      if (!clientId) {
+        throw new Error('Apple Client ID not configured');
+      }
+
+      // Build the redirect URL with exact format
+      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
+
+      // Build authentication URL with exact parameter order
+      const authUrl =
         'https://appleid.apple.com/auth/authorize' +
         `?client_id=${clientId}` +
         `&redirect_uri=${redirectUri}` +
@@ -37,16 +44,16 @@ export default function AppleRedirectAuthHandler() {
         `&state=${state}` +
         '&response_mode=form_post';
 
-      // Log the auth URL for debugging (development only)
+      // Log URL for debugging in development
       if (process.env.NODE_ENV === 'development') {
-        console.log('Initiating Apple auth with URL:', appleAuthUrl);
+        console.log('Apple Auth URL:', authUrl);
       }
 
-      // Use location.assign for more reliable navigation
-      window.location.assign(appleAuthUrl);
+      // Use location.assign for reliable navigation
+      window.location.assign(authUrl);
     } catch (error) {
       console.error('Apple auth initiation error:', error);
-      setError('Failed to initiate Apple authentication');
+      setError('Failed to initiate Apple authentication. Please try again.');
       setIsLoading(false);
     }
   };

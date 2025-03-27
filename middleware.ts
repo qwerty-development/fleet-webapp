@@ -20,19 +20,42 @@ const DEALER_ROUTES = [
 ];
 
 export async function middleware(request: NextRequest) {
-  // Create a response object
+  // Get URL and method information
+  const { pathname } = request.nextUrl;
+  const requestMethod = request.method;
+if (pathname === '/auth/callback') {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': '*',
+  };
+
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { headers: corsHeaders, status: 200 });
+  }
+
+  // Add CORS headers to all responses for this route
+  const response = NextResponse.next();
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+
+  return response;
+}
+  // CRITICAL: Special exemption for callback route with POST method
+  if (pathname === '/auth/callback' && requestMethod === 'POST') {
+    console.log('Middleware: Allowing POST to /auth/callback');
+    // Skip all middleware processing for this specific route and method
+    return NextResponse.next();
+  }
+
+  // Create a response object for other routes
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
-
-  // Special handling for callback route with POST method
-  const { pathname } = request.nextUrl;
-  if (pathname === '/auth/callback' && request.method === 'POST') {
-    // Allow POST requests to continue to the route handler without interference
-    return NextResponse.next();
-  }
 
   // Create a Supabase client directly
   const supabase = createServerClient(
@@ -59,10 +82,11 @@ export async function middleware(request: NextRequest) {
   // Check for auth session
   const { data: { session } } = await supabase.auth.getSession();
 
-  // Handle direct navigation to auth/signin with next parameter when already authenticated
-  if (pathname === '/auth/signin' && request.nextUrl.searchParams.has('next') && session) {
+  // Special case: Direct redirect from signin page with next parameter if already authenticated
+  if (pathname === '/auth/signin' && session) {
+    // If there's a 'next' parameter, redirect there
     const nextPath = request.nextUrl.searchParams.get('next') || '/home';
-    // Redirect directly to the destination if already signed in
+    console.log(`Middleware: Redirecting authenticated user from signin to ${nextPath}`);
     return NextResponse.redirect(new URL(nextPath, request.url));
   }
 
@@ -163,6 +187,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Handle auth routes - redirect to home if already authenticated
+  // IMPORTANT: Exclude callback route from this check entirely
   const isAuthRoute = pathname.startsWith('/auth');
   if (isAuthRoute && session && pathname !== '/auth/callback') {
     return NextResponse.redirect(new URL('/home', request.url));
@@ -175,8 +200,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files, api routes, and _next
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    // Explicitly include callback route to ensure proper handling
-    '/auth/callback'
+    '/((?!_next/static|_next/image|api/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

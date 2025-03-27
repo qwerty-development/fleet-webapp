@@ -2,86 +2,97 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 
-// Handle both GET and POST methods
+// Add explicit exports for both HTTP methods
 export async function GET(request: NextRequest) {
-  return handleAuthCallback(request);
-}
+  // Handle standard OAuth code exchange (for non-Apple providers)
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get('code');
 
-export async function POST(request: NextRequest) {
-  return handleAuthCallback(request);
-}
+  // Redirect to home if no code (fallback safety)
+  if (!code) {
+    console.error('GET: No authentication code provided');
+    return NextResponse.redirect(new URL('/auth/signin', request.url));
+  }
 
-// Unified callback handler logic
-async function handleAuthCallback(request: NextRequest) {
   try {
-    const requestUrl = new URL(request.url);
-
-    // Extract authentication parameters from either query params or form data
-    let idToken = null;
-    let code = null;
-    let state = null;
-
-    // Handle POST requests (Apple Sign In uses form submission)
-    if (request.method === 'POST') {
-      const formData = await request.formData();
-      idToken = formData.get('id_token') as string;
-      code = formData.get('code') as string;
-      state = formData.get('state') as string;
-    }
-
-    // Handle GET requests (Supabase OAuth typically uses query params)
-    else {
-      code = requestUrl.searchParams.get('code');
-      state = requestUrl.searchParams.get('state');
-    }
-
-    // Get destination path from next parameter or default to /home
-    const next = requestUrl.searchParams.get('next') || '/home';
-
-    // Initialize Supabase client
+    // Initialize Supabase client with cookie store
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Handle Apple ID Token authentication
+    // Exchange the code for a session
+    await supabase.auth.exchangeCodeForSession(code);
+
+    // Redirect to home after successful authentication
+    return NextResponse.redirect(new URL('/home', request.url));
+  } catch (error) {
+    console.error('Error in callback GET handler:', error);
+    return NextResponse.redirect(new URL('/auth/signin', request.url));
+  }
+}
+
+export async function POST(request: NextRequest) {
+  console.log('POST request received on /auth/callback');
+
+  try {
+    // 1. Extract form data from Apple's POST request
+    const formData = await request.formData();
+    console.log('Form data keys:', Array.from(formData.keys()));
+
+    // 2. Extract critical authentication values
+    const idToken = formData.get('id_token') as string;
+    const code = formData.get('code') as string;
+    const state = formData.get('state') as string;
+
+    // 3. Log received data for debugging (remove in production)
+    console.log('Authentication data received:', {
+      hasIdToken: !!idToken,
+      hasCode: !!code,
+      hasState: !!state
+    });
+
+    // 4. Verify we have either id_token or code
+    if (!idToken && !code) {
+      console.error('POST: No id_token or code provided');
+      return NextResponse.redirect(new URL('/auth/signin?error=missing_credentials', request.url));
+    }
+
+    // 5. Initialize Supabase client with cookie store
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+
+    // 6. Process authentication based on available credentials
     if (idToken) {
+      // 6a. Handle Apple ID token authentication
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: idToken,
       });
 
       if (error) {
-        console.error('Apple ID token authentication error:', error);
-        return NextResponse.redirect(
-          new URL('/auth/signin?error=authentication_failed', requestUrl.origin)
-        );
+        console.error('Error signing in with Apple ID token:', error);
+        return NextResponse.redirect(new URL('/auth/signin?error=token_processing', request.url));
       }
 
-      // Successful Apple authentication - redirect directly to home
-      return NextResponse.redirect(new URL('/home', requestUrl.origin));
+      console.log('Successfully authenticated with Apple ID token');
+    } else if (code) {
+      // 6b. Handle code-based authentication
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (error) {
+        console.error('Error exchanging code for session:', error);
+        return NextResponse.redirect(new URL('/auth/signin?error=code_processing', request.url));
+      }
+
+      console.log('Successfully authenticated with code');
     }
 
-    // Handle code-based authentication
-    else if (code) {
-      await supabase.auth.exchangeCodeForSession(code);
-    }
-
-    // Failed authentication - no token or code
-    else {
-      console.error('No authentication parameters found');
-      return NextResponse.redirect(
-        new URL('/auth/signin?error=missing_credentials', requestUrl.origin)
-      );
-    }
-
-    // Successful authentication with code - redirect to original destination
-    return NextResponse.redirect(new URL(next, requestUrl.origin));
+    // 7. Create direct redirect to home after successful authentication
+    return NextResponse.redirect(new URL('/home', request.url));
   } catch (error) {
-    console.error('Authentication callback error:', error);
+    // 8. Comprehensive error handling
+    console.error('Error processing Apple authentication callback:', error);
 
-    // Ensure error parameter is properly encoded
-    const errorMessage = encodeURIComponent('Authentication failed');
-    return NextResponse.redirect(
-      new URL(`/auth/signin?error=${errorMessage}`, request.url)
-    );
+    // 9. Redirect to sign-in with error parameter
+    return NextResponse.redirect(new URL('/auth/signin?error=authentication_error', request.url));
   }
 }
