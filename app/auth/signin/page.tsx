@@ -33,6 +33,21 @@ export default function SignInPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
 
+   useEffect(() => {
+  // Check if we're on the error page with a 405 error
+  if (window.location.pathname === '/auth/signin' &&
+      window.location.search.includes('next=%2Fhome')) {
+    // Detect if we have authentication cookies
+    const hasAuthCookie = document.cookie.includes('sb-') ||
+                          document.cookie.includes('supabase');
+
+    if (hasAuthCookie) {
+      console.log('Detected authentication cookies, redirecting to home');
+      window.location.href = '/home';
+    }
+  }
+}, []);
+
   useEffect(() => {
   // Extract and handle error from URL if present
   const urlParams = new URLSearchParams(window.location.search);
