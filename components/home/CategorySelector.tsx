@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CATEGORIES = [
   {
@@ -70,6 +71,17 @@ const CATEGORIES = [
       />
     )
   },
+  {
+    id: 'Classic',
+    label: 'Classic',
+    icon: (
+      <img
+        src="/types/classic.png"
+        alt="Classic"
+        className="w-full h-full object-contain"
+      />
+    )
+  },
 ];
 
 interface CategorySelectorProps {
@@ -119,8 +131,18 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     checkScrollPosition();
   };
 
+  const scrollLeft = () => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+  };
+
+  const scrollRight = () => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  };
+
   return (
-    <div className={`relative w-full  ${className}`}>
+    <div className={`relative w-full ${className}`}>
       <h2 className="text-xl font-bold text-white">Browse by Category</h2>
 
       {/* Gradient fade left: visible only on md+ */}
@@ -131,9 +153,20 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         />
       )}
 
+      {/* Left arrow navigation button */}
+      {canScrollLeft && (
+        <button 
+          onClick={scrollLeft}
+          className="hidden md:flex absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 items-center justify-center transition-all duration-300"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+
       <motion.div
         ref={scrollRef}
-        className="flex flex-nowrap space-x-6 overflow-x-auto pb-4 scrollbar-hide "
+        className="flex flex-nowrap space-x-6 overflow-x-auto pb-4 scrollbar-hide"
         onScroll={handleScroll}
         variants={containerVariants}
         initial="hidden"
@@ -173,6 +206,17 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
           </motion.div>
         ))}
       </motion.div>
+
+      {/* Right arrow navigation button */}
+      {canScrollRight && (
+        <button 
+          onClick={scrollRight}
+          className="hidden md:flex absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 items-center justify-center transition-all duration-300"
+          aria-label="Scroll right"
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
 
       {/* Gradient fade right: visible only on md+ */}
       {showScrollIndicator && (
