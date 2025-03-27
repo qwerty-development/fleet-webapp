@@ -33,6 +33,30 @@ export default function SignInPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
 
+  useEffect(() => {
+  // Extract and handle error from URL if present
+  const urlParams = new URLSearchParams(window.location.search);
+  const errorParam = urlParams.get('error');
+
+  if (errorParam) {
+    // Map error codes to user-friendly messages
+    const errorMessages = {
+      'authentication_failed': 'Authentication with Apple failed. Please try again.',
+      'missing_credentials': 'Authentication information was missing. Please try again.',
+      'default': 'An error occurred during sign in. Please try again.'
+    };
+
+    // Set appropriate error message
+    setError(errorMessages[errorParam] || errorMessages.default);
+
+    // Clean up URL without error parameter (prevent showing errors after page refresh)
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('error');
+    window.history.replaceState({}, document.title, newUrl.toString());
+  }
+}, []);
+
+
   // Check if already signed in on mount
   useEffect(() => {
     const checkAuthStatus = async () => {
