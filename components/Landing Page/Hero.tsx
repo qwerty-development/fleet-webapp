@@ -13,7 +13,7 @@ const Hero: React.FC = () => {
     >
       <div className="absolute inset-0 bg-black opacity-40"></div>
 
-      <div className="relative w-11/12 xl:w-9/12 flex justify-start  items-center   flex-col lg:flex-row">
+      <div className="relative w-11/12 xl:w-9/12 flex justify-center  items-center   flex-col lg:flex-row">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -22,7 +22,7 @@ const Hero: React.FC = () => {
         >
           <div className="   w-fit ">
             <div className="relative  w-full flex justify-center  mb-6">
-              <h1 className="text-8xl md:text-9xl scale-150  font-black tracking-tighter text-white">
+              <h1 className="text-8xl md:text-9xl scale-125 md:scale-150  font-black tracking-tighter text-white">
                 <span className="relative  inline-block">
                   <span className="relative z-10">F</span>
                   <span className="absolute top-0 left-0 z-0 text-accent blur-sm opacity-80">
