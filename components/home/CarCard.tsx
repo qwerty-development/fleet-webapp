@@ -161,7 +161,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
           {(car.dealership_name || car.dealerships?.name) && (
             <div className="mt-4 pt-3 border-t border-gray-700">
               <div className="flex items-center justify-between flex-wrap">
-                {/* Dealership name and logo on left */}
+                {/* Dealership name and logo on lef */}
                 <div className="flex items-center mr-2">
                   <div className="h-8 w-8 mr-2 flex-shrink-0">
                     <img
