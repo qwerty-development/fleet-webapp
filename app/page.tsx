@@ -7,7 +7,7 @@ import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 
 // Critical sections load immediately
-import HeroSection from "@/components/Landing Page/herosection";
+import HeroSection from "@/components/Landing Page/herosection copy 2";
 import Navbar from "@/components/Landing Page/navbar";
 import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
 import FeaturedCarsSection from "@/components/Landing Page/FeaturedCarsSection";
@@ -171,7 +171,7 @@ useEffect(() => {
         {/* Main Content - Simple Structure Without Parallax */}
         <main className="relative z-20">
           {/* Hero Section - No longer fixed */}
-          <section className="min-h-screen pt-16">
+          <section className="min-h-screen pt-0">
             <HeroSection />
           </section>
 

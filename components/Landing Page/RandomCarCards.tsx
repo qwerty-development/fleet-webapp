@@ -77,7 +77,7 @@ const RandomCarCards: React.FC = () => {
   if (!cars.length) return <div className="text-white">No available cars found.</div>;
 
   return (
-    <div className="relative bg-neutral-900  rounded-3xl">
+    <div className="relative bg-neutral-900 w-full h-full rounded-3xl">
       <div 
         className="transition-opacity duration-500 ease-in-out" 
         style={{ opacity: opacity }}
