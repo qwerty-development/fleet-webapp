@@ -110,7 +110,7 @@ export default function HeroSection() {
   }, [isHovering]);
 
   return (
-    <div ref={heroRef} className="relative w-full  overflow-hidden">
+    <div ref={heroRef} className="relative w-full py-16  overflow-hidden">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0  z-10"></div>
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-repeat z-0 opacity-20"></div>
@@ -118,8 +118,8 @@ export default function HeroSection() {
         <div className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 opacity-20 blur-3xl" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col">
-        <div className="flex flex-col md:flex-row items-center justify-center my-10 mb-16">
+      <div className="relative z-10 flex flex-col">
+        <div className="flex flex-col md:flex-row items-center justify-center">
           <div className="flex flex-col w-11/12 xl:w-9/12">
             <div className=" flex flex-col lg:flex-row">
               <motion.div
@@ -128,71 +128,51 @@ export default function HeroSection() {
                 transition={{ duration: 0.6 }}
                 className="w-full  flex flex-col justify-between  text-center md:text-left lg:pr-12"
               >
-                <div className="">
-                  <div className="relative  inline-block mb-6">
-                    <h1 className="text-8xl md:text-9xl font-black tracking-tighter text-white">
-                      <span className="relative inline-block">
-                        <span className="relative z-10">F</span>
-                        <span className="absolute top-0 left-0 z-0 text-accent blur-sm opacity-80">
-                          F
-                        </span>
-                      </span>
-                      <span className="relative inline-block">
-                        <span className="relative z-10">L</span>
-                        <span className="absolute top-0 left-0 z-0 text-accent blur-sm opacity-80">
-                          L
-                        </span>
-                      </span>
-                      <span className="relative inline-block">
-                        <span className="relative z-10">E</span>
-                        <span className="absolute top-0 left-0 z-0 text-accent blur-sm opacity-80">
-                          E
-                        </span>
-                      </span>
-                      <span className="relative inline-block">
-                        <span className="relative z-10">E</span>
-                        <span className="absolute top-0 left-0 z-0 text-accent blur-sm opacity-80">
-                          E
-                        </span>
-                      </span>
-                      <span className="relative inline-block">
-                        <span className="relative z-10">T</span>
-                        <span className="absolute top-0 left-0 z-0 text-accent blur-sm opacity-80">
-                          T
-                        </span>
-                      </span>
-                    </h1>
-                  </div>
-
-                  <div className="mt-4 max-w-2xl mx-auto md:mx-0">
-                    <p className="text-2xl md:text-3xl text-white/90 font-light">
-                      Reimagining how you{" "}
-                      <span className="text-accent font-bold bg-white/5 rounded-md p-1">
-                        discover
-                      </span>{" "}
-                      and
-                      <br />
-                      <span className="text-accent font-bold bg-white/5 rounded-md p-1">
-                        connect with
-                      </span>{" "}
-                      automotive experiences
-                    </p>
-                  </div>
-                  <div className="mt-8">
-                    <Link href="/home" passHref>
-                      <motion.span
-                        whileHover={{ scale: 1.03 }}
-                        transition={{ duration: 0.2 }}
-                        className="inline-block mt-0 bg-accent hover:bg-accent-dark transition-colors duration-300 text-white font-bold rounded-xl px-8 py-5 cursor-pointer"
-                      >
-                        Start Browsing
-                      </motion.span>
-                    </Link>
-                  </div>
+                {/* insert the 3 stuff here */}
+                <div ref={featureRef} className="grid gap-y-3">
+                  {features.map((feature, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 50 }}
+                      animate={
+                        animatedFeatures[idx]
+                          ? { opacity: 1, y: 0 }
+                          : featureInView
+                          ? { opacity: 1, y: 0 }
+                          : { opacity: 0, y: 50 }
+                      } // Modified animate prop
+                      transition={{
+                        duration: 0.5,
+                        delay: idx * 0.2,
+                        onComplete: () => {
+                          if (!animatedFeatures[idx]) {
+                            // Only set to animated if not already true
+                            setAnimatedFeatures((prevState) => ({
+                              ...prevState,
+                              [idx]: true,
+                            }));
+                          }
+                        },
+                      }}
+                      className="bg-white/10 p-6 rounded-2xl shadow-lg backdrop-blur-md hover:bg-white/20 transition-colors duration-300"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="text-3xl text-white">
+                          {feature.icon}
+                        </div>
+                        <h3 className="text-xl font-semibold text-white">
+                          {feature.title}
+                        </h3>
+                      </div>
+                      <p className="text-gray-300 text-start mt-3">
+                        {feature.description}
+                      </p>
+                    </motion.div>
+                  ))}
                 </div>
 
-                <div className="mb-10 lg:mb-0">
-                  <div className="relative w-full mt-10 mx-auto p-5 md:p-10 lg:p-16 rounded-2xl overflow-hidden text-center">
+                <div className="mb-5  lg:mb-0">
+                  <div className="relative w-full mt-5  mx-auto p-5 md:p-10 lg:p-16 rounded-2xl overflow-hidden text-center">
                     <div className="absolute inset-0 -z-10">
                       <div className="absolute inset-0 bg-gradient-to-r from-accent/20 via-purple-500/20 to-accent/20 rounded-2xl"></div>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -264,47 +244,6 @@ export default function HeroSection() {
               >
                 <RandomCarCards />
               </motion.div>
-            </div>
-
-            <div
-              ref={featureRef}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-10"
-            >
-              {features.map((feature, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={
-                    animatedFeatures[idx]
-                      ? { opacity: 1, y: 0 }
-                      : featureInView
-                      ? { opacity: 1, y: 0 }
-                      : { opacity: 0, y: 50 }
-                  } // Modified animate prop
-                  transition={{
-                    duration: 0.5,
-                    delay: idx * 0.2,
-                    onComplete: () => {
-                      if (!animatedFeatures[idx]) {
-                        // Only set to animated if not already true
-                        setAnimatedFeatures((prevState) => ({
-                          ...prevState,
-                          [idx]: true,
-                        }));
-                      }
-                    },
-                  }}
-                  className="bg-white/10 p-6 rounded-2xl shadow-lg backdrop-blur-md hover:bg-white/20 transition-colors duration-300"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="text-3xl text-white">{feature.icon}</div>
-                    <h3 className="text-xl font-semibold text-white">
-                      {feature.title}
-                    </h3>
-                  </div>
-                  <p className="text-gray-300 mt-3">{feature.description}</p>
-                </motion.div>
-              ))}
             </div>
           </div>
         </div>

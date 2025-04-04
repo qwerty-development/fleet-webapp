@@ -182,31 +182,35 @@ export default function AppShowcase() {
           transition={{ duration: 0.8 }}
           className="mb-16 text-center"
         >
-          <motion.span 
+          <motion.span
             className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            Fleet Mobile App
+            Designed for Everyone
           </motion.span>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mb-6">
-            <span className="relative">
-            Experience 
-              <motion.span 
+          <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mt-10 mb-6">
+            <span className="text-accent font-bold bg-white/5 rounded-md p-1">
+              Revolutionizing
+            </span>{" "}
+            {/* <span className="relative">
+              Revolutionizing
+              <motion.span
                 className="absolute -bottom-2 left-0 w-full h-1 bg-accent"
                 initial={{ width: 0 }}
                 whileInView={{ width: "100%" }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: 0.5 }}
               />
-            </span>
-            {" "}
-            <span className="text-accent">the Full Feature Set</span>
+            </span>{" "} */}
+            <span className="">Car Shopping</span>
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-          Discover all the powerful tools available in the Fleet app, connecting car buyers with dealerships through an intuitive, feature-rich experience
+            Fleet connects car buyers with trusted dealerships through an
+            intuitive platform designed to make vehicle shopping seamless and
+            enjoyable.
           </p>
         </motion.div>
 
