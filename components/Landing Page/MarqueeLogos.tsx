@@ -121,7 +121,7 @@ const MarqueeLogos: React.FC = () => {
 
   if (loading) {
     return (
-      <div className=" bg-neutral-500/10 px-10 py-5 w-11/12 mb-24 rounded-3xl flex items-center justify-center shadow-xl">
+      <div className=" bg-neutral-500/10 px-10 mt-10 py-5 w-11/12 mb-24 rounded-3xl flex items-center justify-center shadow-xl">
         <div className="animate-pulse flex flex-col items-center">
           <span className="text-accent text-lg font-bold">Loading</span>
           <div className="mt-2 flex space-x-2">
@@ -141,7 +141,7 @@ const MarqueeLogos: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8 flex flex-col w-11/12 justify-center items-center pb-24">
+    <div className="space-y-8 flex flex-col w-11/12 justify-center items-center py-24">
       {/* Title and Introduction */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
