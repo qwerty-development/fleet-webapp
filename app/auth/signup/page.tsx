@@ -308,6 +308,17 @@ export default function SignUpPage() {
                 <p className="text-center text-accent">{errors.general}</p>
               )}
 
+        <div className="text-xs text-gray-500 mb-4 text-center">
+                By signing up, you agree to our{' '}
+                <Link href="/terms" className="text-accent hover:underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-accent hover:underline">
+                  Privacy Policy
+                </Link>
+              </div>
+
               <button
                 onClick={onSignUpPress}
                 disabled={isLoading}

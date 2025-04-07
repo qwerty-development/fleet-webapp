@@ -68,7 +68,7 @@ useEffect(() => {
 
   if (errorParam) {
     // Map error codes to user-friendly messages
-    const errorMessages = {
+    const errorMessages:any = {
       'authentication_failed': 'Authentication with Apple failed. Please try again.',
       'missing_credentials': 'Authentication information was missing. Please try again.',
       'default': 'An error occurred during sign in. Please try again.'
@@ -439,6 +439,17 @@ setTimeout(async () => {
             >
               Forgot password?
             </Link>
+
+            <div className="text-xs text-gray-500 mt-4">
+              By using this service, you agree to our{' '}
+              <Link href="/terms" className="text-accent hover:underline">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="text-accent hover:underline">
+                Privacy Policy
+              </Link>
+            </div>
           </motion.div>
         </motion.div>
       </motion.div>
