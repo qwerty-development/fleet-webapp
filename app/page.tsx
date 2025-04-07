@@ -197,7 +197,7 @@ export default function Home() {
           </section>
 
           {/* Content Sections */}
-          <div className="relative bg-gray-100 z-30">
+          <div className="relative bg-gray-100 flex flex-col justify-center items-center z-30">
             <AppShowcase />
             <DealerDetails />
             {/* <AboutSection /> */}
