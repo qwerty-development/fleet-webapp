@@ -144,39 +144,33 @@ const MarqueeLogos: React.FC = () => {
     <div className="space-y-8 py-12">
       {/* Title and Introduction */}
       <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8 }}
-          className="mb-16 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="mb-16 text-center"
+      >
+        <motion.span
+          className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
+          initial={{ opacity: 0, scale: 0.8 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
         >
-          <motion.span 
-            className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            Taylored to your needs
-          </motion.span>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mb-6">
-            <span className="relative">
-              Premium
-              <motion.span 
-                className="absolute -bottom-2 left-0 w-full h-1 bg-accent"
-                initial={{ width: 0 }}
-                whileInView={{ width: "100%" }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: 0.5 }}
-              />
-            </span>
-            {" "}
-            <span className="text-accent">Automotive Network</span>
-          </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-          We work with top-notch dealerships across the country to bring you an unparalleled selection of vehicles. Whatever car you're looking for, you'll find it here.
-          </p>
-        </motion.div>
+          Taylored to your needs
+        </motion.span>
+        <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mt-10 mb-6">
+          <span className="text-accent font-bold bg-white/5 rounded-md p-1">
+            Premium
+          </span>{" "}
+          <span className="">Automotive Network</span>
+        </h2>
+        <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          We work with top-notch dealerships across the country to bring you an
+          unparalleled selection of vehicles. Whatever car you're looking for,
+          you'll find it here.
+        </p>
+      </motion.div>
 
       {/* Car Brands Section */}
       <div className="bg-neutral-900/90 backdrop-blur-sm p-6 rounded-3xl shadow-xl">

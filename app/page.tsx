@@ -192,18 +192,12 @@ export default function Home() {
           <section>
             <Hero />
           </section>
-          <section className="">
+          <section className="bg-gray-100">
             <BentoGrid />
           </section>
 
           {/* Content Sections */}
-          <div
-            className="relative z-30"
-            style={{
-              background:
-                "linear-gradient(to bottom, #111111, #1a1a1a, #222222)",
-            }}
-          >
+          <div className="relative bg-gray-100 z-30">
             <AppShowcase />
             <DealerDetails />
             {/* <AboutSection /> */}

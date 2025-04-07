@@ -56,7 +56,7 @@ const Hero: React.FC = () => {
               </h1>
             </div>
 
-            <div className="mt-4 max-w-2xl mx-auto md:mx-0">
+            <div className="hidden md:block mt-4 max-w-2xl mx-auto md:mx-0">
               <p className="text-2xl md:text-3xl text-white/90 text-center font-light">
                 Reimagining how you{" "}
                 <span className="text-accent font-bold bg-white/10 rounded-md p-1">
@@ -68,6 +68,12 @@ const Hero: React.FC = () => {
                   connect with
                 </span>{" "}
                 automotive experiences
+              </p>
+            </div>
+            <div className="block md:hidden mt-4 max-w-2xl mx-auto md:mx-0">
+              <p className="text-2xl md:text-3xl text-white/90 text-center font-light">
+                Reimagining how you discover and connect with automotive
+                experiences
               </p>
             </div>
             {/* <div className="mt-8">
