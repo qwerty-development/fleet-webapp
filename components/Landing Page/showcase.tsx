@@ -144,7 +144,7 @@ export default function AppShowcase() {
   return (
     <section
       id="app"
-      className="py-12 bg-gradient-to-b relative text-white overflow-hidden"
+      className="py-12 bg-gradient-to-b py-24 w-full relative text-white overflow-hidden"
     >
       <div className="absolute inset-0 -z-10 opacity-30">
 
@@ -175,7 +175,7 @@ export default function AppShowcase() {
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-      <motion.div
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
@@ -183,7 +183,7 @@ export default function AppShowcase() {
           className="mb-16 text-center"
         >
           <motion.span
-            className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20"
+            className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/20 border border-accent/20"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
@@ -192,7 +192,7 @@ export default function AppShowcase() {
             Designed for Everyone
           </motion.span>
           <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mt-10 mb-6">
-            <span className="text-accent font-bold bg-white/5 rounded-md p-1">
+            <span className="text-accent font-bold bg-black/10 rounded-md p-1">
               Revolutionizing
             </span>{" "}
             {/* <span className="relative">
@@ -205,9 +205,9 @@ export default function AppShowcase() {
                 transition={{ duration: 0.8, delay: 0.5 }}
               />
             </span>{" "} */}
-            <span className="">Car Shopping</span>
+            <span className="text-black-dark">Car Shopping</span>
           </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-black-light max-w-3xl mx-auto">
             Fleet connects car buyers with trusted dealerships through an
             intuitive platform designed to make vehicle shopping seamless and
             enjoyable.
@@ -231,12 +231,12 @@ export default function AppShowcase() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
-                className="inline-flex items-center gap-3 bg-black/30 backdrop-blur-sm px-6 py-3 rounded-full border border-white/10"
+                className="inline-flex items-center gap-3 bg-white backdrop-blur-sm px-6 py-3 rounded-full border border-white/10"
               >
-                <div className="p-2 rounded-lg bg-accent/10 text-accent">
+                <div className="p-2 rounded-lg bg-accent/15 text-accent">
                   {features[activeIndex].icon}
                 </div>
-                <h3 className="font-bold text-xl">
+                <h3 className="font-bold text-black-light text-xl">
                   {features[activeIndex].title}
                 </h3>
               </motion.div>
@@ -249,7 +249,7 @@ export default function AppShowcase() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
-                className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto"
+                className="mt-4 text-lg text-black/50 max-w-2xl mx-auto"
               >
                 {features[activeIndex].description}
               </motion.p>

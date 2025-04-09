@@ -79,7 +79,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black bg-opacity-80 backdrop-blur-md shadow-lg transform translate-y-0`} // removed conditional class to make navbar static
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white bg-opacity-80 backdrop-blur-lg shadow-lg transform translate-y-0`} // removed conditional class to make navbar static
     >
       <nav
         aria-label="Global"
@@ -97,7 +97,7 @@ export default function Navbar() {
               key={item.name}
               href={item.href}
               onClick={(e) => scrollToSection(e, item.href)}
-              className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
+              className="text-sm/6 font-semibold text-black hover:text-accent transition-colors duration-300"
             >
               {item.name}
             </a>
@@ -142,7 +142,7 @@ export default function Navbar() {
             <div className="flex items-center space-x-4">
               <Link
                 href="/auth/signin"
-                className="text-sm/6 font-semibold text-foreground hover:text-accent transition-colors duration-300"
+                className="text-sm/6 font-semibold text-black hover:text-accent transition-colors duration-300"
               >
                 Log in
               </Link>

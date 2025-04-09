@@ -154,17 +154,17 @@ export default function HeroSection() {
                           }
                         },
                       }}
-                      className="bg-white/10 p-6 rounded-2xl shadow-lg backdrop-blur-md hover:bg-white/20 transition-colors duration-300"
+                      className="bg-neutral-400/10 p-6 rounded-2xl shadow-lg backdrop-blur-md hover:bg-neutral-400/20 transition-colors duration-300"
                     >
                       <div className="flex items-center space-x-4">
                         <div className="text-3xl text-white">
                           {feature.icon}
                         </div>
-                        <h3 className="text-xl font-semibold text-white">
+                        <h3 className="text-xl  text-black font-semibold">
                           {feature.title}
                         </h3>
                       </div>
-                      <p className="text-gray-300 text-start mt-3">
+                      <p className="text-black/80 text-start mt-3">
                         {feature.description}
                       </p>
                     </motion.div>
@@ -178,10 +178,11 @@ export default function HeroSection() {
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                     </div>
 
-                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                      Ready to find your next car?
+                    <h3 className="text-3xl md:text-4xl font-bold text-black mb-4">
+                      Ready to find your{" "}
+                      <span className="text-accent">next car?</span>
                     </h3>
-                    <p className="text-white/80 mb-8 max-w-xl mx-auto">
+                    <p className="text-black/80 mb-8 max-w-xl mx-auto">
                       Join thousands of satisfied users who found their perfect
                       vehicle through FLEET.
                     </p>

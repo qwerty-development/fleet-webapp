@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const DealerDetails: React.FC = () => {
   return (
-    <div className="py-16 md:py-24">
+    <div className="">
       <div className="rounded-3xl shadow-2xl overflow-hidden relative bg-[url('/landing%20page/dealer.jpg')] bg-cover bg-center after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-b after:from-[#151515] after:via-black/60 after:to-black/30">
         {/* Main content container */}
         <div className="px-6 md:px-12 lg:px-20 py-16 md:py-24 flex flex-col md:flex-row items-center gap-12 md:gap-16 relative z-10">
@@ -29,7 +29,7 @@ const DealerDetails: React.FC = () => {
 
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
               Dealer's {""}
-              <span className="text-accent font-bold bg-white/5 rounded-md p-1">
+              <span className="text-accent font-bold bg-black/10 rounded-md p-1">
                 Haven
               </span>
             </h2>

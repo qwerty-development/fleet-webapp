@@ -145,7 +145,7 @@ export default function AboutSection() {
             Designed for Everyone
           </motion.span>
           <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mt-10 mb-6">
-            <span className="text-accent font-bold bg-white/5 rounded-md p-1">
+            <span className="text-accent font-bold bg-black/10 rounded-md p-1">
               Revolutionizing
             </span>{" "}
             {/* <span className="relative">
