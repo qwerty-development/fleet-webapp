@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "3HV996A46Z.com.qwertyapp.clerkexpoquickstart",
+        "paths": ["/cars/*"]
+      }
+    ]
+  }
+}
