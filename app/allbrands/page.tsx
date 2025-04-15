@@ -73,7 +73,7 @@ export default function AllBrandsPage() {
         counts[car.make] = (counts[car.make] || 0) + 1;
       });
 
-      // Create unique brand list with count and logo
+      // Create unique brand list ith count and logo
       const uniqueBrands = Array.from(new Set(data.map((item) => item.make)));
       const brandsData: Brand[] = uniqueBrands.map((make) => ({
         name: make,
