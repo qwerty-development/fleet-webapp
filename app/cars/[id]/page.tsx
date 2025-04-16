@@ -177,8 +177,26 @@ const AppRedirectOverlay = ({
   const [platform, setPlatform] = useState<"ios" | "android" | "unknown">("unknown");
 
   const deepLink = `fleet://cars/${carId}`;
-  const appStoreLink = "https://apps.apple.com/app/yourappid"; // Replace with your app's App Store ID
+  const appStoreLink = "https://apps.apple.com/app/6742141291"; // Replace with your app's App Store ID
   const playStoreLink = "https://play.google.com/store/apps/details?id=com.qwertyapp.clerkexpoquickstart";
+
+useEffect(() => {
+  if (platform && countdown === 0) {
+    // Create hidden iframe for iOS to prevent history disruption
+    if (platform === "ios") {
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 100);
+    } else {
+      // Direct redirection for Android
+      window.location.href = deepLink;
+    }
+  }
+}, [countdown, platform, deepLink]);
 
   useEffect(() => {
     // Detect platform
@@ -649,19 +667,22 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
         {/* App link meta tags */}
         <meta property="al:ios:url" content={`fleet://cars/${car.id}`} />
-        <meta property="al:ios:app_store_id" content="yourappstoreid" /> {/* Replace with your App Store ID */}
+        <meta property="al:ios:app_store_id" content="6742141291" />
         <meta property="al:ios:app_name" content="Fleet" />
 
         <meta property="al:android:url" content={`fleet://cars/${car.id}`} />
         <meta property="al:android:package" content="com.qwertyapp.clerkexpoquickstart" />
         <meta property="al:android:app_name" content="Fleet" />
+<meta name="apple-itunes-app" content={`app-id=yourappstoreid, affiliate-data=myAffiliateData, app-argument=https://www.fleetapp.me/cars/${car.id}`} />
 
+<link rel="alternate" href={`https://www.fleetapp.me/cars/${car.id}`} />
+<meta name="apple-itunes-app" content={`app-id=6742141291, app-argument=https://www.fleetapp.me/cars/${car.id}`} />
         <meta property="og:title" content={`${car.year} ${car.make} ${car.model} | Fleet`} />
         <meta property="og:description" content={`${car.year} ${car.make} ${car.model} for $${car.price.toLocaleString()} at ${dealershipName}`} />
         {car.images && car.images.length > 0 && (
           <meta property="og:image" content={car.images[0]} />
         )}
-        <meta property="og:url" content={`https://fleetapp.me/cars/${car.id}`} />
+        <meta property="og:url" content={`https://www.fleetapp.me/cars/${car.id}`} />
         <meta property="og:type" content="website" />
       </Head>
 
