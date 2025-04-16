@@ -673,8 +673,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         <meta property="al:android:url" content={`fleet://cars/${car.id}`} />
         <meta property="al:android:package" content="com.qwertyapp.clerkexpoquickstart" />
         <meta property="al:android:app_name" content="Fleet" />
-<meta name="apple-itunes-app" content={`app-id=yourappstoreid, affiliate-data=myAffiliateData, app-argument=https://www.fleetapp.me/cars/${car.id}`} />
-
 <link rel="alternate" href={`https://www.fleetapp.me/cars/${car.id}`} />
 <meta name="apple-itunes-app" content={`app-id=6742141291, app-argument=https://www.fleetapp.me/cars/${car.id}`} />
         <meta property="og:title" content={`${car.year} ${car.make} ${car.model} | Fleet`} />
