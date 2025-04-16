@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Head from "next/head";
 import {
   CalendarIcon,
   ClockIcon,
@@ -157,6 +158,122 @@ const ImageThumbnail: React.FC<{
   </div>
 );
 
+// App Redirect component for mobile devices
+const AppRedirectOverlay = ({
+  carId,
+  onClose,
+  make,
+  model,
+  year
+}: {
+  carId: string;
+  onClose: () => void;
+  make: string;
+  model: string;
+  year: number;
+}) => {
+  const [countdown, setCountdown] = useState(3);
+  const [redirectAttempted, setRedirectAttempted] = useState(false);
+  const [platform, setPlatform] = useState<"ios" | "android" | "unknown">("unknown");
+
+  const deepLink = `fleet://cars/${carId}`;
+  const appStoreLink = "https://apps.apple.com/app/yourappid"; // Replace with your app's App Store ID
+  const playStoreLink = "https://play.google.com/store/apps/details?id=com.qwertyapp.clerkexpoquickstart";
+
+  useEffect(() => {
+    // Detect platform
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+      setPlatform("ios");
+    } else if (/android/i.test(userAgent)) {
+      setPlatform("android");
+    }
+
+    // Start countdown
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Attempt to open app when countdown reaches zero
+          window.location.href = deepLink;
+          setRedirectAttempted(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [deepLink]);
+
+  // Get appropriate store link
+  const getStoreLink = () => {
+    if (platform === "ios") return appStoreLink;
+    if (platform === "android") return playStoreLink;
+    return playStoreLink; // Default to Play Store
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+      <div className="bg-gray-800 rounded-xl max-w-md w-full p-6 text-center relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white"
+        >
+          ×
+        </button>
+
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
+          <img src="/logo.png" alt="Fleet App" className="w-12 h-12" />
+        </div>
+
+        <h2 className="text-xl font-bold text-white mb-2">Opening in Fleet App</h2>
+        <p className="text-gray-300 mb-4">
+          {year} {make} {model}
+        </p>
+
+        {countdown > 0 ? (
+          <div className="mb-6">
+            <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
+            <p className="text-gray-400">Redirecting in {countdown}...</p>
+          </div>
+        ) : (
+          <div className="mb-6">
+            <p className="text-gray-400">
+              {redirectAttempted
+                ? "Couldn't open the app automatically."
+                : "Opening app..."}
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <a
+            href={deepLink}
+            className="block w-full py-3 bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
+          >
+            Open in Fleet App
+          </a>
+
+          <a
+            href={getStoreLink()}
+            className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+          >
+            Download Fleet App
+          </a>
+
+          <button
+            onClick={onClose}
+            className="block w-full py-3 bg-transparent hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-medium"
+          >
+            Continue to Website
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main component for the car details page
 export default function CarDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -170,34 +287,67 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const viewTracked = useRef<boolean>(false);
   const supabase = createClient();
 
+  // App redirect state
+  const [showAppRedirect, setShowAppRedirect] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const redirectChecked = useRef(false);
+
+  // Check if it's a mobile device
+  useEffect(() => {
+    if (typeof window !== "undefined" && !redirectChecked.current) {
+      redirectChecked.current = true;
+
+      // Check if this is a mobile device
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      setIsMobile(isMobileDevice);
+
+      // Show redirect for mobile users
+      if (isMobileDevice) {
+        // Check if the user has a cookie indicating they prefer the web version
+        const preferWeb = document.cookie.includes("preferWeb=true");
+        if (!preferWeb) {
+          // Add a slight delay to ensure the page has loaded
+          setTimeout(() => setShowAppRedirect(true), 1000);
+        }
+      }
+    }
+  }, []);
+
+  // Handle closing the redirect and setting preference
+  const handleCloseRedirect = () => {
+    setShowAppRedirect(false);
+    // Set a cookie to remember the preference for 24 hours
+    document.cookie = "preferWeb=true; max-age=86400; path=/";
+  };
+
   // Track car view
-// Modify the trackCarView function in the car detail page component
-const trackCarView = useCallback(async (carId: string) => {
-  if (viewTracked.current) return;
+  const trackCarView = useCallback(async (carId: string) => {
+    if (viewTracked.current) return;
 
-  try {
-    const userId = isGuest ? `guest_${guestId}` : (user?.id || 'anonymous');
+    try {
+      const userId = isGuest ? `guest_${guestId}` : (user?.id || 'anonymous');
 
-    const { data, error } = await supabase.rpc("track_car_view", {
-      car_id: parseInt(carId),
-      user_id: userId,
-    });
+      const { data, error } = await supabase.rpc("track_car_view", {
+        car_id: parseInt(carId),
+        user_id: userId,
+      });
 
-    if (error) {
-      console.error("Error tracking car view:", error);
-      return;
+      if (error) {
+        console.error("Error tracking car view:", error);
+        return;
+      }
+
+      if (data !== null && car) {
+        // Update car state with new view count
+        setCar(prevCar => prevCar ? {...prevCar, views: data} : null);
+      }
+
+      viewTracked.current = true;
+    } catch (error) {
+      console.error("Error in trackCarView:", error);
     }
-
-    if (data !== null && car) {
-      // Update car state with new view count
-      setCar(prevCar => prevCar ? {...prevCar, views: data} : null);
-    }
-
-    viewTracked.current = true;
-  } catch (error) {
-    console.error("Error in trackCarView:", error);
-  }
-}, [isGuest, guestId, user, supabase, car]);
+  }, [isGuest, guestId, user, supabase, car]);
 
   // Track call button clicks
   const trackCallClick = useCallback(async (carId: string) => {
@@ -439,7 +589,17 @@ const trackCarView = useCallback(async (carId: string) => {
         console.error("Share error:", err);
       }
     } else {
-      alert("Sharing not supported on this browser.");
+      // Fallback for browsers that don't support navigator.share
+      // Create a temporary input to copy URL
+      const input = document.createElement('input');
+      input.value = `Check out this ${car.year} ${car.make} ${
+        car.model
+      } for $${car.price.toLocaleString()}! ${window.location.href}`;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      alert("Link copied to clipboard!");
     }
   };
 
@@ -482,302 +642,360 @@ const trackCarView = useCallback(async (carId: string) => {
   const dealershipPhone = car.dealerships?.phone || car.dealership_phone;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white relative">
-      {/* Back Button */}
-      <button
-        onClick={() => router.back()}
-        className="absolute top-4 left-4 z-50 p-2 bg-gray-800 rounded-full hover:bg-gray-700"
-      >
-        ← Back
-      </button>
+    <>
+      <Head>
+        <title>{car.year} {car.make} {car.model} | Fleet</title>
+        <meta name="description" content={`${car.year} ${car.make} ${car.model} for $${car.price.toLocaleString()} at ${dealershipName}`} />
 
-      {/* Improved Image Carousel - Only render if images exist */}
-      {car.images && car.images.length > 0 ? (
-        <div className="relative bg-black">
-          {/* Main large image carousel */}
-          <div
-            ref={carouselRef}
-            onScroll={handleCarouselScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-64 sm:h-80 md:h-96 lg:h-[500px]"
-            style={{ scrollBehavior: "smooth", scrollSnapType: "x mandatory" }}
-          >
-            {car.images.map((img, index) => (
-              <div
-                key={index}
-                className="w-1/2 flex-shrink-0 h-full snap-center relative"
-              >
-                <img
-                  src={img}
-                  alt={`${car.make} ${car.model}`}
-                  className="w-full h-full object-cover object-center"
-                />
-              </div>
-            ))}
-          </div>
+        {/* App link meta tags */}
+        <meta property="al:ios:url" content={`fleet://cars/${car.id}`} />
+        <meta property="al:ios:app_store_id" content="yourappstoreid" /> {/* Replace with your App Store ID */}
+        <meta property="al:ios:app_name" content="Fleet" />
 
-          {/* Thumbnail gallery at the bottom */}
-          {car.images.length > 1 && (
+        <meta property="al:android:url" content={`fleet://cars/${car.id}`} />
+        <meta property="al:android:package" content="com.qwertyapp.clerkexpoquickstart" />
+        <meta property="al:android:app_name" content="Fleet" />
+
+        <meta property="og:title" content={`${car.year} ${car.make} ${car.model} | Fleet`} />
+        <meta property="og:description" content={`${car.year} ${car.make} ${car.model} for $${car.price.toLocaleString()} at ${dealershipName}`} />
+        {car.images && car.images.length > 0 && (
+          <meta property="og:image" content={car.images[0]} />
+        )}
+        <meta property="og:url" content={`https://fleetapp.me/cars/${car.id}`} />
+        <meta property="og:type" content="website" />
+      </Head>
+
+      <div className="min-h-screen bg-gray-900 text-white relative">
+        {/* App Redirect Modal for Mobile Devices */}
+        {showAppRedirect && car && (
+          <AppRedirectOverlay
+            carId={car.id}
+            onClose={handleCloseRedirect}
+            make={car.make}
+            model={car.model}
+            year={car.year}
+          />
+        )}
+
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-4 left-4 z-50 p-2 bg-gray-800 rounded-full hover:bg-gray-700"
+        >
+          ← Back
+        </button>
+
+        {/* Improved Image Carousel - Only render if images exist */}
+        {car.images && car.images.length > 0 ? (
+          <div className="relative bg-black">
+            {/* Main large image carousel */}
             <div
-              ref={thumbnailsRef}
-              className="flex gap-2 overflow-x-auto py-2 px-4 bg-gray-900 scrollbar-hide"
-              style={{ scrollBehavior: "smooth" }}
+              ref={carouselRef}
+              onScroll={handleCarouselScroll}
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-64 sm:h-80 md:h-96 lg:h-[500px]"
+              style={{ scrollBehavior: "smooth", scrollSnapType: "x mandatory" }}
             >
               {car.images.map((img, index) => (
-                <ImageThumbnail
+                <div
                   key={index}
-                  src={img}
-                  isActive={index === activeImageIndex}
-                  onClick={() => setActiveImage(index)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Navigation Arrows */}
-          {car.images.length > 1 && (
-            <>
-              <button
-                onClick={() => navigateCarousel("prev")}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
-                aria-label="Previous image"
-              >
-                <ChevronLeftIcon className="h-6 w-6 text-white" />
-              </button>
-              <button
-                onClick={() => navigateCarousel("next")}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
-                aria-label="Next image"
-              >
-                <ChevronRightIcon className="h-6 w-6 text-white" />
-              </button>
-            </>
-          )}
-
-          {/* Favorite Button - Top Right */}
-          <div className="absolute top-4 right-16 z-10">
-            <FavoriteButton
-              carId={Number(car.id)}
-              initialLikes={car.likes || 0}
-              onLikesUpdate={handleLikesUpdate}
-              size="lg"
-            />
-          </div>
-
-          {/* View Count Badge */}
-          <div className="absolute top-4 left-16 bg-black/70 px-3 py-1 rounded-full text-sm flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            {car.views || 0}
-          </div>
-
-          {/* Image counter */}
-          <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full text-sm">
-            {activeImageIndex + 1} / {car.images.length}
-          </div>
-        </div>
-      ) : (
-        <div className="relative h-64 md:h-96 bg-gray-800 flex items-center justify-center">
-          <p className="text-gray-400">No images available</p>
-        </div>
-      )}
-
-      {/* Price Badge - Positioned to overlap the image and content */}
-      <div className="relative z-10 flex px-4 -top-24">
-        <div className="bg-accent px-6 py-1 rounded-full shadow-lg inline-block mx-auto">
-          <span className="text-white text-xl font-bold">
-            ${car.price.toLocaleString()}
-          </span>
-        </div>
-      </div>
-
-      {/* Car Information Section */}
-      <div className="p-4 space-y-6">
-        {/* Main Info - Always left-aligned on mobile */}
-        <div className="flex items-start space-x-4 mt-4 md:mt-0">
-          <div className=" h-14 md:w-16 md:h-16 flex-shrink-0">
-            <img
-              src={getLogoUrl(car.make, true)}
-              alt={car.make}
-              className=" h-10  rounded-full"
-            />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold">
-              {car.make} {car.model}
-            </h1>
-            <p className="text-lg">{car.year}</p>
-            <p className="text-sm text-gray-400">
-              Posted {getRelativeTime(car.listed_at)}
-            </p>
-          </div>
-        </div>
-
-        {/* Technical Data Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-          <SpecItem
-            icon={<CalendarIcon className="h-5 w-5 text-accent" />}
-            title="Year"
-            value={car.year}
-          />
-          <SpecItem
-            icon={<ClockIcon className="h-5 w-5 text-accent" />}
-            title="Mileage"
-            value={
-              car.mileage > 0 ? `${(car.mileage / 1000).toFixed(1)}k km` : "New"
-            }
-          />
-          <SpecItem
-            icon={<Cog6ToothIcon className="h-5 w-5 text-accent" />}
-            title="Transmission"
-            value={car.transmission || "N/A"}
-          />
-          {car.drivetrain && (
-            <SpecItem
-              icon={<TruckIcon className="h-5 w-5 text-accent" />}
-              title="Drivetrain"
-              value={car.drivetrain}
-            />
-          )}
-          <SpecItem
-            icon={<CheckBadgeIcon className="h-5 w-5 text-accent" />}
-            title="Condition"
-            value={car.condition || "N/A"}
-          />
-          {car.type && (
-            <SpecItem
-              icon={<TagIcon className="h-5 w-5 text-accent" />}
-              title="Type"
-              value={car.type}
-            />
-          )}
-          {car.color && (
-            <SpecItem
-              icon={<SwatchIcon className="h-5 w-5 text-accent" />}
-              title="Color"
-              value={car.color}
-            />
-          )}
-          {car.source && (
-            <SpecItem
-              icon={<FlagIcon className="h-5 w-5 text-accent" />}
-              title="Source"
-              value={car.source}
-            />
-          )}
-        </div>
-
-        {/* Description */}
-        {car.description && (
-          <div>
-            <h2 className="text-xl font-bold">Description</h2>
-            <p className="mt-2 text-gray-300">{car.description}</p>
-          </div>
-        )}
-
-        {/* Features */}
-        {car.features && car.features.length > 0 && (
-          <div>
-            <h2 className="text-xl font-bold">Features</h2>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {car.features.map((feature, index) => (
-                <span
-                  key={index}
-                  className="bg-gray-800 text-gray-300 text-xs px-3 py-1 rounded-full border border-gray-700"
+                  className="w-screen flex-shrink-0 h-full snap-center relative"
                 >
-                  {feature}
-                </span>
+                  <img
+                    src={img}
+                    alt={`${car.make} ${car.model}`}
+                    className="w-full h-full object-cover object-center"
+                  />
+                </div>
               ))}
             </div>
-          </div>
-        )}
 
-        {/* Dealership Section with Contact Buttons */}
-        <div className="bg-gray-800 rounded-xl p-4">
-          <h2 className="text-xl font-bold mb-4">Dealership</h2>
-          <div className="flex items-center justify-between">
-            {/* Dealership Info */}
-            <div className="flex items-center">
-              <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0">
-                <img
-                  src={dealershipLogo}
-                  alt={dealershipName}
-                  className="w-full h-full rounded-full"
-                />
+            {/* Thumbnail gallery at the bottom */}
+            {car.images.length > 1 && (
+              <div
+                ref={thumbnailsRef}
+                className="flex gap-2 overflow-x-auto py-2 px-4 bg-gray-900 scrollbar-hide"
+                style={{ scrollBehavior: "smooth" }}
+              >
+                {car.images.map((img, index) => (
+                  <ImageThumbnail
+                    key={index}
+                    src={img}
+                    isActive={index === activeImageIndex}
+                    onClick={() => setActiveImage(index)}
+                  />
+                ))}
               </div>
-              <div className="ml-3">
-                <h3 className="text-lg font-semibold">{dealershipName}</h3>
-                <p className="text-sm text-gray-400">{dealershipLocation}</p>
-              </div>
-            </div>
+            )}
 
-            {/* Contact Buttons - Icons only */}
-            {dealershipPhone && (
-              <div className="flex space-x-3">
+            {/* Navigation Arrows */}
+            {car.images.length > 1 && (
+              <>
                 <button
-                  onClick={handleCall}
-                  className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors"
-                  aria-label="Call"
+                  onClick={() => navigateCarousel("prev")}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
+                  aria-label="Previous image"
                 >
-                  <PhoneIcon className="h-5 w-5" />
+                  <ChevronLeftIcon className="h-6 w-6 text-white" />
                 </button>
                 <button
-                  onClick={handleWhatsApp}
-                  className="p-3 bg-green-600 rounded-full hover:bg-green-500 transition-colors"
-                  aria-label="WhatsApp"
+                  onClick={() => navigateCarousel("next")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
+                  aria-label="Next image"
                 >
-                  <svg
-                    viewBox="0 0 32 32"
-                    className="h-5 w-5 fill-current"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <ChevronRightIcon className="h-6 w-6 text-white" />
+                </button>
+              </>
+            )}
+
+            {/* Favorite Button - Top Right */}
+            <div className="absolute top-4 right-16 z-10">
+              <FavoriteButton
+                carId={Number(car.id)}
+                initialLikes={car.likes || 0}
+                onLikesUpdate={handleLikesUpdate}
+                size="lg"
+              />
+            </div>
+
+            {/* View Count Badge */}
+            <div className="absolute top-4 left-16 bg-black/70 px-3 py-1 rounded-full text-sm flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {car.views || 0}
+            </div>
+
+            {/* Image counter */}
+            <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full text-sm">
+              {activeImageIndex + 1} / {car.images.length}
+            </div>
+          </div>
+        ) : (
+          <div className="relative h-64 md:h-96 bg-gray-800 flex items-center justify-center">
+            <p className="text-gray-400">No images available</p>
+          </div>
+        )}
+
+        {/* Price Badge - Positioned to overlap the image and content */}
+        <div className="relative z-10 flex px-4 -top-24">
+          <div className="bg-accent px-6 py-1 rounded-full shadow-lg inline-block mx-auto">
+            <span className="text-white text-xl font-bold">
+              ${car.price.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Car Information Section */}
+        <div className="p-4 space-y-6">
+          {/* Main Info - Always left-aligned on mobile */}
+          <div className="flex items-start space-x-4 mt-4 md:mt-0">
+            <div className=" h-14 md:w-16 md:h-16 flex-shrink-0">
+              <img
+                src={getLogoUrl(car.make, true)}
+                alt={car.make}
+                className=" h-10  rounded-full"
+              />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-3xl font-bold">
+                {car.make} {car.model}
+              </h1>
+              <p className="text-lg">{car.year}</p>
+              <p className="text-sm text-gray-400">
+                Posted {getRelativeTime(car.listed_at)}
+              </p>
+            </div>
+          </div>
+
+          {/* Technical Data Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+            <SpecItem
+              icon={<CalendarIcon className="h-5 w-5 text-accent" />}
+              title="Year"
+              value={car.year}
+            />
+            <SpecItem
+              icon={<ClockIcon className="h-5 w-5 text-accent" />}
+              title="Mileage"
+              value={
+                car.mileage > 0 ? `${(car.mileage / 1000).toFixed(1)}k km` : "New"
+              }
+            />
+            <SpecItem
+              icon={<Cog6ToothIcon className="h-5 w-5 text-accent" />}
+              title="Transmission"
+              value={car.transmission || "N/A"}
+            />
+            {car.drivetrain && (
+              <SpecItem
+                icon={<TruckIcon className="h-5 w-5 text-accent" />}
+                title="Drivetrain"
+                value={car.drivetrain}
+              />
+            )}
+            <SpecItem
+              icon={<CheckBadgeIcon className="h-5 w-5 text-accent" />}
+              title="Condition"
+              value={car.condition || "N/A"}
+            />
+            {car.type && (
+              <SpecItem
+                icon={<TagIcon className="h-5 w-5 text-accent" />}
+                title="Type"
+                value={car.type}
+              />
+            )}
+            {car.color && (
+              <SpecItem
+                icon={<SwatchIcon className="h-5 w-5 text-accent" />}
+                title="Color"
+                value={car.color}
+              />
+            )}
+            {car.source && (
+              <SpecItem
+                icon={<FlagIcon className="h-5 w-5 text-accent" />}
+                title="Source"
+                value={car.source}
+              />
+            )}
+          </div>
+
+          {/* Description */}
+          {car.description && (
+            <div>
+              <h2 className="text-xl font-bold">Description</h2>
+              <p className="mt-2 text-gray-300">{car.description}</p>
+            </div>
+          )}
+
+          {/* Features */}
+          {car.features && car.features.length > 0 && (
+            <div>
+              <h2 className="text-xl font-bold">Features</h2>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {car.features.map((feature, index) => (
+                  <span
+                    key={index}
+                    className="bg-gray-800 text-gray-300 text-xs px-3 py-1 rounded-full border border-gray-700"
                   >
-                    <path d="M16.004 0h-.008c-8.837 0-16 7.163-16 16 0 3.497 1.126 6.741 3.038 9.377L1.01 31l5.724-1.846c2.532 1.682 5.549 2.66 8.784 2.66h.008c8.837 0 16-7.163 16-16s-7.163-16-16-16zm0 29.156h-.007c-2.699 0-5.347-.724-7.663-2.091l-.53-.324-5.477 1.766 1.797-5.368-.345-.546c-1.487-2.365-2.272-5.096-2.272-7.93C1.507 8.386 7.893 2 16.004 2c3.934 0 7.621 1.528 10.403 4.31s4.31 6.47 4.31 10.4-1.528 7.621-4.31 10.403c-2.782 2.783-6.469 4.043-10.403 4.043zm5.737-7.346l-.332-.186c-.538-.301-3.184-1.576-3.682-1.754-.498-.179-.86-.268-1.223.269-.361.537-1.403 1.754-1.718 2.114-.316.36-.632.404-1.17.134-.539-.268-2.273-.837-4.326-2.667-1.599-1.425-2.677-3.183-2.993-3.72-.317-.537-.034-.827.238-1.095.244-.243.539-.634.807-.951.27-.317.359-.537.539-.896.179-.36.09-.673-.045-.95-.135-.274-1.218-2.94-1.67-4.028-.44-1.058-.887-.914-1.22-.93-.312-.015-.673-.018-1.035-.018s-.944.134-1.442.672c-.497.537-1.903 1.859-1.903 4.533s1.947 5.258 2.218 5.618c.269.36 3.8 5.801 9.21 8.136 1.286.556 2.29.889 3.074 1.139 1.292.4 2.47.344 3.398.209.75-.101 2.92-1.139 3.33-2.24.41-1.097.41-2.042.286-2.24-.121-.197-.482-.315-1.022-.583z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
-                  aria-label="Share"
-                >
-                  <ShareIcon className="h-5 w-5" />
-                </button>
+                    {feature}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dealership Section with Contact Buttons */}
+          <div className="bg-gray-800 rounded-xl p-4">
+            <h2 className="text-xl font-bold mb-4">Dealership</h2>
+            <div className="flex items-center justify-between">
+              {/* Dealership Info */}
+              <div className="flex items-center">
+                <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0">
+                  <img
+                    src={dealershipLogo}
+                    alt={dealershipName}
+                    className="w-full h-full rounded-full"
+                  />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold">{dealershipName}</h3>
+                  <p className="text-sm text-gray-400">{dealershipLocation}</p>
+                </div>
+              </div>
+
+              {/* Contact Buttons - Icons only */}
+              {dealershipPhone && (
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleCall}
+                    className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors"
+                    aria-label="Call"
+                  >
+                    <PhoneIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={handleWhatsApp}
+                    className="p-3 bg-green-600 rounded-full hover:bg-green-500 transition-colors"
+                    aria-label="WhatsApp"
+                  >
+                    <svg
+                      viewBox="0 0 32 32"
+                      className="h-5 w-5 fill-current"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M16.004 0h-.008c-8.837 0-16 7.163-16 16 0 3.497 1.126 6.741 3.038 9.377L1.01 31l5.724-1.846c2.532 1.682 5.549 2.66 8.784 2.66h.008c8.837 0 16-7.163 16-16s-7.163-16-16-16zm0 29.156h-.007c-2.699 0-5.347-.724-7.663-2.091l-.53-.324-5.477 1.766 1.797-5.368-.345-.546c-1.487-2.365-2.272-5.096-2.272-7.93C1.507 8.386 7.893 2 16.004 2c3.934 0 7.621 1.528 10.403 4.31s4.31 6.47 4.31 10.4-1.528 7.621-4.31 10.403c-2.782 2.783-6.469 4.043-10.403 4.043zm5.737-7.346l-.332-.186c-.538-.301-3.184-1.576-3.682-1.754-.498-.179-.86-.268-1.223.269-.361.537-1.403 1.754-1.718 2.114-.316.36-.632.404-1.17.134-.539-.268-2.273-.837-4.326-2.667-1.599-1.425-2.677-3.183-2.993-3.72-.317-.537-.034-.827.238-1.095.244-.243.539-.634.807-.951.27-.317.359-.537.539-.896.179-.36.09-.673-.045-.95-.135-.274-1.218-2.94-1.67-4.028-.44-1.058-.887-.914-1.22-.93-.312-.015-.673-.018-1.035-.018s-.944.134-1.442.672c-.497.537-1.903 1.859-1.903 4.533s1.947 5.258 2.218 5.618c.269.36 3.8 5.801 9.21 8.136 1.286.556 2.29.889 3.074 1.139 1.292.4 2.47.344 3.398.209.75-.101 2.92-1.139 3.33-2.24.41-1.097.41-2.042.286-2.24-.121-.197-.482-.315-1.022-.583z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
+                    aria-label="Share"
+                  >
+                    <ShareIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Map */}
+            {dealershipLatitude && dealershipLongitude && (
+              <div className="mt-4">
+                <iframe
+                  width="100%"
+                  height="250"
+                  frameBorder="0"
+                  className="rounded-lg"
+                  src={`https://www.google.com/maps?q=${dealershipLatitude},${dealershipLongitude}&hl=es;z=14&output=embed`}
+                  allowFullScreen
+                ></iframe>
               </div>
             )}
           </div>
 
-          {/* Map */}
-          {dealershipLatitude && dealershipLongitude && (
-            <div className="mt-4">
-              <iframe
-                width="100%"
-                height="250"
-                frameBorder="0"
-                className="rounded-lg"
-                src={`https://www.google.com/maps?q=${dealershipLatitude},${dealershipLongitude}&hl=es;z=14&output=embed`}
-                allowFullScreen
-              ></iframe>
-            </div>
-          )}
+          {/* More Cars from this Dealership Section */}
+          <DealershipCarsSection dealershipID={car.dealership_id} currentCarId={params.id} />
         </div>
 
-        {/* More Cars from this Dealership Section */}
-        <DealershipCarsSection dealershipID={car.dealership_id} currentCarId={params.id} />
+        {/* Padding at the bottom for spacing */}
+        <div className="h-8"></div>
+
+        {/* Mobile app banner for non-mobile devices (optional) */}
+        {!isMobile && (
+          <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 flex items-center justify-between z-50">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
+                <img src="/logo.png" alt="Fleet App" className="w-6 h-6" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-white font-medium">Fleet App</h3>
+                <p className="text-gray-300 text-xs">Get a better experience on our mobile app</p>
+              </div>
+            </div>
+            <a
+              href="https://fleetapp.me"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-accent/90 transition-colors"
+            >
+              Get the App
+            </a>
+          </div>
+        )}
+
+        {/* Hide scrollbar */}
+        <style jsx global>{`
+          .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;  /* Chrome, Safari and Opera */
+          }
+        `}</style>
       </div>
-
-      {/* Padding at the bottom for spacing */}
-      <div className="h-8"></div>
-
-      {/* Hide scrollbar */}
-      <style jsx global>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;  /* Chrome, Safari and Opera */
-        }
-      `}</style>
-    </div>
+    </>
   );
 }

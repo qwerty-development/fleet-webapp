@@ -11,7 +11,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/((?!.well-known).*)',
         headers: [
           {
             key: 'Content-Security-Policy',
@@ -28,7 +28,7 @@ const nextConfig = {
               worker-src 'self' blob: 'unsafe-inline';
             `.replace(/\s+/g, ' ').trim(),
           },
-           {
+          {
             key: 'Accept',
             value: 'application/json, application/x-www-form-urlencoded, text/html, */*',
           },
@@ -46,8 +46,57 @@ const nextConfig = {
           },
         ],
       },
+
+      // 2. APPLE APP SITE ASSOCIATION HEADERS
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
+
+      // 3. ANDROID ASSET LINKS HEADERS
+      {
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
     ];
   },
+
+  // 4. ADD REWRITES CONFIGURATION
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/:path*',
+        destination: '/.well-known/:path*',
+      },
+    ];
+  },
+
   typescript: {
     ignoreBuildErrors: true,
   },

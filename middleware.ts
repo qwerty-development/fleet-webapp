@@ -7,7 +7,6 @@ const PROTECTED_ROUTES = [
   '/favorites',
   '/home',
   '/dealerships',
-  '/cars',
   '/autoclips',
 ];
 
@@ -19,10 +18,35 @@ const DEALER_ROUTES = [
   '/dealer',
 ];
 
+const PUBLIC_PATHS = [
+  '/.well-known/apple-app-site-association',
+  '/.well-known/assetlinks.json',
+];
+
 export async function middleware(request: NextRequest) {
   // Get URL and method information
   const { pathname } = request.nextUrl;
   const requestMethod = request.method;
+
+  // STEP 1: Handle .well-known paths for deep linking
+  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/.well-known/')) {
+    // Allow direct access to these files without auth checks
+    const response = NextResponse.next();
+
+    // Set appropriate content type for JSON files
+    if (pathname.endsWith('.json') || pathname === '/.well-known/apple-app-site-association') {
+      response.headers.set('Content-Type', 'application/json');
+    }
+
+    return response;
+  }
+
+  // STEP 2: Handle car deep links
+  if (pathname.startsWith('/cars/') && pathname.split('/').length === 3) {
+    // This is a car detail page that might be accessed via deep link
+    // Allow access without auth for the redirect page
+    return NextResponse.next();
+  }
 
   // CRITICAL FIX 1: Enhanced handling for Apple callback route
   if (pathname === '/auth/callback') {
@@ -226,5 +250,8 @@ export const config = {
   matcher: [
     // Match all routes except static files, api routes, and _next
     '/((?!_next/static|_next/image|api/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Explicitly match well-known paths and deep link routes
+    '/.well-known/:path*',
+    '/cars/:id'
   ],
 };
