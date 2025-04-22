@@ -41,9 +41,10 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // STEP 2: Handle car deep links
-  if (pathname.startsWith('/cars/') && pathname.split('/').length === 3) {
-    // This is a car detail page that might be accessed via deep link
+  // STEP 2: Handle car and autoclip deep links
+  if ((pathname.startsWith('/cars/') && pathname.split('/').length === 3) || 
+      (pathname.startsWith('/clips/') && pathname.split('/').length === 3)) {
+    // These are detail pages that might be accessed via deep link
     // Allow access without auth for the redirect page
     return NextResponse.next();
   }
@@ -252,6 +253,7 @@ export const config = {
     '/((?!_next/static|_next/image|api/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     // Explicitly match well-known paths and deep link routes
     '/.well-known/:path*',
-    '/cars/:id'
+    '/cars/:id',
+    '/clips/:id'  // Add matcher for autoclip deep links
   ],
 };
