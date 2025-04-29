@@ -81,7 +81,7 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
         </div>
       </Link>
       {/* CTA buttons */}
-      <div className="flex justify-around mt-4">
+      <div className="flex justify-around mt-10">
         {/* Share Button */}
         <button
           onClick={handleShare}
