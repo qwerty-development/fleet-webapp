@@ -3,6 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { PhoneIcon } from "@heroicons/react/24/outline";
 
 export interface Dealership {
   id: number | string;
@@ -40,7 +41,9 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
 
   const handleWhatsApp = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault(); // Changed from stopPropagation
-    const message = encodeURIComponent(`Check out ${dealership.name} located at ${dealership.location}`);
+    const message = encodeURIComponent(
+      `Check out ${dealership.name} located at ${dealership.location}`
+    );
     const whatsappUrl = `https://wa.me/?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -56,11 +59,15 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <img
-              src={dealership.logo || "https://via.placeholder.com/150?text=No+Logo"}
+              src={
+                dealership.logo ||
+                "https://via.placeholder.com/150?text=No+Logo"
+              }
               alt={`${dealership.name} Logo`}
               className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://via.placeholder.com/150?text=No+Logo";
+                (e.target as HTMLImageElement).src =
+                  "https://via.placeholder.com/150?text=No+Logo";
               }}
             />
           </div>
@@ -87,7 +94,12 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12v.01M12 4v.01M20 12v.01M12 20v.01M16.24 7.76l-.01.01M7.76 7.76l.01.01M7.76 16.24l.01.01M16.24 16.24l-.01-.01" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 12v.01M12 4v.01M20 12v.01M12 20v.01M16.24 7.76l-.01.01M7.76 7.76l.01.01M7.76 16.24l.01.01M16.24 16.24l-.01-.01"
+            />
           </svg>
           <span>Share</span>
         </button>
@@ -112,15 +124,7 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
           onClick={(e) => e.stopPropagation()}
           className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-full text-white text-xs"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h2l3.6 7.59-1.35 2.45a1 1 0 00.25 1.17l3.24 3.24a1 1 0 001.17.25l2.45-1.35L19 19v2a1 1 0 001 1h1a1 1 0 001-1V4a1 1 0 00-1-1h-1a1 1 0 00-1 1v2l-3.6 7.59-2.45-1.35a1 1 0 00-1.17.25l-3.24 3.24a1 1 0 01-1.17.25L3 17V5z" />
-          </svg>
+          <PhoneIcon className="h-4 w-4" />
           <span>Call</span>
         </a>
       </div>

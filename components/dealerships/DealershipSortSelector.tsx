@@ -11,8 +11,8 @@ interface DealershipSortSelectorProps {
 }
 
 const DEALERSHIP_SORT_OPTIONS = [
-  { id: "name_asc", label: "Name: A-Z" },
-  { id: "name_desc", label: "Name: Z-A" },
+  { id: "name_asc", label: "Name: A - Z" },
+  { id: "name_desc", label: "Name: Z - A" },
 ];
 
 const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
@@ -24,12 +24,15 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedLabel =
-    DEALERSHIP_SORT_OPTIONS.find((option) => option.id === selectedOption)?.label ||
-    "Sort by";
+    DEALERSHIP_SORT_OPTIONS.find((option) => option.id === selectedOption)
+      ?.label || "Sort by\u00A0";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -58,18 +61,30 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 4h13M3 8h9m-9 4h6"
+            />
           </svg>
           <span className="text-sm">{selectedLabel}</span>
         </div>
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className={`h-5 w-5 transition-transform duration-300 ${isOpen ? "transform rotate-180" : ""}`}
+          className={`h-5 w-5 transition-transform duration-300 ${
+            isOpen ? "transform rotate-180" : ""
+          }`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
 
@@ -87,7 +102,12 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
           viewBox="0 0 24 24"
           stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 4h13M3 8h9m-9 4h6"
+          />
         </svg>
       </button>
 

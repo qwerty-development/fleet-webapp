@@ -5,7 +5,9 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/home/Navbar";
 import SearchBar from "@/components/home/SearchBar";
 import DealershipSortSelector from "@/components/dealerships/DealershipSortSelector";
-import DealershipCard, { Dealership } from "@/components/dealerships/DealershipCard";
+import DealershipCard, {
+  Dealership,
+} from "@/components/dealerships/DealershipCard";
 import { createClient } from "@/utils/supabase/client";
 
 const ITEMS_PER_PAGE = 9;
@@ -22,116 +24,125 @@ export default function DealershipsPage() {
 
   const supabase = createClient();
 
-  const fetchDealerships = useCallback(async (page = 1) => {
-    if (page === 1) {
-      setIsLoading(true);
-    } else {
-      setIsLoadingMore(true);
-    }
-
-    try {
-      let queryBuilder = supabase
-        .from("dealerships")
-        .select("*", { count: "exact" });
-
-      // Apply search filter (search by name or location)
-      if (searchQuery.trim() !== "") {
-        const cleanQuery = searchQuery.trim().toLowerCase();
-        queryBuilder = queryBuilder.or(
-          `name.ilike.%${cleanQuery}%,location.ilike.%${cleanQuery}%`
-        );
+  const fetchDealerships = useCallback(
+    async (page = 1) => {
+      if (page === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
       }
 
-      // Apply sorting if selected
-      if (sortOption) {
-        if (sortOption === "name_asc") {
-          queryBuilder = queryBuilder.order("name", { ascending: true });
-        } else if (sortOption === "name_desc") {
-          queryBuilder = queryBuilder.order("name", { ascending: false });
+      try {
+        let queryBuilder = supabase
+          .from("dealerships")
+          .select("*", { count: "exact" });
+
+        // Apply search filter (search by name or location)
+        if (searchQuery.trim() !== "") {
+          const cleanQuery = searchQuery.trim().toLowerCase();
+          queryBuilder = queryBuilder.or(
+            `name.ilike.%${cleanQuery}%,location.ilike.%${cleanQuery}%`
+          );
         }
-      }
 
-      // Get total count for pagination
-      const { count, error: countError } = await queryBuilder;
-      if (countError) {
-        console.error("Error getting count:", countError);
-        throw countError;
-      }
+        // Apply sorting if selected
+        if (sortOption) {
+          if (sortOption === "name_asc") {
+            queryBuilder = queryBuilder.order("name", { ascending: true });
+          } else if (sortOption === "name_desc") {
+            queryBuilder = queryBuilder.order("name", { ascending: false });
+          }
+        }
 
-      if (!count) {
+        // Get total count for pagination
+        const { count, error: countError } = await queryBuilder;
+        if (countError) {
+          console.error("Error getting count:", countError);
+          throw countError;
+        }
+
+        if (!count) {
+          setDealerships([]);
+          setTotalPages(0);
+          setCurrentPage(1);
+          setTotalDealershipCount(0);
+          return;
+        }
+
+        const totalItems = count;
+        setTotalDealershipCount(totalItems);
+        const totalPagesCalc = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        const safePageNumber = Math.min(page, totalPagesCalc);
+        const startRange = (safePageNumber - 1) * ITEMS_PER_PAGE;
+        const endRange = Math.min(
+          safePageNumber * ITEMS_PER_PAGE - 1,
+          totalItems - 1
+        );
+
+        // Fetch data for the current page
+        const { data, error } = await queryBuilder.range(startRange, endRange);
+        if (error) {
+          console.error("Error fetching dealerships:", error);
+          throw error;
+        }
+
+        let fetchedDealerships: Dealership[] = data || [];
+
+        // Fetch available cars from the "cars" table and count them by dealership_id
+        const { data: carsData, error: carsError } = await supabase
+          .from("cars")
+          .select("dealership_id")
+          .eq("status", "available");
+
+        if (carsError) {
+          console.error("Error fetching available cars count:", carsError);
+        }
+
+        // Build a count map: { dealership_id: number }
+        const countMap: Record<string | number, number> = {};
+        carsData?.forEach((car: any) => {
+          countMap[car.dealership_id] = (countMap[car.dealership_id] || 0) + 1;
+        });
+
+        // Merge the count into each dealership object
+        fetchedDealerships = fetchedDealerships.map((dealer: any) => ({
+          ...dealer,
+          carsAvailable: countMap[dealer.id] || 0,
+        }));
+
+        // If no sort option is selected, randomize the results
+        if (!sortOption && fetchedDealerships) {
+          for (let i = fetchedDealerships.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [fetchedDealerships[i], fetchedDealerships[j]] = [
+              fetchedDealerships[j],
+              fetchedDealerships[i],
+            ];
+          }
+        }
+
+        if (safePageNumber === 1) {
+          setDealerships(fetchedDealerships);
+        } else {
+          setDealerships((prev) => [...prev, ...fetchedDealerships]);
+        }
+        setTotalPages(totalPagesCalc);
+        setCurrentPage(safePageNumber);
+      } catch (error) {
+        console.error("Error in fetchDealerships:", error);
         setDealerships([]);
         setTotalPages(0);
         setCurrentPage(1);
-        setTotalDealershipCount(0);
-        return;
-      }
-
-      const totalItems = count;
-      setTotalDealershipCount(totalItems);
-      const totalPagesCalc = Math.ceil(totalItems / ITEMS_PER_PAGE);
-      const safePageNumber = Math.min(page, totalPagesCalc);
-      const startRange = (safePageNumber - 1) * ITEMS_PER_PAGE;
-      const endRange = Math.min(safePageNumber * ITEMS_PER_PAGE - 1, totalItems - 1);
-
-      // Fetch data for the current page
-      const { data, error } = await queryBuilder.range(startRange, endRange);
-      if (error) {
-        console.error("Error fetching dealerships:", error);
-        throw error;
-      }
-
-      let fetchedDealerships: Dealership[] = data || [];
-
-      // Fetch available cars from the "cars" table and count them by dealership_id
-      const { data: carsData, error: carsError } = await supabase
-        .from("cars")
-        .select("dealership_id")
-        .eq("status", "available");
-
-      if (carsError) {
-        console.error("Error fetching available cars count:", carsError);
-      }
-
-      // Build a count map: { dealership_id: number }
-      const countMap: Record<string | number, number> = {};
-      carsData?.forEach((car: any) => {
-        countMap[car.dealership_id] = (countMap[car.dealership_id] || 0) + 1;
-      });
-
-      // Merge the count into each dealership object
-      fetchedDealerships = fetchedDealerships.map((dealer: any) => ({
-        ...dealer,
-        carsAvailable: countMap[dealer.id] || 0,
-      }));
-
-      // If no sort option is selected, randomize the results
-      if (!sortOption && fetchedDealerships) {
-        for (let i = fetchedDealerships.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [fetchedDealerships[i], fetchedDealerships[j]] = [fetchedDealerships[j], fetchedDealerships[i]];
+      } finally {
+        if (page === 1) {
+          setIsLoading(false);
+        } else {
+          setIsLoadingMore(false);
         }
       }
-
-      if (safePageNumber === 1) {
-        setDealerships(fetchedDealerships);
-      } else {
-        setDealerships((prev) => [...prev, ...fetchedDealerships]);
-      }
-      setTotalPages(totalPagesCalc);
-      setCurrentPage(safePageNumber);
-    } catch (error) {
-      console.error("Error in fetchDealerships:", error);
-      setDealerships([]);
-      setTotalPages(0);
-      setCurrentPage(1);
-    } finally {
-      if (page === 1) {
-        setIsLoading(false);
-      } else {
-        setIsLoadingMore(false);
-      }
-    }
-  }, [searchQuery, sortOption, supabase]);
+    },
+    [searchQuery, sortOption, supabase]
+  );
 
   // Initial load and refetch on search/sort changes
   useEffect(() => {
@@ -171,6 +182,9 @@ export default function DealershipsPage() {
     },
   };
 
+  {
+    /* mn hon */
+  }
   return (
     <div className="min-h-screen flex flex-col bg-black">
       {/* Fixed Navbar */}
@@ -180,23 +194,29 @@ export default function DealershipsPage() {
           {/* Fixed Search and Sort Bar - Styled to match All Brands page */}
           <div className="sticky top-16 z-40 bg-black py-4 mb-6 border-b border-gray-800 shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl md:text-3xl font-bold text-white">Dealerships</h1>
-              <p className="text-gray-400 text-sm">{totalDealershipCount} {totalDealershipCount === 1 ? 'dealership' : 'dealerships'} available</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
+                Dealerships
+              </h1>
+              <p className="text-gray-400 text-sm">
+                {totalDealershipCount}{" "}
+                {totalDealershipCount === 1 ? "dealership" : "dealerships"}{" "}
+                available
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <SearchBar 
-                searchQuery={searchQuery} 
-                onSearch={handleSearch} 
+              <SearchBar
+                searchQuery={searchQuery}
+                onSearch={handleSearch}
                 className="flex-1"
               />
-              <DealershipSortSelector 
-                onSort={handleSort} 
-                selectedOption={sortOption} 
-                className="flex-shrink-0" 
+              <DealershipSortSelector
+                onSort={handleSort}
+                selectedOption={sortOption}
+                className="flex-shrink-0"
               />
             </div>
           </div>
-          
+
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
@@ -216,7 +236,9 @@ export default function DealershipsPage() {
             </motion.div>
           ) : (
             <div className="text-center mt-12 p-8 bg-gray-900 rounded-lg">
-              <h3 className="text-white text-xl font-bold mb-2">No dealerships found</h3>
+              <h3 className="text-white text-xl font-bold mb-2">
+                No dealerships found
+              </h3>
               <p className="text-gray-400 mb-4">
                 Try adjusting your search query to find more results.
               </p>
@@ -244,8 +266,19 @@ export default function DealershipsPage() {
                       fill="none"
                       viewBox="0 0 24 24"
                     >
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Loading...
                   </span>
