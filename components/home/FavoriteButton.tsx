@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
-import { LockClosedIcon } from '@heroicons/react/24/solid';
-import { useFavorites } from '@/utils/FavoritesContext';
-import { useAuth } from '@/utils/AuthContext';
-import { useGuestUser } from '@/utils/GuestUserContext';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import React, { useState } from "react";
+import { HeartIcon as HeartOutline } from "@heroicons/react/24/outline";
+import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
+import { LockClosedIcon } from "@heroicons/react/24/solid";
+import { useFavorites } from "@/utils/FavoritesContext";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 // Enhanced modal component for guest users
 const AuthRequiredModal: React.FC<{
@@ -20,7 +20,7 @@ const AuthRequiredModal: React.FC<{
   if (!isVisible) return null;
 
   const handleSignIn = () => {
-    router.push('/auth/signin');
+    router.push("/auth/signin");
   };
 
   return (
@@ -37,8 +37,12 @@ const AuthRequiredModal: React.FC<{
       >
         <div className="flex flex-col items-center text-center">
           <LockClosedIcon className="h-16 w-16 mb-4" />
-          <h2 className="text-2xl font-bold mb-2">You're browsing as a guest</h2>
-          <p className="mb-6">Please sign in to access and manage your favorites.</p>
+          <h2 className="text-2xl font-bold mb-2">
+            You're browsing as a guest
+          </h2>
+          <p className="mb-6">
+            Please sign in to access and manage your favorites.
+          </p>
           <button
             onClick={handleSignIn}
             className="bg-white text-accent font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors"
@@ -46,7 +50,7 @@ const AuthRequiredModal: React.FC<{
             Sign In
           </button>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push("/")}
             className="mt-4 text-white/80 hover:text-white"
           >
             Return to Home
@@ -61,7 +65,7 @@ interface FavoriteButtonProps {
   carId: number;
   initialLikes?: number;
   onLikesUpdate?: (newLikes: number) => void;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
   showCount?: boolean;
 }
@@ -70,9 +74,9 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
   carId,
   initialLikes = 0,
   onLikesUpdate,
-  size = 'md',
-  className = '',
-  showCount = false
+  size = "md",
+  className = "",
+  showCount = false,
 }) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isSignedIn } = useAuth();
@@ -86,16 +90,16 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
 
   // Size mappings
   const sizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-7 w-7',
-    lg: 'h-8 w-8'
+    sm: "h-6 w-6",
+    md: "h-7 w-7",
+    lg: "h-8 w-8",
   };
 
   // Button container size mappings
   const containerSizeClasses = {
-    sm: 'p-1.5',
-    md: 'p-2',
-    lg: 'p-3'
+    sm: "p-1.5",
+    md: "p-2",
+    lg: "p-3",
   };
 
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
@@ -118,7 +122,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
         onLikesUpdate(newLikesCount);
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error("Error toggling favorite:", error);
     } finally {
       setIsLoading(false);
     }
@@ -129,12 +133,14 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       <button
         onClick={handleFavoriteToggle}
         disabled={isLoading}
-        className={`${containerSizeClasses[size]} rounded-full transition-all focus:outline-none relative group ${
+        className={`${
+          containerSizeClasses[size]
+        } rounded-full transition-all focus:outline-none relative group ${
           favorited
-            ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-            : 'bg-black/40 backdrop-blur-sm hover:bg-black/60 text-white hover:text-accent'
+            ? "bg-accent/10 hover:bg-accent/20 text-accent"
+            : "bg-black/40 backdrop-blur-sm hover:bg-black/60 text-white hover:text-accent"
         } ${className}`}
-        aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+        aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
       >
         {isLoading ? (
           <div className="animate-spin rounded-full border-t-2 border-b-2 border-current h-4 w-4 m-auto"></div>
@@ -149,8 +155,8 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
         )}
 
         {/* Tooltip */}
-        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-          {favorited ? 'Remove from favorites' : 'Add to favorites'}
+        <span className="absolute top-full left-1/2 -ml-20 mt-2 px-2 py-1 bg-gray-800/70 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+          {favorited ? "Remove favorite" : "Add to favorites"}
         </span>
       </button>
 
