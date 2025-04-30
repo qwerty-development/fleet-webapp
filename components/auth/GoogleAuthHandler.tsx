@@ -10,7 +10,6 @@ interface EnvironmentInfo {
   reason: string | null;
   browserInfo: string;
 }
-
 interface GoogleAuthState {
   isLoading: boolean;
   isScriptLoaded: boolean;
@@ -42,7 +41,27 @@ export default function GoogleAuthHandler() {
   // Clean up navigation tracking when component unmounts
   return () => {
     sessionStorage.removeItem('google_auth_redirect_pending');
+    sessionStorage.removeItem('auth_redirect_path');
   };
+}, []);
+const [redirectPath, setRedirectPath] = useState<string>('/home');
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    // Extract the 'next' parameter immediately on component mount
+    const params = new URLSearchParams(window.location.search);
+    const nextPath = params.get('next');
+    
+    if (nextPath) {
+      console.log('Found next parameter:', nextPath);
+      // Update state
+      setRedirectPath(nextPath);
+      
+      // Also store in sessionStorage as a more reliable fallback
+      sessionStorage.setItem('auth_redirect_path', nextPath);
+    } else {
+      console.log('No next parameter found in URL, using default path: /home');
+    }
+  }
 }, []);
 
   const initAttempts = useRef(0);
@@ -129,100 +148,98 @@ export default function GoogleAuthHandler() {
 };
 
   // Process credential response from Google
-const handleCredentialResponse = async (response: any) => {
-  console.log('Google credential response received');
-
-  if (!response?.credential) {
-    setAuthState(prev => ({
-      ...prev,
-      error: 'Invalid credential received from Google'
-    }));
-    return;
-  }
-
-  try {
-    setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    if (!signInWithIdToken) {
-      throw new Error('Authentication method not available');
-    }
-
-    // 1. Create an authentication promise
-    const authPromise = signInWithIdToken({
-      provider: 'google',
-      token: response.credential,
-    });
-
-    // 2. Create a timeout promise (15 seconds)
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Authentication request timed out')), 15000)
-    );
-
-    // 3. Race the promises
-    const { data, error, errorType } = await Promise.race([
-      authPromise,
-      timeoutPromise
-    ]);
-
-    if (error) {
-      console.error('Error signing in with Google:', error);
-
-      // Set user-friendly error messages based on error type
-      let errorMessage = 'Failed to sign in with Google';
-      if (errorType === 'network') {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (errorType === 'auth') {
-        errorMessage = 'Authentication failed. Please try again.';
-      } else if (error.message?.includes('timed out')) {
-        errorMessage = 'Authentication request timed out. Please try again.';
-      }
-
-      setAuthState(prev => ({ ...prev, isLoading: false, error: errorMessage }));
+  const handleCredentialResponse = async (response: any) => {
+    console.log('Google credential response received');
+  
+    if (!response?.credential) {
+      setAuthState(prev => ({
+        ...prev,
+        error: 'Invalid credential received from Google'
+      }));
       return;
     }
-
-    console.log('Successfully signed in with Google');
-
-    // 4. Flag for navigation tracking
-    sessionStorage.setItem('google_auth_redirect_pending', 'true');
-
-    // 5. Attempt primary navigation
+  
     try {
-      router.push('/home');
-
-      // 6. Set a fallback timeout to check if navigation worked
-      setTimeout(() => {
-        // If we're still on this page after 1.5 seconds, use fallback navigation
-        if (sessionStorage.getItem('google_auth_redirect_pending') === 'true') {
-          console.log('Navigation fallback triggered after Google sign-in');
-          sessionStorage.removeItem('google_auth_redirect_pending');
-          window.location.href = '/home';
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+  
+      if (!signInWithIdToken) {
+        throw new Error('Authentication method not available');
+      }
+  
+      // Authentication process remains unchanged
+      const authPromise = signInWithIdToken({
+        provider: 'google',
+        token: response.credential,
+      });
+  
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Authentication request timed out')), 15000)
+      );
+  
+      const { data, error, errorType } = await Promise.race([
+        authPromise,
+        timeoutPromise
+      ]);
+  
+      if (error) {
+        console.error('Error signing in with Google:', error);
+        
+        let errorMessage = 'Failed to sign in with Google';
+        if (errorType === 'network') {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (errorType === 'auth') {
+          errorMessage = 'Authentication failed. Please try again.';
+        } else if (error.message?.includes('timed out')) {
+          errorMessage = 'Authentication request timed out. Please try again.';
         }
-      }, 1500);
-    } catch (navError) {
-      // If router.push fails, fall back to direct location change
-      console.error('Navigation error after Google sign-in:', navError);
-      window.location.href = '/home';
+  
+        setAuthState(prev => ({ ...prev, isLoading: false, error: errorMessage }));
+        return;
+      }
+  
+      console.log('Successfully signed in with Google');
+  
+      // Flag for navigation tracking
+      sessionStorage.setItem('google_auth_redirect_pending', 'true');
+  
+      // FIXED: Get the most up-to-date redirect path with reliable fallback chain
+      const currentRedirectPath = sessionStorage.getItem('auth_redirect_path') || redirectPath || '/home';
+      console.log('Redirecting to:', currentRedirectPath);
+  
+      // Attempt primary navigation with the correct path
+      try {
+        router.push(currentRedirectPath);
+  
+        // Fallback timeout remains, but uses the same path consistently
+        setTimeout(() => {
+          if (sessionStorage.getItem('google_auth_redirect_pending') === 'true') {
+            console.log('Navigation fallback triggered after Google sign-in');
+            sessionStorage.removeItem('google_auth_redirect_pending');
+            window.location.href = currentRedirectPath;
+          }
+        }, 1500);
+      } catch (navError) {
+        console.error('Navigation error after Google sign-in:', navError);
+        window.location.href = currentRedirectPath;
+      }
+    } catch (error: any) {
+      console.error('Error processing Google credential:', error);
+  
+      if (error.message?.includes('timed out')) {
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Authentication request timed out. Please try again later.'
+        }));
+      } else {
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: 'Failed to process Google sign in. Please try again.'
+        }));
+      }
     }
-  } catch (error: any) {
-    console.error('Error processing Google credential:', error);
-
-    // Specific handling for timeout errors
-    if (error.message?.includes('timed out')) {
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Authentication request timed out. Please try again later.'
-      }));
-    } else {
-      setAuthState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Failed to process Google sign in. Please try again.'
-      }));
-    }
-  }
-};
+  };
 
   // Initialize Google Sign-In with better error handling
   const initializeGoogleAuth = () => {

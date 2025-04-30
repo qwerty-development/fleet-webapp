@@ -18,10 +18,12 @@ import {
   ArrowRightOnRectangleIcon,
   EnvelopeIcon,
   ChatBubbleLeftRightIcon,
-} from "@heroicons/react/24/outline";
-import { createClient } from "@/utils/supabase/client";
-import dynamic from "next/dynamic";
-import Image from "next/image";
+  TrashIcon
+} from '@heroicons/react/24/outline';
+import { createClient } from '@/utils/supabase/client';
+import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import Link from 'next/link';
 
 // Dynamically import Navbarr to avoid SSR issues with localStorage
 const Navbar = dynamic(() => import("@/components/home/Navbar"), {
@@ -457,6 +459,23 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
               </button>
+
+              {/* Add to the Account Actions section in profile page */}
+<Link
+  href="/account/delete"
+  className="w-full flex items-center p-4 rounded-xl bg-black-medium border border-gray-800 hover:border-red-500 transition-colors"
+>
+  <div className="p-3 bg-red-500/10 rounded-xl">
+    <TrashIcon className="h-6 w-6 text-red-500" />
+  </div>
+  <div className="ml-4 text-left">
+    <p className="font-medium text-white">Delete Account</p>
+    <p className="text-sm text-gray-400">Permanently remove your account and data</p>
+  </div>
+  <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
+</Link>
+
+
             </div>
 
             {/* Support Section */}

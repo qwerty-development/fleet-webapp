@@ -1,12 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AppleRedirectAuthHandler() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [redirectPath, setRedirectPath] = useState<string>('/home');
+
+  // Extract and store the 'next' parameter when component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const nextPath = params.get('next');
+      
+      if (nextPath) {
+        console.log('Found next parameter for Apple auth:', nextPath);
+        setRedirectPath(nextPath);
+        
+        // Store in sessionStorage as a reliable fallback
+        sessionStorage.setItem('apple_auth_redirect_path', nextPath);
+      } else {
+        console.log('No next parameter found for Apple auth, using default path: /home');
+      }
+    }
+  }, []);
 
   const initiateAppleAuth = () => {
     try {
@@ -20,10 +39,23 @@ export default function AppleRedirectAuthHandler() {
         return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
       };
 
-      const state = generateState();
+      // Get current next path from sessionStorage or state
+      const currentRedirectPath = sessionStorage.getItem('apple_auth_redirect_path') || redirectPath;
+      
+      // Create a state object that includes both security state and redirect path
+      const stateObj = {
+        securityToken: generateState(),
+        redirectPath: currentRedirectPath
+      };
+      
+      // Encode the state object to JSON and then to Base64 for safe transport
+      const stateEncoded = btoa(JSON.stringify(stateObj));
 
-      // Store state in session storage for validation
-      sessionStorage.setItem('apple_auth_state', state);
+      // Store complete state object in session storage for validation
+      sessionStorage.setItem('apple_auth_state', stateEncoded);
+      
+      // Mark that we're expecting a redirect back
+      sessionStorage.setItem('apple_auth_redirect_pending', 'true');
 
       // Get client ID from environment
       const clientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
@@ -41,7 +73,7 @@ export default function AppleRedirectAuthHandler() {
         `&redirect_uri=${redirectUri}` +
         '&response_type=code id_token' +
         '&scope=name email' +
-        `&state=${state}` +
+        `&state=${stateEncoded}` +
         '&response_mode=form_post';
 
       // Log URL for debugging in development

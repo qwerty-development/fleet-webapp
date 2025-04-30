@@ -29,37 +29,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handle Apple authentication POST callback
 export async function POST(request: NextRequest) {
-  console.log('POST request received on /auth/callback');
-
   try {
     // 1. Extract form data from Apple's POST request
     const formData = await request.formData();
-    console.log('Form data keys:', Array.from(formData.keys()));
-
     // 2. Extract critical authentication values
     const idToken = formData.get('id_token') as string;
     const code = formData.get('code') as string;
     const state = formData.get('state') as string;
 
-    // 3. Log received data for debugging
-    console.log('Authentication data received:', {
-      hasIdToken: !!idToken,
-      hasCode: !!code,
-      hasState: !!state
-    });
+    // 3. Add logic to extract redirect path from state
+    let redirectPath = '/home'; // Default fallback
+    
+    if (state) {
+      try {
+        // Decode the state parameter
+        const decodedState = JSON.parse(atob(state));
+        
+        // Extract the redirect path if it exists
+        if (decodedState && decodedState.redirectPath) {
+          redirectPath = decodedState.redirectPath;
+          console.log('Found redirect path in state:', redirectPath);
+        }
+      } catch (stateError) {
+        console.error('Error parsing state parameter:', stateError);
+        // Continue with default redirect if state parsing fails
+      }
+    }
 
     // 4. Verify we have either id_token or code
     if (!idToken && !code) {
       console.error('POST: No id_token or code provided');
       return NextResponse.redirect(new URL('/auth/signin?error=missing_credentials', request.url));
     }
-
+    
     // 5. Initialize Supabase client with cookie store
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-
+    
     // 6. Process authentication based on available credentials
     if (idToken) {
       // 6a. Handle Apple ID token authentication
@@ -67,29 +74,24 @@ export async function POST(request: NextRequest) {
         provider: 'apple',
         token: idToken,
       });
-
       if (error) {
         console.error('Error signing in with Apple ID token:', error);
         return NextResponse.redirect(new URL('/auth/signin?error=token_processing', request.url));
       }
-
       console.log('Successfully authenticated with Apple ID token');
     } else if (code) {
       // 6b. Handle code-based authentication
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
       if (error) {
         console.error('Error exchanging code for session:', error);
         return NextResponse.redirect(new URL('/auth/signin?error=code_processing', request.url));
       }
-
       console.log('Successfully authenticated with code');
     }
-
-    // 7. CRITICAL FIX: Return HTML with JavaScript redirect instead of NextResponse.redirect
-    // This prevents the 405 error by ensuring the client initiates a fresh GET request
-    return new NextResponse(
-      `
+    
+    // 7. CRITICAL FIX: Return HTML with JavaScript redirect
+    // Now using the dynamically extracted redirectPath
+    return new NextResponse(`
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -128,8 +130,8 @@ export async function POST(request: NextRequest) {
         <div class="loader"></div>
         <p>Authentication successful. Redirecting...</p>
         <script>
-          // This ensures a clean redirect with proper method (GET)
-          window.location.href = '/home';
+          // Using the dynamically extracted redirectPath instead of hardcoded '/home'
+          window.location.href = '${redirectPath}';
         </script>
       </body>
       </html>
