@@ -156,7 +156,7 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-black-light">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-neutral-900">
       <Navbar />
 
          {isGuest && (
@@ -288,13 +288,13 @@ export default function FavoritesPage() {
               ))}
             </div>
           ) : (
-            <div className="bg-black-medium border border-gray-800 rounded-xl p-12 shadow-xl text-center">
+            <div className="bg-gradient-to-br from-gray-900 to-neutral-900 border border-gray-800 rounded-xl p-12 shadow-xl text-center">
               <h3 className="text-2xl font-semibold text-white mb-4">No Favorites Yet</h3>
               <p className="text-gray-400 max-w-md mx-auto mb-8">
                 You haven't added any cars to your favorites. Browse the available cars and click the heart icon to add favorites.
               </p>
               <button
-                onClick={() => router.push('/cars')}
+                onClick={() => router.push('/home')}
                 className="bg-accent hover:bg-accent-dark text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
                 Browse Cars

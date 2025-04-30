@@ -49,7 +49,7 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
   };
 
   return (
-    <div className="relative bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out hover:scale-105">
+    <div className="relative pt-14 bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out hover:scale-105">
       {/* Badge for available cars */}
       <div className="absolute top-4 right-4 bg-accent text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
         {dealership.carsAvailable} Cars

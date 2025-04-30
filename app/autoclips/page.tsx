@@ -356,7 +356,7 @@ const AutoClipsContent = () => {
   };
 
   return (
-    <div className="h-screen bg-black flex flex-col">
+    <div className="h-screen bg-gradient-to-b from-gray-900 to-neutral-900 flex flex-col">
       {/* Navbar */}
       <Navbar />
 
