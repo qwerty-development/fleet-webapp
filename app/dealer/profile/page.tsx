@@ -527,7 +527,7 @@ export default function DealerProfilePage() {
                   </span>
                 </div>
 
-                {dealership.subscription_end_date && (
+                {/* {dealership.subscription_end_date && (
                   getDaysRemaining(dealership.subscription_end_date) <= 30 && (
                     <div className="mt-4">
                       <button
@@ -538,7 +538,7 @@ export default function DealerProfilePage() {
                       </button>
                     </div>
                   )
-                )}
+                )} */}
               </div>
 
               {/* Dealership Details Card */}
