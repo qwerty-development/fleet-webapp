@@ -63,19 +63,23 @@ interface InfoItemProps {
 }
 
 const InfoItem: React.FC<InfoItemProps> = ({ icon, title, value }) => (
-  <div className="flex items-center p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
-    <div className="mr-2">{icon}</div>
+  <div className="flex items-center p-4 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl group hover:from-gray-800 hover:to-accent-dark/5 transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg">
+    <div className="mr-5 text-accent group-hover:text-white transition-colors">
+      {icon}
+    </div>
     <div className="flex flex-col">
-      <span className=" text-gray-400">{title}</span>
-      <span className="font-semibold text-white text-sm">{value}</span>
+      <span className="text-gray-400 group-hover:text-white transition-colors">
+        {title}
+      </span>
+      <span className="mt-1 font-semibold text-white text-lg">{value}</span>
     </div>
   </div>
 );
 
 // Loading state component
 const LoadingState = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-900">
-    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-accent"></div>
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800">
+    <div className="animate-spin rounded-full h-16 w-16 border-4 border-t-4 border-accent border-t-transparent"></div>
   </div>
 );
 
@@ -222,103 +226,100 @@ export default function DealershipDetailsPage({
   // Show error state if there was an error
   if (error || !dealership) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white">
-        <button
-          onClick={() => router.back()}
-          className="absolute top-4 left-4 z-50 p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition-colors"
-        >
-          ← Back
-        </button>
-        <div className="flex flex-col items-center justify-center min-h-screen p-4">
-          <div className="bg-gray-800 rounded-xl p-8 max-w-md text-center">
-            <h2 className="text-2xl font-bold mb-4">
-              {error === "Dealership not found"
-                ? "Dealership not found"
-                : "Something went wrong"}
-            </h2>
-            <p className="text-gray-300 mb-6">
-              {error === "Dealership not found"
-                ? "The dealership you're looking for doesn't exist or has been removed."
-                : `We encountered an error while trying to load this dealership: ${
-                    error || "Unknown error"
-                  }`}
-            </p>
-            <button
-              onClick={() => router.push("/dealerships")}
-              className="px-4 py-2 bg-accent hover:bg-accent/80 transition-colors rounded-lg text-white font-semibold"
-            >
-              Browse Dealerships
-            </button>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 p-4">
+        <div className="relative bg-gray-800 bg-opacity-80 backdrop-blur-sm rounded-2xl shadow-2xl p-10 max-w-md text-center text-white">
+          <button
+            onClick={() => router.back()}
+            className="absolute top-4 left-4 p-3 bg-gray-700 bg-opacity-50 backdrop-blur-sm rounded-full hover:scale-105 transition-transform duration-300 ease-in-out"
+          >
+            ← Back
+          </button>
+          <h2 className="text-3xl font-extrabold mb-6">
+            {error === "Dealership not found"
+              ? "Dealership not found"
+              : "Something went wrong"}
+          </h2>
+          <p className="text-gray-300 mb-8">
+            {error === "Dealership not found"
+              ? "This dealership doesn't exist or has been removed."
+              : `We encountered an error: ${error || "Unknown error"}`}
+          </p>
+          <button
+            onClick={() => router.push("/dealerships")}
+            className="mt-4 px-6 py-3 bg-accent hover:bg-accent/90 transition-colors rounded-full text-white font-semibold uppercase tracking-wide shadow-lg"
+          >
+            Browse Dealerships
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen  bg-gray-900 text-white relative">
+    <div className="min-h-screen bg-gray-900 text-white relative overflow-hidden">
       {/* Back Button */}
       <button
         onClick={() => router.back()}
-        className="absolute top-4 left-4 z-50 p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition-colors"
+        className="absolute top-6 left-6 z-50 p-3 bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-full hover:scale-105 transition-transform duration-300 ease-in-out text-white"
       >
         ← Back
       </button>
 
       {/* Header Image - Dealership Banner */}
-      <div className="relative h-64 sm:h-80 md:h-96 bg-gradient-to-r from-gray-800 to-gray-900 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center opacity-10"></div>
-
-        {/* Centered Logo - With fallback for missing logo */}
+      <div className="relative h-[25rem] sm:h-[30rem] md:h-[40rem] bg-gradient-to-br from-accent/20 via-accent-dark/5 to-gray-900 overflow-hidden">
+        {/* Decorative backgrounds */}
+        <div className="absolute -top-16 -left-16 w-72 h-72 bg-indigo-500/0 rounded-full blur-3xl opacity-50 animate-pulse"></div>
+        <div className="absolute -bottom-16 -right-16 w-72 h-72 bg-purple-600/0 rounded-full blur-3xl opacity-50 animate-pulse"></div>
+        {/* Centered Logo and Dealership Info */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-          <div className="w-32 h-32 sm:w-36 sm:h-36 relative mb-4">
+          <div className="w-36 h-36 sm:w-44 sm:h-44 relative mb-6 transform transition-transform duration-300 ease-in-out hover:scale-105">
             <img
               src={
                 dealership.logo ||
                 "https://via.placeholder.com/150?text=No+Logo"
               }
               alt={`${dealership.name} Logo`}
-              className="w-full h-full object-cover rounded-full border-4 border-gray-700 shadow-xl"
+              className="w-full h-full object-cover rounded-full border-4 border-accent shadow-2xl"
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
                   "https://via.placeholder.com/150?text=No+Logo";
               }}
             />
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-white drop-shadow-lg">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-2">
             {dealership.name}
           </h1>
           <div className="flex items-center mt-2">
             <MapPinIcon className="h-5 w-5 text-accent mr-1" />
-            <p className="text-gray-300">{dealership.location}</p>
+            <p className="text-gray-300 text-lg">{dealership.location}</p>
           </div>
         </div>
       </div>
       <div className="flex  justify-center">
         <div className="w-full 3xl:w-9/12 xl:w-11/12">
           {/* Action Buttons - Positioned to overlap the header and content */}
-          <div className="relative z-10 flex justify-center px-4 -mt-6">
-            <div className="bg-gray-800 px-4 py-3 rounded-full shadow-lg flex space-x-3">
+          <div className="relative z-10 flex justify-center px-4 -mt-12">
+            <div className="flex space-x-4 bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-full p-3 shadow-xl">
               <button
                 onClick={handleCall}
-                className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors"
+                className="p-4 bg-blue-600 rounded-full hover:scale-105 transition-transform duration-300 ease-in-out shadow-lg"
                 aria-label="Call"
               >
-                <PhoneIcon className="h-5 w-5" />
+                <PhoneIcon className="h-6 w-6 text-white" />
               </button>
               <button
                 onClick={handleWhatsApp}
-                className="p-3 bg-green-600 rounded-full hover:bg-green-500 transition-colors"
+                className="p-4 bg-green-600 rounded-full hover:scale-105 transition-transform duration-300 ease-in-out shadow-lg"
                 aria-label="WhatsApp"
               >
-                <FaWhatsapp className="h-5 w-5 text-white" />
+                <FaWhatsapp className="h-6 w-6 text-white" />
               </button>
               <button
                 onClick={handleShare}
-                className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
+                className="p-4 bg-gray-700 rounded-full hover:scale-105 transition-transform duration-300 ease-in-out shadow-lg"
                 aria-label="Share"
               >
-                <ShareIcon className="h-5 w-5" />
+                <ShareIcon className="h-6 w-6 text-white" />
               </button>
             </div>
           </div>
@@ -326,7 +327,7 @@ export default function DealershipDetailsPage({
           {/* Dealership Information Section */}
           <div className="p-4 space-y-6 mt-6">
             {/* Info Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-7 mt-6">
               <InfoItem
                 icon={
                   <BuildingStorefrontIcon className="h-5 w-5 text-accent" />
@@ -363,17 +364,14 @@ export default function DealershipDetailsPage({
 
             {/* Map Section */}
             {dealership.latitude && dealership.longitude && (
-              <div className="bg-gray-800 rounded-xl overflow-hidden mt-8">
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900  bg-opacity-50 backdrop-blur-sm rounded-2xl overflow-hidden mt-8 shadow-2xl">
                 <h2 className="text-xl font-bold p-4 border-b border-gray-700">
                   Dealership Location
                 </h2>
                 <div className="p-4">
                   <iframe
-                    width="100%"
-                    height="300"
-                    frameBorder="0"
-                    className="rounded-lg"
                     src={`https://www.google.com/maps?q=${dealership.latitude},${dealership.longitude}&hl=es;z=14&output=embed`}
+                    className="w-full h-64 sm:h-80 rounded-xl border-2 border-gray-700 shadow-inner"
                     allowFullScreen
                   ></iframe>
                 </div>
@@ -382,11 +380,15 @@ export default function DealershipDetailsPage({
 
             {/* Available Cars Section */}
             <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-6">Available Cars</h2>
-              {/* Ensure we pass the ID as expected by the database */}
-              {dealership && (
-                <DealershipCarsSection dealershipID={dealership.id} />
-              )}
+              <h2 className="text-xl font-bold p-4 mb-6 border-b-2 border-accent pb-2">
+                Available Cars
+              </h2>
+              {/* Cars list card */}
+              <div className="bg-gray-800 bg-opacity-40 backdrop-blur-md rounded-2xl p-6 shadow-2xl">
+                {dealership && (
+                  <DealershipCarsSection dealershipID={dealership.id} />
+                )}
+              </div>
             </div>
           </div>
 
