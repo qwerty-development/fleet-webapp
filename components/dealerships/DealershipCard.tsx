@@ -57,21 +57,17 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
       {/* Main card content */}
       <Link href={`/dealerships/${dealershipId}`} className="block">
         <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <img
-              src={
-                dealership.logo ||
-                "https://via.placeholder.com/150?text=No+Logo"
-              }
-              alt={`${dealership.name} Logo`}
-              className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  "https://via.placeholder.com/150?text=No+Logo";
-              }}
-            />
-          </div>
-          <div className="ml-4">
+          {dealership.logo && (
+            <div className="flex-shrink-0">
+              <div
+                className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-cover bg-center"
+                style={{ backgroundImage: `url(${dealership.logo})` }}
+                role="img"
+                aria-label={`${dealership.name} Logo`}
+              />
+            </div>
+          )}
+          <div className={dealership.logo ? "ml-4" : ""}>
             <h3 className="text-white font-semibold text-lg sm:text-base">
               {dealership.name}
             </h3>
