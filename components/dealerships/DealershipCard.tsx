@@ -3,7 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { PhoneIcon } from "@heroicons/react/24/outline";
+import { PhoneIcon, ShareIcon } from "@heroicons/react/24/outline";
 
 export interface Dealership {
   id: number | string;
@@ -49,9 +49,9 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
   };
 
   return (
-    <div className="relative bg-gray-800 rounded-lg px-10 py-5 shadow-md hover:scale-105 hover:shadow-xl transition-all duration-200">
+    <div className="relative bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out hover:scale-105">
       {/* Badge for available cars */}
-      <div className="absolute top-2 right-2 bg-accent text-white text-xs font-semibold px-2 py-1 rounded-full">
+      <div className="absolute top-4 right-4 bg-accent text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
         {dealership.carsAvailable} Cars
       </div>
       {/* Main card content */}
@@ -81,32 +81,19 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
         </div>
       </Link>
       {/* CTA buttons */}
-      <div className="flex justify-around mt-10">
+      <div className="flex justify-center mt-10 space-x-4">
         {/* Share Button */}
         <button
           onClick={handleShare}
-          className="flex items-center space-x-1 bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-full text-white text-xs"
+          className="flex items-center space-x-2 bg-gray-700 bg-opacity-50 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm hover:scale-105 transition-all duration-300 ease-in-out shadow"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 12v.01M12 4v.01M20 12v.01M12 20v.01M16.24 7.76l-.01.01M7.76 7.76l.01.01M7.76 16.24l.01.01M16.24 16.24l-.01-.01"
-            />
-          </svg>
+          <ShareIcon className="h-5 w-5 text-white" />
           <span>Share</span>
         </button>
         {/* WhatsApp Button */}
         <button
           onClick={handleWhatsApp}
-          className="flex items-center space-x-1 bg-green-600 hover:bg-green-500 px-3 py-2 rounded-full text-white text-xs"
+          className="flex items-center space-x-2 bg-green-600 px-4 py-2 rounded-full text-white text-sm hover:scale-105 transition-all duration-300 ease-in-out shadow"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -122,9 +109,9 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
         <a
           href={`tel:${dealership.phone}`}
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-full text-white text-xs"
+          className="flex items-center space-x-2 bg-blue-600 px-4 py-2 rounded-full text-white text-sm hover:scale-105 transition-all duration-300 ease-in-out shadow"
         >
-          <PhoneIcon className="h-4 w-4" />
+          <PhoneIcon className="h-5 w-5 text-white" />
           <span>Call</span>
         </a>
       </div>

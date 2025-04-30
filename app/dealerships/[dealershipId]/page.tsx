@@ -266,7 +266,7 @@ export default function DealershipDetailsPage({
       </button>
 
       {/* Header Image - Dealership Banner */}
-      <div className="relative h-[25rem] sm:h-[30rem] md:h-[40rem] bg-gradient-to-br from-accent/20 via-accent-dark/5 to-gray-900 overflow-hidden">
+      <div className="relative h-[25rem] sm:h-[30rem] md:h-[35rem] bg-gradient-to-br from-accent/20 via-accent-dark/5 to-gray-900 overflow-hidden">
         {/* Decorative backgrounds */}
         <div className="absolute -top-16 -left-16 w-72 h-72 bg-indigo-500/0 rounded-full blur-3xl opacity-50 animate-pulse"></div>
         <div className="absolute -bottom-16 -right-16 w-72 h-72 bg-purple-600/0 rounded-full blur-3xl opacity-50 animate-pulse"></div>
@@ -365,7 +365,7 @@ export default function DealershipDetailsPage({
             {/* Map Section */}
             {dealership.latitude && dealership.longitude && (
               <div className="bg-gradient-to-br from-gray-800 to-gray-900  bg-opacity-50 backdrop-blur-sm rounded-2xl overflow-hidden mt-8 shadow-2xl">
-                <h2 className="text-xl font-bold p-4 border-b border-gray-700">
+                <h2 className="text-xl font-bold p-4 mb-1 border-b border-gray-700">
                   Dealership Location
                 </h2>
                 <div className="p-4">

@@ -335,7 +335,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
   return (
     <div 
-      className={`${className} sticky bg-black  rounded-xl overflow-y p-2 `} 
+      className={`${className} sticky bg-gray-900  rounded-xl overflow-y p-2 `} 
       style={{ height: 'fit-content' }}
     >
       <div 

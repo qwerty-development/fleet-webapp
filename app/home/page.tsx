@@ -556,7 +556,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
       {/* Fixed Navbar at the top */}
       <Navbar />
 
@@ -576,7 +576,7 @@ export default function HomePage() {
         {/* Main Content - Scrollable area */}
         <main className="flex-1 p-4 min-w-0 overflow-x-hidden">
           {/* Fixed search bar that stays at the top */}
-          <div className="sticky top-16 z-40 bg-black py-4 mb-4 border-b border-gray-800 shadow-md">
+          <div className="sticky top-16 z-40  py-4 mb-4 border-b border-gray-700 shadow-md">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar

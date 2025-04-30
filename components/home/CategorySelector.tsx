@@ -142,8 +142,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   };
 
   return (
-    <div className={`relative w-full ${className}`}>
-      <h2 className="text-xl font-bold text-white">Browse by Category</h2>
+    <div className={`relative pb-5 w-full ${className}`}>
+      <h2 className="text-xl mb-5 font-bold text-white">Browse by Category</h2>
 
       {/* Gradient fade left: visible only on md+ */}
       {showScrollIndicator && (

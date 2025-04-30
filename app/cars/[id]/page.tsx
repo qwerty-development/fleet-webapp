@@ -913,8 +913,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           {/* Features */}
           {car.features && car.features.length > 0 && (
             <div className=" p-4">
-              <h2 className="text-xl font-bold">Features</h2>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <h2 className="text-xl font-bold mb-5">Features</h2>
+              <div className="flex flex-wrap gap-2 ">
                 {car.features.map((feature, index) => (
                   <span
                     key={index}
@@ -929,7 +929,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
           {/* Dealership Section with Contact Buttons */}
           <div className="bg-gray-800 rounded-xl p-4">
-            <h2 className="text-xl font-bold mb-4">Dealership</h2>
+            <h2 className="text-xl font-bold mb-5">Dealership</h2>
             <div className="flex items-center justify-between">
               {/* Dealership Info */}
               <div className="flex items-center">

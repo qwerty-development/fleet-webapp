@@ -182,28 +182,25 @@ export default function DealershipsPage() {
     },
   };
 
-  {
-    /* mn hon */
-  }
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
+    <div className="min-h-screen pb-10 flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
       {/* Fixed Navbar */}
       <Navbar />
       <div className="flex flex-1 pt-20">
-        <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
+        <main className="flex-1 w-full max-w-7xl mx-auto">
           {/* Fixed Search and Sort Bar - Styled to match All Brands page */}
-          <div className="sticky top-16 z-40  py-4 mb-6 border-b border-gray-700 shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <div className="sticky top-16 z-40 bg-gray-900 bg-opacity-80 backdrop-blur-md py-4 mb-6 border-b border-gray-700 shadow-lg">
+            <div className="flex justify-between items-center mb-4 px-6">
+              <h1 className="text-3xl md:text-4xl font-bold text-white">
                 Dealerships
               </h1>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-base">
                 {totalDealershipCount}{" "}
                 {totalDealershipCount === 1 ? "dealership" : "dealerships"}{" "}
                 available
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-6">
               <SearchBar
                 searchQuery={searchQuery}
                 onSearch={handleSearch}
@@ -222,20 +219,28 @@ export default function DealershipsPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : dealerships.length > 0 ? (
-            <motion.div
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-8"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {dealerships.map((dealer) => (
-                <motion.div key={dealer.id} variants={itemVariants}>
-                  <DealershipCard dealership={dealer} />
-                </motion.div>
-              ))}
-            </motion.div>
+            <div className="flex justify-center">
+              <motion.div
+                className="grid w-11/12 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-8"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {dealerships.map((dealer) => (
+                  <motion.div
+                    key={dealer.id}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.03 }}
+                    transition={{ duration: 0.3 }}
+                    className="cursor-pointer"
+                  >
+                    <DealershipCard dealership={dealer} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
           ) : (
-            <div className="text-center mt-12 p-8 bg-gray-900 rounded-lg">
+            <div className="text-center mt-12 p-8 bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-2xl shadow-lg">
               <h3 className="text-white text-xl font-bold mb-2">
                 No dealerships found
               </h3>
@@ -244,7 +249,7 @@ export default function DealershipsPage() {
               </p>
               <button
                 onClick={() => setSearchQuery("")}
-                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold"
+                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors duration-300 ease-in-out rounded-full uppercase tracking-wide text-white font-semibold shadow-lg"
               >
                 Reset Search
               </button>
@@ -256,7 +261,7 @@ export default function DealershipsPage() {
               <button
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold disabled:bg-gray-700"
+                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors duration-300 ease-in-out rounded-full uppercase tracking-wide text-white font-semibold shadow-lg disabled:bg-gray-700 disabled:opacity-50"
               >
                 {isLoadingMore ? (
                   <span className="flex items-center">
