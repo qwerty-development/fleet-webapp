@@ -42,7 +42,22 @@ export default function GoogleAuthHandler() {
   // Clean up navigation tracking when component unmounts
   return () => {
     sessionStorage.removeItem('google_auth_redirect_pending');
+    sessionStorage.removeItem('auth_redirect_path');
   };
+}, []);
+const [redirectPath, setRedirectPath] = useState<string>('/home');
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const nextPath = params.get('next');
+    if (nextPath) {
+      // Store the nextPath for later use in redirections
+      setRedirectPath(nextPath);
+      
+      // Optionally store in sessionStorage as fallback
+      sessionStorage.setItem('auth_redirect_path', nextPath);
+    }
+  }
 }, []);
 
   const initAttempts = useRef(0);
@@ -188,7 +203,7 @@ const handleCredentialResponse = async (response: any) => {
 
     // 5. Attempt primary navigation
     try {
-      router.push('/home');
+      router.push(redirectPath);
 
       // 6. Set a fallback timeout to check if navigation worked
       setTimeout(() => {
@@ -196,13 +211,15 @@ const handleCredentialResponse = async (response: any) => {
         if (sessionStorage.getItem('google_auth_redirect_pending') === 'true') {
           console.log('Navigation fallback triggered after Google sign-in');
           sessionStorage.removeItem('google_auth_redirect_pending');
-          window.location.href = '/home';
+          const storedPath = sessionStorage.getItem('auth_redirect_path') || redirectPath;
+          window.location.href = storedPath;
         }
       }, 1500);
     } catch (navError) {
       // If router.push fails, fall back to direct location change
       console.error('Navigation error after Google sign-in:', navError);
-      window.location.href = '/home';
+      const storedPath = sessionStorage.getItem('auth_redirect_path') || redirectPath;
+      window.location.href = storedPath;
     }
   } catch (error: any) {
     console.error('Error processing Google credential:', error);

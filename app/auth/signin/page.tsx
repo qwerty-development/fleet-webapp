@@ -33,7 +33,7 @@ export default function SignInPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
 
-useEffect(() => {
+  useEffect(() => {
     // Check if we're on the error page with potential 405 error
     if (window.location.pathname === '/auth/signin' &&
         window.location.search.includes('next=')) {
@@ -62,28 +62,27 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
-  // Extract and handle error from URL if present
-  const urlParams = new URLSearchParams(window.location.search);
-  const errorParam = urlParams.get('error');
+    // Extract and handle error from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get('error');
 
-  if (errorParam) {
-    // Map error codes to user-friendly messages
-    const errorMessages:any = {
-      'authentication_failed': 'Authentication with Apple failed. Please try again.',
-      'missing_credentials': 'Authentication information was missing. Please try again.',
-      'default': 'An error occurred during sign in. Please try again.'
-    };
+    if (errorParam) {
+      // Map error codes to user-friendly messages
+      const errorMessages:any = {
+        'authentication_failed': 'Authentication with Apple failed. Please try again.',
+        'missing_credentials': 'Authentication information was missing. Please try again.',
+        'default': 'An error occurred during sign in. Please try again.'
+      };
 
-    // Set appropriate error message
-    setError(errorMessages[errorParam] || errorMessages.default);
+      // Set appropriate error message
+      setError(errorMessages[errorParam] || errorMessages.default);
 
-    // Clean up URL without error parameter (prevent showing errors after page refresh)
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.delete('error');
-    window.history.replaceState({}, document.title, newUrl.toString());
-  }
-}, []);
-
+      // Clean up URL without error parameter (prevent showing errors after page refresh)
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('error');
+      window.history.replaceState({}, document.title, newUrl.toString());
+    }
+  }, []);
 
   // Check if already signed in on mount
   useEffect(() => {
@@ -91,7 +90,12 @@ useEffect(() => {
       const { data } = await supabase.auth.getSession();
       if (data?.session) {
         setIsAuthenticated(true);
-        router.push('/home');
+        
+        // Get the 'next' parameter from URL if it exists
+        const params = new URLSearchParams(window.location.search);
+        const nextPath = params.get('next') || '/home';
+        
+        router.push(nextPath);
       }
       setIsPageReady(true);
     };
@@ -185,43 +189,46 @@ useEffect(() => {
         return;
       }
 
-// In onSignInPress function, replace the setTimeout redirection with:
-setTimeout(async () => {
-  try {
-    const { data } = await supabase.auth.getSession();
+      setTimeout(async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
 
-    if (data?.session) {
-      // Set loading false before navigation
-      setIsLoading(false);
+          if (data?.session) {
+            // Set loading false before navigation
+            setIsLoading(false);
 
-      // Implement robust navigation with fallback
-      try {
-        // Primary navigation method
-        router.push('/home');
+            // Get the 'next' parameter from URL
+            const params = new URLSearchParams(window.location.search);
+            const nextPath = params.get('next') || '/home';
 
-        // Fallback in case router.push doesn't trigger navigation
-        setTimeout(() => {
-          // Check if we're still on the signin page after attempt
-          if (window.location.href.includes('/auth/signin')) {
-            console.log('Router navigation fallback triggered');
-            window.location.href = '/home';
+            // Implement robust navigation with fallback
+            try {
+              // Primary navigation method using the nextPath
+              router.push(nextPath);
+
+              // Fallback in case router.push doesn't trigger navigation
+              setTimeout(() => {
+                // Check if we're still on the signin page after attempt
+                if (window.location.href.includes('/auth/signin')) {
+                  console.log('Router navigation fallback triggered');
+                  window.location.href = nextPath;
+                }
+              }, 1000);
+            } catch (navError) {
+              console.error('Navigation error:', navError);
+              // Force navigation as last resort
+              window.location.href = nextPath;
+            }
+          } else {
+            setError("Sign in successful but session not established. Please try again.");
+            setIsLoading(false);
           }
-        }, 1000);
-      } catch (navError) {
-        console.error('Navigation error:', navError);
-        // Force navigation as last resort
-        window.location.href = '/home';
-      }
-    } else {
-      setError("Sign in successful but session not established. Please try again.");
-      setIsLoading(false);
-    }
-  } catch (sessionError) {
-    console.error("Session verification error:", sessionError);
-    setError("Sign in appeared successful but couldn't verify session. Please try again.");
-    setIsLoading(false);
-  }
-}, 500);
+        } catch (sessionError) {
+          console.error("Session verification error:", sessionError);
+          setError("Sign in appeared successful but couldn't verify session. Please try again.");
+          setIsLoading(false);
+        }
+      }, 500);
 
     } catch (err: any) {
       console.error("Sign in process error:", err);
@@ -244,8 +251,12 @@ setTimeout(async () => {
       const result = await setGuestMode(true);
 
       if (result) {
+        // Get the 'next' parameter from URL if it exists
+        const params = new URLSearchParams(window.location.search);
+        const nextPath = params.get('next') || '/home';
+        
         // Use router instead of direct location change
-        router.push('/home');
+        router.push(nextPath);
       } else {
         setError("Failed to activate guest mode. Please try again.");
       }
