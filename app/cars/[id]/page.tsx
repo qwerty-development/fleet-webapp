@@ -21,6 +21,7 @@ import DealershipCarsSection from "@/components/dealerships/DealershipCarsSectio
 import FavoriteButton from "@/components/home/FavoriteButton";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
+import { FaWhatsapp } from "react-icons/fa";
 
 // Updated Car interface to match your global types
 export interface Car {
@@ -904,8 +905,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
           {/* Description */}
           {car.description && (
-            <div>
-              <h2 className="text-xl font-bold">Description</h2>
+            <div className="p-4">
+              <h2 className="text-xl  font-bold">Description</h2>
               <p className="mt-2 text-gray-300">{car.description}</p>
             </div>
           )}
@@ -961,13 +962,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     className="p-3 bg-green-600 rounded-full hover:bg-green-500 transition-colors"
                     aria-label="WhatsApp"
                   >
-                    <svg
-                      viewBox="0 0 32 32"
-                      className="h-5 w-5 fill-current"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path d="M16.004 0h-.008c-8.837 0-16 7.163-16 16 0 3.497 1.126 6.741 3.038 9.377L1.01 31l5.724-1.846c2.532 1.682 5.549 2.66 8.784 2.66h.008c8.837 0 16-7.163 16-16s-7.163-16-16-16zm0 29.156h-.007c-2.699 0-5.347-.724-7.663-2.091l-.53-.324-5.477 1.766 1.797-5.368-.345-.546c-1.487-2.365-2.272-5.096-2.272-7.93C1.507 8.386 7.893 2 16.004 2c3.934 0 7.621 1.528 10.403 4.31s4.31 6.47 4.31 10.4-1.528 7.621-4.31 10.403c-2.782 2.783-6.469 4.043-10.403 4.043zm5.737-7.346l-.332-.186c-.538-.301-3.184-1.576-3.682-1.754-.498-.179-.86-.268-1.223.269-.361.537-1.403 1.754-1.718 2.114-.316.36-.632.404-1.17.134-.539-.268-2.273-.837-4.326-2.667-1.599-1.425-2.677-3.183-2.993-3.72-.317-.537-.034-.827.238-1.095.244-.243.539-.634.807-.951.27-.317.359-.537.539-.896.179-.36.09-.673-.045-.95-.135-.274-1.218-2.94-1.67-4.028-.44-1.058-.887-.914-1.22-.93-.312-.015-.673-.018-1.035-.018s-.944.134-1.442.672c-.497.537-1.903 1.859-1.903 4.533s1.947 5.258 2.218 5.618c.269.36 3.8 5.801 9.21 8.136 1.286.556 2.29.889 3.074 1.139 1.292.4 2.47.344 3.398.209.75-.101 2.92-1.139 3.33-2.24.41-1.097.41-2.042.286-2.24-.121-.197-.482-.315-1.022-.583z" />
-                    </svg>
+                    <FaWhatsapp className="h-5 w-5 text-white" />
                   </button>
                   <button
                     onClick={handleShare}
