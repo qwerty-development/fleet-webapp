@@ -186,13 +186,13 @@ export default function DealershipsPage() {
     /* mn hon */
   }
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
       {/* Fixed Navbar */}
       <Navbar />
       <div className="flex flex-1 pt-20">
         <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
           {/* Fixed Search and Sort Bar - Styled to match All Brands page */}
-          <div className="sticky top-16 z-40 bg-black py-4 mb-6 border-b border-gray-800 shadow-md">
+          <div className="sticky top-16 z-40  py-4 mb-6 border-b border-gray-700 shadow-md">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl md:text-3xl font-bold text-white">
                 Dealerships
