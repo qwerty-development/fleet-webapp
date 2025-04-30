@@ -267,19 +267,7 @@ export default function DealershipDetailsPage({
 
       {/* Header Image - Dealership Banner */}
       <div className="relative h-64 sm:h-80 md:h-96 bg-gradient-to-r from-gray-800 to-gray-900 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center opacity-10">
-          <svg
-            className="h-full w-full"
-            viewBox="0 0 200 200"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fill="#FFFFFF"
-              d="M41.9,-71.9C53.5,-64.7,61.9,-52.6,69.5,-39.7C77.2,-26.9,84.1,-13.5,84.1,0C84.1,13.5,77.2,26.9,69.5,39.7C61.9,52.6,53.5,64.7,41.9,71.9C30.4,79.2,15.2,81.6,0.3,81.1C-14.6,80.7,-29.2,77.4,-40.2,69.5C-51.3,61.7,-58.9,49.2,-67.1,36.4C-75.4,23.6,-84.3,10.8,-84.4,-2.1C-84.5,-15,-75.8,-30,-66.3,-44.2C-56.7,-58.4,-46.2,-71.7,-33.7,-78.2C-21.1,-84.7,-10.6,-84.4,1.3,-86.7C13.2,-89,26.3,-93.9,41.9,-91.9"
-              transform="translate(100 100)"
-            />
-          </svg>
-        </div>
+        <div className="absolute inset-0 flex items-center justify-center opacity-10"></div>
 
         {/* Centered Logo - With fallback for missing logo */}
         <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
@@ -306,8 +294,8 @@ export default function DealershipDetailsPage({
           </div>
         </div>
       </div>
-      <div className="flex justify-center">
-        <div className="3xl:w-9/12 xl:w-11/12">
+      <div className="flex  justify-center">
+        <div className="w-full 3xl:w-9/12 xl:w-11/12">
           {/* Action Buttons - Positioned to overlap the header and content */}
           <div className="relative z-10 flex justify-center px-4 -mt-6">
             <div className="bg-gray-800 px-4 py-3 rounded-full shadow-lg flex space-x-3">
