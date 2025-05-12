@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import FilterPanel from "@/components/home/FilterPanel";
 import FilterModal from "@/components/home/FilterModal";
@@ -677,7 +677,6 @@ export default function HomePage() {
   };
 
   return (
-    <Suspense>
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
       {/* Fixed Navbar at the top */}
       <Navbar />
@@ -831,6 +830,5 @@ export default function HomePage() {
         onResetFilters={handleResetFilters}
       />
     </div>
-    </Suspense>
   );
 }
