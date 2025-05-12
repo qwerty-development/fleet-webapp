@@ -75,7 +75,7 @@ export default function DealerDashboard() {
       endDate: "",
       isActive: true,
       daysRemaining: 0,
-    }
+    },
   });
 
   const [popularCars, setPopularCars] = useState<any[]>([]);
@@ -149,7 +149,9 @@ export default function DealerDashboard() {
           // Calculate subscription status
           const endDate = new Date(dealershipData.subscription_end_date);
           const now = new Date();
-          const daysRemaining = Math.floor((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          const daysRemaining = Math.floor(
+            (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          );
 
           setStats((prev) => ({
             ...prev,
@@ -265,15 +267,21 @@ export default function DealerDashboard() {
 
           {/* Subscription Alert Banner */}
           {dealershipData && (
-            <div className={`mb-6 p-4 rounded-lg ${getSubscriptionStatusClass()}`}>
+            <div
+              className={`mb-6 p-4 rounded-lg ${getSubscriptionStatusClass()}`}
+            >
               <div className="flex items-center">
                 <CalendarIcon className="h-5 w-5 mr-2" />
                 <span className="font-medium">
                   {!stats.subscription.isActive
                     ? "Your subscription has expired. Please contact support to renew."
                     : stats.subscription.daysRemaining <= 30
-                    ? `Your subscription expires in ${stats.subscription.daysRemaining} days on ${formatDate(stats.subscription.endDate)}.`
-                    : `Your subscription is active until ${formatDate(stats.subscription.endDate)}.`}
+                    ? `Your subscription expires in ${
+                        stats.subscription.daysRemaining
+                      } days on ${formatDate(stats.subscription.endDate)}.`
+                    : `Your subscription is active until ${formatDate(
+                        stats.subscription.endDate
+                      )}.`}
                 </span>
               </div>
             </div>
@@ -286,8 +294,8 @@ export default function DealerDashboard() {
           ) : (
             <>
               {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+              <div className="flex justify-center grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
                       Total Cars
@@ -301,36 +309,22 @@ export default function DealerDashboard() {
                       {stats.inventory.total}
                     </p>
                     <div className="flex items-center text-xs mt-1 text-gray-400">
-                      <span className={`flex items-center ${stats.inventory.available > 0 ? "text-emerald-400" : "text-gray-400"}`}>
+                      <span
+                        className={`flex items-center ${
+                          stats.inventory.available > 0
+                            ? "text-emerald-400"
+                            : "text-gray-400"
+                        }`}
+                      >
                         {stats.inventory.available} available
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <p className="text-gray-400 text-sm font-medium">Sales</p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-emerald-500/20 text-emerald-300">
-                      <BanknotesIcon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-white text-2xl font-semibold">
-                      {stats.inventory.sold}
-                    </p>
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-400">
-                        <span className="text-rose-400">
-                          {stats.inventory.pending}
-                        </span>{" "}
-                        pending
-                      </span>
-                    </div>
-                  </div>
-                </div>
+               
 
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
                       Average Price
@@ -351,7 +345,7 @@ export default function DealerDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
                       Engagement
@@ -375,7 +369,8 @@ export default function DealerDashboard() {
                         <span className="text-emerald-400">
                           {stats.inventory.totalViews > 0
                             ? Math.round(
-                                (stats.inventory.totalLikes / stats.inventory.totalViews) *
+                                (stats.inventory.totalLikes /
+                                  stats.inventory.totalViews) *
                                   100
                               )
                             : 0}
@@ -533,8 +528,6 @@ export default function DealerDashboard() {
                   </div>
                 </div>
               )}
-
-
             </>
           )}
         </div>
