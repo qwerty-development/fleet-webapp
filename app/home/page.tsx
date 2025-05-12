@@ -14,7 +14,7 @@ import { createClient } from "@/utils/supabase/client";
 import { FilterState, Car, Brand } from "@/types";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Define constants for filter options to avoid string literals
 export const SORT_OPTIONS = {
@@ -54,6 +54,7 @@ export default function HomePage() {
   const { user, profile, isLoaded, isSignedIn } = useAuth();
   const { isGuest, guestId } = useGuestUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Global UI states
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -65,9 +66,116 @@ export default function HomePage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const [urlParamsProcessed, setUrlParamsProcessed] = useState<boolean>(false);
 
   const ITEMS_PER_PAGE = 9;
   const supabase = createClient();
+
+  // Process URL parameters and set initial filters
+  useEffect(() => {
+    if (!searchParams || urlParamsProcessed) return;
+
+    try {
+      const newFilters = { ...DEFAULT_FILTERS };
+      let hasSearchParams = false;
+
+      // Extract search query
+      const query = searchParams.get('query');
+      if (query) {
+        newFilters.searchQuery = query;
+        setSearchQuery(query);
+        hasSearchParams = true;
+      }
+
+      // Extract categories
+      const categories = searchParams.get('categories');
+      if (categories) {
+        newFilters.categories = categories.split(',');
+        hasSearchParams = true;
+      }
+
+      // Extract price range
+      const minPrice = searchParams.get('minPrice');
+      const maxPrice = searchParams.get('maxPrice');
+      if (minPrice || maxPrice) {
+        newFilters.priceRange = [
+          minPrice ? parseInt(minPrice) : 0,
+          maxPrice ? parseInt(maxPrice) : 1000000
+        ];
+        hasSearchParams = true;
+      }
+
+      // Extract year range
+      const minYear = searchParams.get('minYear');
+      const maxYear = searchParams.get('maxYear');
+      if (minYear || maxYear) {
+        newFilters.yearRange = [
+          minYear ? parseInt(minYear) : 1900,
+          maxYear ? parseInt(maxYear) : new Date().getFullYear()
+        ];
+        hasSearchParams = true;
+      }
+
+      // Extract transmission
+      const transmission = searchParams.get('transmission');
+      if (transmission) {
+        newFilters.transmission = transmission.split(',');
+        hasSearchParams = true;
+      }
+
+      // Extract drivetrain
+      const drivetrain = searchParams.get('drivetrain');
+      if (drivetrain) {
+        newFilters.drivetrain = drivetrain.split(',');
+        hasSearchParams = true;
+      }
+
+      // Extract engine types if available in your data model
+      const engineTypes = searchParams.get('engineTypes');
+      if (engineTypes) {
+        // Depending on your data model, map these to the appropriate filter
+        // This might be categories, or a custom field
+        hasSearchParams = true;
+      }
+
+      // Extract fuel types if available in your data model
+      const fuelTypes = searchParams.get('fuelTypes');
+      if (fuelTypes) {
+        // Depending on your data model, map these to the appropriate filter
+        hasSearchParams = true;
+      }
+
+      // Extract make (brand)
+      const make = searchParams.get('make');
+      if (make) {
+        newFilters.make = make.split(',');
+        hasSearchParams = true;
+      }
+
+      // Extract special filter
+      const specialFilter = searchParams.get('specialFilter');
+      if (specialFilter) {
+        newFilters.specialFilter = specialFilter;
+        hasSearchParams = true;
+      }
+
+      // Extract sort option
+      const sortBy = searchParams.get('sortBy');
+      if (sortBy) {
+        newFilters.sortBy = sortBy;
+        hasSearchParams = true;
+      }
+
+      if (hasSearchParams) {
+        console.log("URL params found, setting filters:", newFilters);
+        setFilters(newFilters);
+      }
+
+      setUrlParamsProcessed(true);
+    } catch (error) {
+      console.error("Error processing URL parameters:", error);
+    }
+  }, [searchParams]);
 
   // Sync user to Supabase (for both signed-in and guest users)
   useEffect(() => {
@@ -183,7 +291,7 @@ export default function HomePage() {
       }
 
       try {
-        console.log("Fetching cars with query:", searchQuery);
+        console.log("Fetching cars with query:", currentFilters.searchQuery || searchQuery);
         console.log("Current filters:", currentFilters);
         console.log("Sort option:", sortOption || currentFilters.sortBy);
 
@@ -285,9 +393,10 @@ export default function HomePage() {
             .lte("mileage", currentFilters.mileageRange[1]);
         }
 
-        // Search query
-        if (searchQuery && searchQuery.trim() !== "") {
-          const cleanQuery = searchQuery.trim().toLowerCase();
+        // Search query (from filters or searchQuery state)
+        const currentSearchQuery = currentFilters.searchQuery || searchQuery;
+        if (currentSearchQuery && currentSearchQuery.trim() !== "") {
+          const cleanQuery = currentSearchQuery.trim().toLowerCase();
           console.log("Clean search query:", cleanQuery);
 
           let searchConditions = [
@@ -468,22 +577,31 @@ export default function HomePage() {
     }
   }, []);
 
-  // Initial data load
+  // Initial data load - wait for URL params to be processed
   useEffect(() => {
-    console.log("Initial data load");
-    fetchCars();
-    fetchBrands();
-  }, []);
+    // Only fetch cars once URL params have been processed
+    if (urlParamsProcessed) {
+      console.log("URL params processed, initial data load");
+      fetchCars(1, filters);
+      fetchBrands();
+    }
+  }, [urlParamsProcessed]);
 
-  // Refetch when filters or search query change
+  // Refetch when filters or search query change (but not on initial load)
   useEffect(() => {
-    console.log("Search query or filters changed, refetching cars");
-    fetchCars(1);
+    if (urlParamsProcessed && !isLoading) {
+      console.log("Search query or filters changed, refetching cars");
+      fetchCars(1);
+    }
   }, [filters, searchQuery]);
 
   const handleSearch = (query: string) => {
     console.log("Search triggered with query:", query);
     setSearchQuery(query);
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      searchQuery: query
+    }));
     setCurrentPage(1);
   };
 
@@ -525,6 +643,9 @@ export default function HomePage() {
     console.log("Resetting all filters");
     setFilters(DEFAULT_FILTERS);
     setSearchQuery("");
+    
+    // Clear URL parameters by redirecting to the base URL
+    router.push('/');
   };
 
   const handleLoadMore = () => {
@@ -576,11 +697,11 @@ export default function HomePage() {
         {/* Main Content - Scrollable area */}
         <main className="flex-1 p-4 min-w-0 overflow-x-hidden">
           {/* Fixed search bar that stays at the top */}
-          <div className="sticky top-16 z-40  py-4 mb-4 border-b border-gray-700 shadow-md">
+          <div className="sticky top-16 z-40 py-4 mb-4 border-b border-gray-700 shadow-md">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar
-                  searchQuery={searchQuery}
+                  searchQuery={searchQuery || filters.searchQuery}
                   onSearch={handleSearch}
                   className="w-full"
                 />

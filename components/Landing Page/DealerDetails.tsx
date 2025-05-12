@@ -27,7 +27,7 @@ const DealerDetails: React.FC = () => {
               For Dealerships
             </motion.span>
 
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold">
+            <h2 className="text-4xl md:text-5xl text-white lg:text-6xl font-bold">
               Dealer's {""}
               <span className="text-accent font-bold bg-black/10 rounded-md p-1">
                 Haven
