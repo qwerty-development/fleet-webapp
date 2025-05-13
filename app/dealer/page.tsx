@@ -33,7 +33,7 @@ const SECTIONS = [
   },
   {
     id: "autoclips",
-    name: "Auto Clips",
+    name: "AutoClips",
     description: "Manage your video content",
     icon: FilmIcon,
     color: "from-emerald-500 to-teal-500",
@@ -322,8 +322,6 @@ export default function DealerDashboard() {
                   </div>
                 </div>
 
-               
-
                 <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
@@ -512,7 +510,10 @@ export default function DealerDashboard() {
                                   car.status
                                 )}`}
                               >
-                                {car.status}
+                                {car.status && car.status.length > 0
+                                  ? car.status.charAt(0).toUpperCase() +
+                                    car.status.slice(1)
+                                  : car.status}
                               </span>
                             </td>
                             <td className="py-3 text-right text-white">

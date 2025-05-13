@@ -1,13 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  Suspense,
+} from "react";
 import Navbar from "@/components/home/Navbar";
 import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import AutoClipCard from "@/components/autoclips/AutoClipCard";
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface AutoClip {
   id: number;
@@ -58,7 +64,7 @@ const AutoClipsContent = () => {
 
   const supabase = createClient();
 
-  // Fetch auto clips data
+  // Fetch AutoClips data
   const fetchClips = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -72,64 +78,77 @@ const AutoClipsContent = () => {
 
       if (clipsData) {
         // Fetch additional data for each clip (dealership and car info)
-        const enrichedClips = await Promise.all(clipsData.map(async (clip) => {
-          // Get dealership info
-          const { data: dealershipData } = await supabase
-            .from("dealerships")
-            .select("name, logo")
-            .eq("id", clip.dealership_id)
-            .single();
+        const enrichedClips = await Promise.all(
+          clipsData.map(async (clip) => {
+            // Get dealership info
+            const { data: dealershipData } = await supabase
+              .from("dealerships")
+              .select("name, logo")
+              .eq("id", clip.dealership_id)
+              .single();
 
-          // Get car info
-          const { data: carData } = await supabase
-            .from("cars")
-            .select("make, model, year, price")
-            .eq("id", clip.car_id)
-            .single();
+            // Get car info
+            const { data: carData } = await supabase
+              .from("cars")
+              .select("make, model, year, price")
+              .eq("id", clip.car_id)
+              .single();
 
-          // Safely parse liked_users and viewed_users arrays
-          let likedUsers: string[] = [];
-          let viewedUsers: string[] = [];
+            // Safely parse liked_users and viewed_users arrays
+            let likedUsers: string[] = [];
+            let viewedUsers: string[] = [];
 
-          try {
-            if (Array.isArray(clip.liked_users)) {
-              likedUsers = clip.liked_users;
-            } else if (typeof clip.liked_users === 'string' && clip.liked_users.trim() !== '') {
-              likedUsers = JSON.parse(clip.liked_users);
+            try {
+              if (Array.isArray(clip.liked_users)) {
+                likedUsers = clip.liked_users;
+              } else if (
+                typeof clip.liked_users === "string" &&
+                clip.liked_users.trim() !== ""
+              ) {
+                likedUsers = JSON.parse(clip.liked_users);
+              }
+            } catch (e) {
+              console.warn(`Error parsing liked_users for clip ${clip.id}:`, e);
             }
-          } catch (e) {
-            console.warn(`Error parsing liked_users for clip ${clip.id}:`, e);
-          }
 
-          try {
-            if (Array.isArray(clip.viewed_users)) {
-              viewedUsers = clip.viewed_users;
-            } else if (typeof clip.viewed_users === 'string' && clip.viewed_users.trim() !== '') {
-              viewedUsers = JSON.parse(clip.viewed_users);
+            try {
+              if (Array.isArray(clip.viewed_users)) {
+                viewedUsers = clip.viewed_users;
+              } else if (
+                typeof clip.viewed_users === "string" &&
+                clip.viewed_users.trim() !== ""
+              ) {
+                viewedUsers = JSON.parse(clip.viewed_users);
+              }
+            } catch (e) {
+              console.warn(
+                `Error parsing viewed_users for clip ${clip.id}:`,
+                e
+              );
             }
-          } catch (e) {
-            console.warn(`Error parsing viewed_users for clip ${clip.id}:`, e);
-          }
 
-          return {
-            ...clip,
-            dealership_name: dealershipData?.name || "Unknown Dealership",
-            dealership_logo: dealershipData?.logo,
-            car_make: carData?.make || "Unknown",
-            car_model: carData?.model || "Model",
-            car_year: carData?.year || null,
-            car_price: carData?.price || null,
-            liked_users: likedUsers,
-            viewed_users: viewedUsers,
-          };
-        }));
+            return {
+              ...clip,
+              dealership_name: dealershipData?.name || "Unknown Dealership",
+              dealership_logo: dealershipData?.logo,
+              car_make: carData?.make || "Unknown",
+              car_model: carData?.model || "Model",
+              car_year: carData?.year || null,
+              car_price: carData?.price || null,
+              liked_users: likedUsers,
+              viewed_users: viewedUsers,
+            };
+          })
+        );
 
         setClips(enrichedClips);
 
         // Check if there's a specific clip ID in the URL
-        const clipId = searchParams.get('clip');
+        const clipId = searchParams.get("clip");
         if (clipId) {
-          const clipIndex = enrichedClips.findIndex(clip => clip.id.toString() === clipId);
+          const clipIndex = enrichedClips.findIndex(
+            (clip) => clip.id.toString() === clipId
+          );
           if (clipIndex !== -1) {
             setCurrentClipIndex(clipIndex);
 
@@ -137,8 +156,8 @@ const AutoClipsContent = () => {
             setTimeout(() => {
               if (clipContainerRefs.current[clipIndex]) {
                 clipContainerRefs.current[clipIndex]?.scrollIntoView({
-                  behavior: 'auto',
-                  block: 'center'
+                  behavior: "auto",
+                  block: "center",
                 });
               }
             }, 100);
@@ -157,54 +176,60 @@ const AutoClipsContent = () => {
   }, [fetchClips]);
 
   // Track view count for a clip using RPC
-  const trackClipView = useCallback(async (clipId: number) => {
-    // Skip if clip has already been viewed in this session
-    if (viewedClips.current.has(clipId)) return;
+  const trackClipView = useCallback(
+    async (clipId: number) => {
+      // Skip if clip has already been viewed in this session
+      if (viewedClips.current.has(clipId)) return;
 
-    // Get appropriate user ID
-    const userId = isGuest
-      ? `guest_${guestId}`
-      : (user?.id || null);
+      // Get appropriate user ID
+      const userId = isGuest ? `guest_${guestId}` : user?.id || null;
 
-    // Skip if no user ID is available
-    if (!userId) return;
+      // Skip if no user ID is available
+      if (!userId) return;
 
-    try {
-      // Call the RPC function
-      const { error } = await supabase.rpc('track_autoclip_view', {
-        clip_id: clipId,
-        user_id: userId
-      });
+      try {
+        // Call the RPC function
+        const { error } = await supabase.rpc("track_autoclip_view", {
+          clip_id: clipId,
+          user_id: userId,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Mark clip as viewed in this session
-      viewedClips.current.add(clipId);
+        // Mark clip as viewed in this session
+        viewedClips.current.add(clipId);
 
-      // Update the view count in the state
-      setClips(prev =>
-        prev.map(clip =>
-          clip.id === clipId
-            ? { ...clip, views: (clip.views || 0) + 1 }
-            : clip
-        )
-      );
-    } catch (err) {
-      console.error('Error tracking view:', err);
-    }
-  }, [isGuest, guestId, user, supabase]);
+        // Update the view count in the state
+        setClips((prev) =>
+          prev.map((clip) =>
+            clip.id === clipId
+              ? { ...clip, views: (clip.views || 0) + 1 }
+              : clip
+          )
+        );
+      } catch (err) {
+        console.error("Error tracking view:", err);
+      }
+    },
+    [isGuest, guestId, user, supabase]
+  );
 
   // Set up Intersection Observer to detect which clip is in view
   useEffect(() => {
     // Initialize an array of refs for each clip
-    clipContainerRefs.current = clipContainerRefs.current.slice(0, clips.length);
+    clipContainerRefs.current = clipContainerRefs.current.slice(
+      0,
+      clips.length
+    );
 
     // Set up intersection observer
     observer.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const index = parseInt(entry.target.getAttribute('data-index') || '0');
+            const index = parseInt(
+              entry.target.getAttribute("data-index") || "0"
+            );
             setCurrentClipIndex(index);
 
             // Track view when clip becomes visible
@@ -232,79 +257,83 @@ const AutoClipsContent = () => {
     };
   }, [clips.length, trackClipView]);
 
-
-
   // State for auth modal
   const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
 
   // Handle like/unlike clip using RPC
-  const toggleLike = useCallback(async (clipId: number) => {
-    // Check if user is signed in (not a guest)
-    if (isGuest || !isSignedIn) {
-      // Show auth modal instead of liking
-      setIsAuthModalVisible(true);
-      return;
-    }
+  const toggleLike = useCallback(
+    async (clipId: number) => {
+      // Check if user is signed in (not a guest)
+      if (isGuest || !isSignedIn) {
+        // Show auth modal instead of liking
+        setIsAuthModalVisible(true);
+        return;
+      }
 
-    // Get user ID for authenticated user
-    const userId = user?.id;
+      // Get user ID for authenticated user
+      const userId = user?.id;
 
-    // Skip if no user ID is available
-    if (!userId) return;
+      // Skip if no user ID is available
+      if (!userId) return;
 
-    try {
-      // Call the RPC function that handles the toggle
-      const { data: newLikesCount, error } = await supabase.rpc(
-        'toggle_autoclip_like',
-        {
-          clip_id: clipId,
-          user_id: userId
-        }
-      );
-
-      if (error) throw error;
-
-      // Update the clip in state with new likes count and liked_users
-      setClips(prev =>
-        prev.map(clip => {
-          if (clip.id === clipId) {
-            const isCurrentlyLiked = clip.liked_users?.includes(userId);
-            const updatedLikedUsers = isCurrentlyLiked
-              ? (clip.liked_users || []).filter(id => id !== userId)
-              : [...(clip.liked_users || []), userId];
-
-            return {
-              ...clip,
-              likes: newLikesCount as number,
-              liked_users: updatedLikedUsers
-            };
+      try {
+        // Call the RPC function that handles the toggle
+        const { data: newLikesCount, error } = await supabase.rpc(
+          "toggle_autoclip_like",
+          {
+            clip_id: clipId,
+            user_id: userId,
           }
-          return clip;
-        })
-      );
-    } catch (err) {
-      console.error('Error toggling like:', err);
-    }
-  }, [isGuest, isSignedIn, user, supabase]);
+        );
+
+        if (error) throw error;
+
+        // Update the clip in state with new likes count and liked_users
+        setClips((prev) =>
+          prev.map((clip) => {
+            if (clip.id === clipId) {
+              const isCurrentlyLiked = clip.liked_users?.includes(userId);
+              const updatedLikedUsers = isCurrentlyLiked
+                ? (clip.liked_users || []).filter((id) => id !== userId)
+                : [...(clip.liked_users || []), userId];
+
+              return {
+                ...clip,
+                likes: newLikesCount as number,
+                liked_users: updatedLikedUsers,
+              };
+            }
+            return clip;
+          })
+        );
+      } catch (err) {
+        console.error("Error toggling like:", err);
+      }
+    },
+    [isGuest, isSignedIn, user, supabase]
+  );
 
   // Check if a clip is liked by the current user
-  const isClipLiked = useCallback((clip: AutoClip) => {
-    // Guests can't like clips, so always return false for guests
-    if (isGuest || !isSignedIn) return false;
+  const isClipLiked = useCallback(
+    (clip: AutoClip) => {
+      // Guests can't like clips, so always return false for guests
+      if (isGuest || !isSignedIn) return false;
 
-    const userId = user?.id;
+      const userId = user?.id;
 
-    if (!userId || !clip.liked_users) return false;
-    return clip.liked_users.includes(userId);
-  }, [isGuest, isSignedIn, user]);
+      if (!userId || !clip.liked_users) return false;
+      return clip.liked_users.includes(userId);
+    },
+    [isGuest, isSignedIn, user]
+  );
 
   // Navigate to previous clip
   const goToPrevClip = () => {
     if (currentClipIndex > 0) {
       setCurrentClipIndex(currentClipIndex - 1);
       clipContainerRefs.current[currentClipIndex - 1]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+        behavior: "smooth",
+        block: "center",
       });
     }
   };
@@ -314,8 +343,8 @@ const AutoClipsContent = () => {
     if (currentClipIndex < clips.length - 1) {
       setCurrentClipIndex(currentClipIndex + 1);
       clipContainerRefs.current[currentClipIndex + 1]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+        behavior: "smooth",
+        block: "center",
       });
     }
   };
@@ -326,7 +355,7 @@ const AutoClipsContent = () => {
   useEffect(() => {
     // Function to get actual navbar height
     const getNavbarHeight = () => {
-      const navbar = document.querySelector('nav');
+      const navbar = document.querySelector("nav");
       if (navbar) {
         setNavbarHeight(navbar.offsetHeight);
       }
@@ -336,8 +365,8 @@ const AutoClipsContent = () => {
     getNavbarHeight();
 
     // Update on window resize
-    window.addEventListener('resize', getNavbarHeight);
-    return () => window.removeEventListener('resize', getNavbarHeight);
+    window.addEventListener("resize", getNavbarHeight);
+    return () => window.removeEventListener("resize", getNavbarHeight);
   }, []);
 
   // Navigation for sign in functionality
@@ -347,7 +376,7 @@ const AutoClipsContent = () => {
     setIsAuthModalVisible(false);
 
     // Navigate to sign in page
-    router.push('/auth/signin');
+    router.push("/auth/signin");
   }, [router]);
 
   // Handler for closing the modal
@@ -361,7 +390,10 @@ const AutoClipsContent = () => {
       <Navbar />
 
       {/* Main Content - Adjusted to take full height minus navbar */}
-      <div className="flex-1 flex flex-col items-center" style={{ height: `calc(100vh - ${navbarHeight}px)` }}>
+      <div
+        className="flex-1 flex flex-col items-center"
+        style={{ height: `calc(100vh - ${navbarHeight}px)` }}
+      >
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
@@ -375,7 +407,9 @@ const AutoClipsContent = () => {
                 {clips.map((clip, index) => (
                   <div
                     key={clip.id}
-                    ref={(el) => { clipContainerRefs.current[index] = el; }}
+                    ref={(el) => {
+                      clipContainerRefs.current[index] = el;
+                    }}
                     data-index={index}
                     className="w-full h-full snap-start snap-always flex items-center justify-center overflow-hidden bg-black"
                   >
@@ -394,9 +428,12 @@ const AutoClipsContent = () => {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center p-8 bg-gray-900 rounded-lg max-w-md">
-              <h3 className="text-white text-xl font-bold mb-2">No clips found</h3>
+              <h3 className="text-white text-xl font-bold mb-2">
+                No clips found
+              </h3>
               <p className="text-gray-400 mb-4">
-                There are no auto clips available at the moment. Check back later!
+                There are no AutoClips available at the moment. Check back
+                later!
               </p>
             </div>
           </div>
@@ -409,13 +446,31 @@ const AutoClipsContent = () => {
               <div className="flex flex-col items-center text-center">
                 {/* Lock Icon */}
                 <div className="bg-accent/10 p-4 rounded-full mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-10 w-10 text-accent"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect
+                      x="3"
+                      y="11"
+                      width="18"
+                      height="11"
+                      rx="2"
+                      ry="2"
+                    ></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-2">Sign In Required</h3>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Sign In Required
+                </h3>
                 <p className="text-gray-400 mb-6">
                   Please sign in to like autoclips and track your favorites.
                 </p>
@@ -443,15 +498,16 @@ const AutoClipsContent = () => {
       {/* Hidden scrollbar styles */}
       <style jsx global>{`
         .hide-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
+          -ms-overflow-style: none; /* IE and Edge */
+          scrollbar-width: none; /* Firefox */
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none; /* Chrome, Safari, Opera */
         }
 
         /* Ensure body and html take full height */
-        html, body {
+        html,
+        body {
           height: 100%;
           margin: 0;
           padding: 0;
@@ -460,8 +516,14 @@ const AutoClipsContent = () => {
 
         /* Animation for modal fade-in */
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         .animate-fade-in {
           animation: fadeIn 0.3s ease-out forwards;

@@ -15,7 +15,7 @@ import {
   XMarkIcon,
   BuildingStorefrontIcon,
   CurrencyDollarIcon,
-  DocumentCurrencyDollarIcon
+  DocumentCurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -24,7 +24,7 @@ import {
   UserIcon as UserIconSolid,
   ChartBarIcon as ChartBarIconSolid,
   Cog6ToothIcon as Cog6ToothIconSolid,
-  BuildingStorefrontIcon as BuildingStorefrontIconSolid
+  BuildingStorefrontIcon as BuildingStorefrontIconSolid,
 } from "@heroicons/react/24/solid";
 import { useAuth } from "@/utils/AuthContext";
 
@@ -40,37 +40,37 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     href: "/dealer",
     icon: HomeIcon,
-    iconActive: HomeIconSolid
+    iconActive: HomeIconSolid,
   },
   {
     name: "Inventory",
     href: "/dealer/inventory",
     icon: ShoppingBagIcon,
-    iconActive: ShoppingBagIconSolid
+    iconActive: ShoppingBagIconSolid,
   },
   {
     name: "Sales History",
     href: "/dealer/saleshistory",
     icon: CurrencyDollarIcon,
-    iconActive: DocumentCurrencyDollarIcon
+    iconActive: DocumentCurrencyDollarIcon,
   },
   {
-    name: "Auto Clips",
+    name: "AutoClips",
     href: "/dealer/autoclips",
     icon: FilmIcon,
-    iconActive: FilmIconSolid
+    iconActive: FilmIconSolid,
   },
   {
     name: "Analytics",
     href: "/dealer/analytics",
     icon: ChartBarIcon,
-    iconActive: ChartBarIconSolid
+    iconActive: ChartBarIconSolid,
   },
   {
     name: "Profile",
     href: "/dealer/profile",
     icon: UserIcon,
-    iconActive: UserIconSolid
+    iconActive: UserIconSolid,
   },
 ];
 
@@ -96,29 +96,26 @@ const DealerNavbar: React.FC = () => {
 
   // Check if a nav item is active
   const isActive = (href: string) => {
-    if (href === '/dealer') {
-      return pathname === '/dealer';
+    if (href === "/dealer") {
+      return pathname === "/dealer";
     }
     return pathname.startsWith(href);
   };
 
   // Handle logout
   const handleLogout = async () => {
-   try {
-
-
+    try {
       // Use enhanced signOut with options
       await signOut({
         forceRedirect: false,
-        redirectUrl: '/',
-        clearAllData: true
+        redirectUrl: "/",
+        clearAllData: true,
       });
       // No manual navigation needed - handled by signOut function
+    } catch (error) {
+      console.error("Error during sign-out:", error);
+      // Error is captured in signOutError state from AuthContext
     }
-   catch (error) {
-    console.error('Error during sign-out:', error);
-    // Error is captured in signOutError state from AuthContext
-  }
   };
 
   return (
@@ -129,8 +126,14 @@ const DealerNavbar: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center justify-center h-16 border-b border-gray-800">
             <Link href="/dealer" className="flex items-center">
-              <img src="/logo.png" alt="Fleet Dealer Portal" className="h-8 w-auto" />
-              <span className="ml-2 text-xl font-bold text-white">Dealer Portal</span>
+              <img
+                src="/logo.png"
+                alt="Fleet Dealer Portal"
+                className="h-8 w-auto"
+              />
+              <span className="ml-2 text-xl font-bold text-white">
+                Dealer Portal
+              </span>
             </Link>
           </div>
 
@@ -175,7 +178,7 @@ const DealerNavbar: React.FC = () => {
       {/* Mobile Top Navigation */}
       <header
         className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 transition-all duration-200 ${
-          scrolled ? 'shadow-md' : ''
+          scrolled ? "shadow-md" : ""
         }`}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">

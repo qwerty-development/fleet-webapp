@@ -1150,7 +1150,7 @@ export default function DealerAutoClipsPage() {
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-white mb-2">Auto Clips</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">AutoClips</h1>
             <button
               onClick={openCreateModal}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
@@ -1168,10 +1168,10 @@ export default function DealerAutoClipsPage() {
             <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-8 text-center">
               <VideoCameraIcon className="h-12 w-12 text-gray-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-white mb-2">
-                No Auto Clips Found
+                No AutoClips Found
               </h3>
               <p className="text-gray-400 mb-6">
-                You haven't created any auto clips yet. Create video content to
+                You haven't created any AutoClips yet. Create video content to
                 showcase your vehicles.
               </p>
               <button
@@ -1209,7 +1209,8 @@ export default function DealerAutoClipsPage() {
                             : "bg-amber-500/80"
                         }`}
                       >
-                        {clip.status.charAt(0).toUpperCase() + clip.status.slice(1)}
+                        {clip.status.charAt(0).toUpperCase() +
+                          clip.status.slice(1)}
                       </div>
                       <div
                         className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity"
