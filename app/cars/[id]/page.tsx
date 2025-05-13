@@ -718,7 +718,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               {car.images.map((img, index) => (
                 <div
                   key={index}
-                  className="w-screen flex-shrink-0 h-full snap-center relative"
+                  className=" flex-shrink-0 h-full snap-center relative"
                 >
                   <img
                     src={img}
@@ -732,7 +732,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
           {/* Thumbnail gallery at the bottom */}
           {car.images.length > 1 && (
-            <div className="flex bg-gray-900 md:justify-center ">
+            <div className="hidden bg-gray-900 md:justify-center ">
               <div
                 ref={thumbnailsRef}
                 className="flex  gap-2 overflow-x-auto py-2 pl-1  scrollbar-hide"
@@ -805,7 +805,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           </div>
 
           {/* Image counter */}
-          <div className="absolute bottom-24 right-5 bg-black/40 px-4 py-2 rounded-full text-sm">
+          <div className="absolute hidden bottom-24 right-5 bg-black/40 px-4 py-2 rounded-full text-sm">
             {activeImageIndex + 1} / {car.images.length}
           </div>
         </div>
@@ -816,13 +816,13 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
       )}
 
       {/* Price Badge - Positioned to overlap the image and content */}
-      <div className="relative z-10 flex px-4 -top-24">
-        <div className="bg-accent px-6 py-1 rounded-full shadow-lg inline-block mx-auto">
-          <span className="text-white text-xl font-bold">
-            ${car.price.toLocaleString()}
-          </span>
-        </div>
-      </div>
+      <div className="relative z-10 flex px-4 transform translate-y-[-50%]">
+  <div className="bg-accent px-4 py-2 rounded-full shadow-lg inline-block mx-auto">
+    <span className="text-white text-xl font-bold">
+      ${car.price.toLocaleString()}
+    </span>
+  </div>
+</div>
 
       {/* Car Information Section */}
       <div className="flex justify-center">
