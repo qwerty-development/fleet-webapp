@@ -921,7 +921,15 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     key={index}
                     className="bg-gray-800 text-gray-300  text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700"
                   >
-                    {feature}
+                    {feature
+                      .replace(/_/g, " ")
+                      .split(" ")
+                      .map(
+                        (word) =>
+                          word.charAt(0).toUpperCase() +
+                          word.slice(1).toLowerCase()
+                      )
+                      .join(" ")}
                   </span>
                 ))}
               </div>
