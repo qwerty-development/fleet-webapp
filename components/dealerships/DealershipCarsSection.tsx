@@ -98,16 +98,16 @@ const DealershipCarsSection: React.FC<DealershipCarsSectionProps> = ({ dealershi
 
   return (
     <section className="mt-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {cars.map((car) => (
           <Link key={car.id} href={`/cars/${car.id}`}>
             <div className="bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer h-full">
               {/* Car Image */}
-              <div className="relative h-40">
+              <div className="relative">
                 <img
                   src={car.images && car.images.length ? car.images[0] : '/placeholder-car.jpg'}
                   alt={`${car.make} ${car.model}`}
-                  className="object-cover w-full h-full"
+                  className="object-cover w-full aspect-square"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = '/placeholder-car.jpg';
                   }}
