@@ -316,7 +316,7 @@ export default function DealerDashboard() {
                             : "text-gray-400"
                         }`}
                       >
-                        {stats.inventory.available} available
+                        {stats.inventory.available} Available
                       </span>
                     </div>
                   </div>
