@@ -49,16 +49,16 @@ const navItems: NavItem[] = [
     iconActive: ShoppingBagIconSolid
   },
   {
+    name: "Sales History",
+    href: "/dealer/saleshistory",
+    icon: CurrencyDollarIcon,
+    iconActive: DocumentCurrencyDollarIcon
+  },
+  {
     name: "Auto Clips",
     href: "/dealer/autoclips",
     icon: FilmIcon,
     iconActive: FilmIconSolid
-  },
-  {
-    name: "Profile",
-    href: "/dealer/profile",
-    icon: UserIcon,
-    iconActive: UserIconSolid
   },
   {
     name: "Analytics",
@@ -67,10 +67,10 @@ const navItems: NavItem[] = [
     iconActive: ChartBarIconSolid
   },
   {
-    name: "Sales History",
-    href: "/dealer/saleshistory",
-    icon: CurrencyDollarIcon,
-    iconActive: DocumentCurrencyDollarIcon
+    name: "Profile",
+    href: "/dealer/profile",
+    icon: UserIcon,
+    iconActive: UserIconSolid
   },
 ];
 

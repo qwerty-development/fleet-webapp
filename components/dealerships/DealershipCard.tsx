@@ -3,7 +3,11 @@
 
 import React from "react";
 import Link from "next/link";
-import { PhoneIcon, ShareIcon } from "@heroicons/react/24/outline";
+import {
+  PhoneIcon,
+  ShareIcon,
+  UserCircleIcon,
+} from "@heroicons/react/24/outline";
 
 export interface Dealership {
   id: number | string;
@@ -57,17 +61,21 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
       {/* Main card content */}
       <Link href={`/dealerships/${dealershipId}`} className="block">
         <div className="flex items-center">
-          {dealership.logo && (
-            <div className="flex-shrink-0">
+          <div className="flex-shrink-0">
+            {dealership.logo ? (
               <div
                 className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-cover bg-center"
                 style={{ backgroundImage: `url(${dealership.logo})` }}
                 role="img"
                 aria-label={`${dealership.name} Logo`}
               />
-            </div>
-          )}
-          <div className={dealership.logo ? "ml-4" : ""}>
+            ) : (
+              <div className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-gray-700 flex items-center justify-center">
+                <UserCircleIcon className="h-12 w-12 sm:h-10 sm:w-10 md:h-12 md:w-12 text-gray-400" />
+              </div>
+            )}
+          </div>
+          <div className="ml-4">
             <h3 className="text-white font-semibold text-lg sm:text-base">
               {dealership.name}
             </h3>

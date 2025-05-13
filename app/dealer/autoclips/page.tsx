@@ -1203,13 +1203,13 @@ export default function DealerAutoClipsPage() {
                         </div>
                       )}
                       <div
-                        className={`absolute top-2 right-2 px-2 py-1 rounded text-xs text-white ${
+                        className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs text-white ${
                           clip.status === "published"
                             ? "bg-emerald-500/80"
                             : "bg-amber-500/80"
                         }`}
                       >
-                        {clip.status}
+                        {clip.status.charAt(0).toUpperCase() + clip.status.slice(1)}
                       </div>
                       <div
                         className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity"

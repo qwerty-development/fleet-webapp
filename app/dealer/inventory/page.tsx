@@ -25,9 +25,9 @@ import {
 const ITEMS_PER_PAGE = 12;
 const STATUS_OPTIONS = [
   { label: "All", value: "" },
-  { label: "Available", value: "available" },
-  { label: "Pending", value: "pending" },
-  { label: "Sold", value: "sold" },
+  { label: "Available", value: "Available" },
+  { label: "Pending", value: "Pending" },
+  { label: "Sold", value: "Sold" },
 ];
 const CONDITION_OPTIONS = [
   { label: "All", value: "" },
@@ -731,7 +731,7 @@ export default function DealerInventoryPage() {
                         car.status
                       )}`}
                     >
-                      {car.status}
+                      {car.status.charAt(0).toUpperCase() + car.status.slice(1)}
                     </div>
                   </div>
 
