@@ -14,7 +14,7 @@ import { createClient } from "@/utils/supabase/client";
 import { FilterState, Car, Brand } from "@/types";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";       
 
 // Define constants for filter options to avoid string literals
 export const SORT_OPTIONS = {
@@ -85,6 +85,10 @@ export default function HomePage() {
         newFilters.searchQuery = query;
         setSearchQuery(query);
         hasSearchParams = true;
+
+
+
+        
       }
 
       // Extract categories
