@@ -23,6 +23,8 @@ import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { FaWhatsapp } from "react-icons/fa";
 
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+
 // Updated Car interface to match your global types
 export interface Car {
   id: string; // String instead of number
@@ -553,6 +555,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
+
   // Set the active image directly by clicking a thumbnail
   const setActiveImage = (index: number) => {
     setActiveImageIndex(index);
@@ -679,6 +682,11 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const dealershipLongitude =
     car.dealerships?.longitude || car.dealership_longitude;
   const dealershipPhone = car.dealerships?.phone || car.dealership_phone;
+
+  const googleMapsUrl = dealershipLatitude && dealershipLongitude
+  ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${dealershipLatitude},${dealershipLongitude}`
+  : `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(dealershipLocation || dealershipName)}`;
+
 
   return (
     <div className="min-h-screen pb-20  bg-gray-900 text-white relative">
@@ -1139,13 +1147,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             {dealershipLatitude && dealershipLongitude && (
               <div className="mt-4">
                 <iframe
-                  width="100%"
-                  height="250"
-                  frameBorder="0"
-                  className="rounded-lg"
-                  src={`https://www.google.com/maps?q=${dealershipLatitude},${dealershipLongitude}&hl=es;z=14&output=embed`}
+                  width='100%'
+                  height='150%'
+                  style={{ border: 0, borderRadius: '4px' }}
+                  loading='lazy'
                   allowFullScreen
-                ></iframe>
+                  src={googleMapsUrl}></iframe>
               </div>
             )}
           </div>
