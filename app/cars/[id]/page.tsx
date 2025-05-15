@@ -817,12 +817,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
       {/* Price Badge - Positioned to overlap the image and content */}
       <div className="relative z-10 flex px-4 transform translate-y-[-50%]">
-  <div className="bg-accent px-4 py-2 rounded-full shadow-lg inline-block mx-auto">
-    <span className="text-white text-xl font-bold">
-      ${car.price.toLocaleString()}
-    </span>
-  </div>
-</div>
+        <div className="bg-accent px-4 py-2 rounded-full shadow-lg inline-block mx-auto">
+          <span className="text-white text-xl font-bold">
+            ${car.price.toLocaleString()}
+          </span>
+        </div>
+      </div>
 
       {/* Car Information Section */}
       <div className="flex justify-center">
@@ -913,26 +913,178 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
           {/* Features */}
           {car.features && car.features.length > 0 && (
-            <div className=" p-4">
+            <div className="p-4">
               <h2 className="text-xl font-bold mb-5">Features</h2>
-              <div className="flex flex-wrap gap-2 ">
-                {car.features.map((feature, index) => (
-                  <span
-                    key={index}
-                    className="bg-gray-800 text-gray-300  text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700"
-                  >
-                    {feature
-                      .replace(/_/g, " ")
-                      .split(" ")
-                      .map(
-                        (word) =>
-                          word.charAt(0).toUpperCase() +
-                          word.slice(1).toLowerCase()
-                      )
-                      .join(" ")}
-                  </span>
-                ))}
-              </div>
+
+              {/* Categorize features */}
+              {(() => {
+                // Define categories and related keywords
+                const categories: Record<string, string[]> = {
+                  safety: [
+                    "safety",
+                    "airbag",
+                    "assist",
+                    "brake",
+                    "control",
+                    "warning",
+                    "alert",
+                    "security",
+                  ],
+                  comfort: [
+                    "comfort",
+                    "seat",
+                    "climate",
+                    "air",
+                    "conditioning",
+                    "heated",
+                    "ventilated",
+                    "leather",
+                  ],
+                  technology: [
+                    "bluetooth",
+                    "connectivity",
+                    "navigation",
+                    "audio",
+                    "sound",
+                    "speaker",
+                    "system",
+                    "smart",
+                    "tech",
+                  ],
+                  exterior: [
+                    "light",
+                    "wheel",
+                    "mirror",
+                    "sensor",
+                    "camera",
+                    "exterior",
+                    "roof",
+                    "tint",
+                  ],
+                  interior: [
+                    "interior",
+                    "cabin",
+                    "storage",
+                    "cargo",
+                    "trunk",
+                    "ambient",
+                    "lighting",
+                  ],
+                  performance: [
+                    "engine",
+                    "power",
+                    "drive",
+                    "sport",
+                    "eco",
+                    "mode",
+                    "transmission",
+                    "suspension",
+                  ],
+                };
+
+                // Sort features into categories
+                const categorizedFeatures: Record<string, string[]> = {};
+                const uncategorizedFeatures: string[] = [];
+
+                // Initialize categories
+                Object.keys(categories).forEach((cat) => {
+                  categorizedFeatures[cat] = [];
+                });
+
+                // Categorize each feature
+                car.features?.forEach((feature) => {
+                  if (typeof feature !== "string") return;
+
+                  const lowerFeature = feature.toLowerCase();
+                  let assigned = false;
+
+                  // Check each category for keyword matches
+                  for (const [category, keywords] of Object.entries(
+                    categories
+                  )) {
+                    if (
+                      keywords.some((keyword) => lowerFeature.includes(keyword))
+                    ) {
+                      categorizedFeatures[category].push(feature);
+                      assigned = true;
+                      break;
+                    }
+                  }
+
+                  // If no category matched, add to uncategorized
+                  if (!assigned) {
+                    uncategorizedFeatures.push(feature);
+                  }
+                });
+
+                // Display categorized features
+                return (
+                  <div className="space-y-6">
+                    {Object.entries(categorizedFeatures).map(
+                      ([category, features]) => {
+                        if (features.length === 0) return null;
+
+                        return (
+                          <div key={category} className="mb-4">
+                            <h3 className="text-base font-semibold text-white/90 capitalize mb-2">
+                              {category}
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {features.map(
+                                (feature: string, index: number) => (
+                                  <span
+                                    key={index}
+                                    className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700"
+                                  >
+                                    {feature
+                                      .replace(/_/g, " ")
+                                      .split(" ")
+                                      .map(
+                                        (word: string) =>
+                                          word.charAt(0).toUpperCase() +
+                                          word.slice(1).toLowerCase()
+                                      )
+                                      .join(" ")}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+
+                    {/* Display uncategorized features if any */}
+                    {uncategorizedFeatures.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold  mb-2">
+                          Other Features
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {uncategorizedFeatures.map(
+                            (feature: string, index: number) => (
+                              <span
+                                key={index}
+                                className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700"
+                              >
+                                {feature
+                                  .replace(/_/g, " ")
+                                  .split(" ")
+                                  .map(
+                                    (word: string) =>
+                                      word.charAt(0).toUpperCase() +
+                                      word.slice(1).toLowerCase()
+                                  )
+                                  .join(" ")}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
