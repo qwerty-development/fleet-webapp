@@ -188,7 +188,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                 className={`p-3 rounded-lg transition-all duration-300 ${
                   selectedCategories.includes(category.id)
                     ? "bg-accent/20 ring-2 ring-accent"
-                    : "bg-gray-800 hover:bg-gray-700"
+                    : "bg-gray-100 hover:bg-gray-200"
                 }`}
               >
                 <div className="w-20 h-20 relative">{category.icon}</div>
