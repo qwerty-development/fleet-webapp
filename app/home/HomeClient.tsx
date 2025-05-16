@@ -14,7 +14,7 @@ import { createClient } from "@/utils/supabase/client";
 import { FilterState, Car, Brand } from "@/types";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
-import { useRouter, useSearchParams } from "next/navigation";       
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Define constants for filter options to avoid string literals
 export const SORT_OPTIONS = {
@@ -24,12 +24,12 @@ export const SORT_OPTIONS = {
   YEAR_DESC: "year_desc",
   MILEAGE_ASC: "mileage_asc",
   MILEAGE_DESC: "mileage_desc",
-  VIEWS_DESC: "views_desc"
+  VIEWS_DESC: "views_desc",
 } as const;
 
 export const SPECIAL_FILTERS = {
   NEW_ARRIVALS: "newArrivals",
-  MOST_POPULAR: "mostPopular"
+  MOST_POPULAR: "mostPopular",
 } as const;
 
 const DEFAULT_FILTERS: FilterState = {
@@ -56,6 +56,9 @@ export default function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Add a loading state for role determination
+  const [isRoleLoading, setIsRoleLoading] = useState(false);
+
   // Global UI states
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState<boolean>(false);
@@ -80,62 +83,58 @@ export default function HomePage() {
       let hasSearchParams = false;
 
       // Extract search query
-      const query = searchParams.get('query');
+      const query = searchParams.get("query");
       if (query) {
         newFilters.searchQuery = query;
         setSearchQuery(query);
         hasSearchParams = true;
-
-
-
-        
       }
 
       // Extract categories
-      const categories = searchParams.get('categories');
+      const categories = searchParams.get("categories");
       if (categories) {
-        newFilters.categories = categories.split(',');
+        newFilters.categories = categories.split(",");
         hasSearchParams = true;
       }
 
       // Extract price range
-      const minPrice = searchParams.get('minPrice');
-      const maxPrice = searchParams.get('maxPrice');
+      const minPrice = searchParams.get("minPrice");
+      const maxPrice = searchParams.get("maxPrice");
       if (minPrice || maxPrice) {
         newFilters.priceRange = [
           minPrice ? parseInt(minPrice) : 0,
-          maxPrice ? parseInt(maxPrice) : 1000000
+          maxPrice ? parseInt(maxPrice) : 1000000,
         ];
         hasSearchParams = true;
       }
 
       // Extract year range
-      const minYear = searchParams.get('minYear');
-      const maxYear = searchParams.get('maxYear');
+      const minYear = searchParams.get("minYear");
+      const maxYear = searchParams.get("maxYear");
       if (minYear || maxYear) {
         newFilters.yearRange = [
           minYear ? parseInt(minYear) : 1900,
-          maxYear ? parseInt(maxYear) : new Date().getFullYear()
+          maxYear ? parseInt(maxYear) : new Date().getFullYear(),
         ];
         hasSearchParams = true;
       }
 
       // Extract transmission
-      const transmission = searchParams.get('transmission');
+      const transmission = searchParams.get("transmission");
       if (transmission) {
-        newFilters.transmission = transmission.split(',');
+        newFilters.transmission = transmission.split(",");
         hasSearchParams = true;
       }
 
       // Extract drivetrain
-      const drivetrain = searchParams.get('drivetrain');
+      const drivetrain = searchParams.get("drivetrain");
       if (drivetrain) {
-        newFilters.drivetrain = drivetrain.split(',');
+        newFilters.drivetrain = drivetrain.split(",");
         hasSearchParams = true;
       }
 
       // Extract engine types if available in your data model
-      const engineTypes = searchParams.get('engineTypes');
+      const engineTypes = searchParams.get("engineTypes");
       if (engineTypes) {
         // Depending on your data model, map these to the appropriate filter
         // This might be categories, or a custom field
@@ -143,28 +142,28 @@ export default function HomePage() {
       }
 
       // Extract fuel types if available in your data model
-      const fuelTypes = searchParams.get('fuelTypes');
+      const fuelTypes = searchParams.get("fuelTypes");
       if (fuelTypes) {
         // Depending on your data model, map these to the appropriate filter
         hasSearchParams = true;
       }
 
       // Extract make (brand)
-      const make = searchParams.get('make');
+      const make = searchParams.get("make");
       if (make) {
-        newFilters.make = make.split(',');
+        newFilters.make = make.split(",");
         hasSearchParams = true;
       }
 
       // Extract special filter
-      const specialFilter = searchParams.get('specialFilter');
+      const specialFilter = searchParams.get("specialFilter");
       if (specialFilter) {
         newFilters.specialFilter = specialFilter;
         hasSearchParams = true;
       }
 
       // Extract sort option
-      const sortBy = searchParams.get('sortBy');
+      const sortBy = searchParams.get("sortBy");
       if (sortBy) {
         newFilters.sortBy = sortBy;
         hasSearchParams = true;
@@ -210,25 +209,23 @@ export default function HomePage() {
             ? "Guest User"
             : profile?.name || user?.user_metadata?.name || "";
 
-          const { error: upsertError } = await supabase
-            .from("users")
-            .upsert(
-              [
-                {
-                  id: userId,
-                  name: name,
-                  email: email,
-                  favorite: [],
-                  is_guest: isGuest,
-                  last_active: new Date().toISOString(),
-                  timezone: "UTC",
-                },
-              ],
+          const { error: upsertError } = await supabase.from("users").upsert(
+            [
               {
-                onConflict: "id",
-                ignoreDuplicates: false,
-              }
-            );
+                id: userId,
+                name: name,
+                email: email,
+                favorite: [],
+                is_guest: isGuest,
+                last_active: new Date().toISOString(),
+                timezone: "UTC",
+              },
+            ],
+            {
+              onConflict: "id",
+              ignoreDuplicates: false,
+            }
+          );
 
           if (upsertError && upsertError.code !== "23505") {
             throw upsertError;
@@ -255,10 +252,18 @@ export default function HomePage() {
     if (!isLoaded) return;
 
     const redirectBasedOnRole = async () => {
+      // Set loading state when attempting to redirect
+      if (isSignedIn) {
+        setIsRoleLoading(true);
+      }
+
       if (isSignedIn && profile?.role === "admin") {
         router.push("/admin");
-      }else if(isSignedIn && profile?.role === "dealer"){
+      } else if (isSignedIn && profile?.role === "dealer") {
         router.push("/dealer");
+      } else {
+        // Only clear loading state when we know it's a regular user
+        setIsRoleLoading(false);
       }
     };
 
@@ -287,7 +292,11 @@ export default function HomePage() {
   };
 
   const fetchCars = useCallback(
-    async (page = 1, currentFilters = filters, sortOption: string | null = null) => {
+    async (
+      page = 1,
+      currentFilters = filters,
+      sortOption: string | null = null
+    ) => {
       if (page === 1) {
         setIsLoading(true);
       } else {
@@ -295,7 +304,10 @@ export default function HomePage() {
       }
 
       try {
-        console.log("Fetching cars with query:", currentFilters.searchQuery || searchQuery);
+        console.log(
+          "Fetching cars with query:",
+          currentFilters.searchQuery || searchQuery
+        );
         console.log("Current filters:", currentFilters);
         console.log("Sort option:", sortOption || currentFilters.sortBy);
 
@@ -602,9 +614,9 @@ export default function HomePage() {
   const handleSearch = (query: string) => {
     console.log("Search triggered with query:", query);
     setSearchQuery(query);
-    setFilters(prevFilters => ({
+    setFilters((prevFilters) => ({
       ...prevFilters,
-      searchQuery: query
+      searchQuery: query,
     }));
     setCurrentPage(1);
   };
@@ -647,9 +659,9 @@ export default function HomePage() {
     console.log("Resetting all filters");
     setFilters(DEFAULT_FILTERS);
     setSearchQuery("");
-    
+
     // Clear URL parameters by redirecting to the base URL
-    router.push('/');
+    router.push("/");
   };
 
   const handleLoadMore = () => {
@@ -679,6 +691,18 @@ export default function HomePage() {
       },
     },
   };
+
+  // Show loading state if role is being determined
+  if (isRoleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-neutral-900">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-accent mb-4"></div>
+          <p className="text-white text-lg">Loading your account...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
@@ -761,10 +785,7 @@ export default function HomePage() {
             >
               {cars.map((car) => (
                 <motion.div key={car.id} variants={itemVariants}>
-                  <CarCard
-                    car={car}
-                    isDealer={false}
-                  />
+                  <CarCard car={car} isDealer={false} />
                 </motion.div>
               ))}
             </motion.div>
