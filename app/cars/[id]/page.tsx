@@ -999,7 +999,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         {/* Back Button - Adjusted position to account for navbar */}
         <button
           onClick={() => router.back()}
-          className="absolute top-24 left-5 z-50 py-2 px-4 bg-gray-800 rounded-full hover:bg-gray-700"
+          className="absolute top-24 left-5 z-40 py-2 px-4 bg-gray-800 rounded-full hover:bg-gray-700"
         >
           ← Back
         </button>
