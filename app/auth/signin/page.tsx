@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/utils/AuthContext';
-import { useGuestUser } from '@/utils/GuestUserContext';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import GoogleAuthHandler from '@/components/auth/GoogleAuthHandler';
-import { createClient } from '@/utils/supabase/client';
-import AppleAuthHandler from '@/components/auth/AppleAuthHandler';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import GoogleAuthHandler from "@/components/auth/GoogleAuthHandler";
+import { createClient } from "@/utils/supabase/client";
+import AppleAuthHandler from "@/components/auth/AppleAuthHandler";
 
 export default function SignInPage() {
   const { signIn } = useAuth();
@@ -18,14 +18,14 @@ export default function SignInPage() {
   const supabase = createClient();
 
   // Form state
-  const [emailAddress, setEmailAddress] = useState('');
-  const [password, setPassword] = useState('');
+  const [emailAddress, setEmailAddress] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   // Error states
-  const [error, setError] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
@@ -35,25 +35,30 @@ export default function SignInPage() {
 
   useEffect(() => {
     // Check if we're on the error page with potential 405 error
-    if (window.location.pathname === '/auth/signin' &&
-        window.location.search.includes('next=')) {
-
+    if (
+      window.location.pathname === "/auth/signin" &&
+      window.location.search.includes("next=")
+    ) {
       // Detect if we have authentication cookies (more comprehensive check)
-      const hasAuthCookie = document.cookie.split(';').some(cookie => {
+      const hasAuthCookie = document.cookie.split(";").some((cookie) => {
         const trimmedCookie = cookie.trim();
-        return trimmedCookie.startsWith('sb-') ||
-               trimmedCookie.includes('supabase') ||
-               trimmedCookie.includes('access_token');
+        return (
+          trimmedCookie.startsWith("sb-") ||
+          trimmedCookie.includes("supabase") ||
+          trimmedCookie.includes("access_token")
+        );
       });
 
       if (hasAuthCookie) {
-        console.log('Client-side failsafe: Detected authentication cookies, redirecting from signin page');
+        console.log(
+          "Client-side failsafe: Detected authentication cookies, redirecting from signin page"
+        );
         // Extract the intended destination from the next parameter
         const params = new URLSearchParams(window.location.search);
-        const nextPath = params.get('next') || '/home';
+        const nextPath = params.get("next") || "/home";
 
         // Strip URL encoding if present
-        const cleanDestination = nextPath.replace(/%2F/g, '/');
+        const cleanDestination = nextPath.replace(/%2F/g, "/");
 
         // Use history API to replace current URL to avoid adding to browser history
         window.location.replace(cleanDestination);
@@ -64,14 +69,16 @@ export default function SignInPage() {
   useEffect(() => {
     // Extract and handle error from URL if present
     const urlParams = new URLSearchParams(window.location.search);
-    const errorParam = urlParams.get('error');
+    const errorParam = urlParams.get("error");
 
     if (errorParam) {
       // Map error codes to user-friendly messages
-      const errorMessages:any = {
-        'authentication_failed': 'Authentication with Apple failed. Please try again.',
-        'missing_credentials': 'Authentication information was missing. Please try again.',
-        'default': 'An error occurred during sign in. Please try again.'
+      const errorMessages: any = {
+        authentication_failed:
+          "Authentication with Apple failed. Please try again.",
+        missing_credentials:
+          "Authentication information was missing. Please try again.",
+        default: "An error occurred during sign in. Please try again.",
       };
 
       // Set appropriate error message
@@ -79,7 +86,7 @@ export default function SignInPage() {
 
       // Clean up URL without error parameter (prevent showing errors after page refresh)
       const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('error');
+      newUrl.searchParams.delete("error");
       window.history.replaceState({}, document.title, newUrl.toString());
     }
   }, []);
@@ -90,11 +97,11 @@ export default function SignInPage() {
       const { data } = await supabase.auth.getSession();
       if (data?.session) {
         setIsAuthenticated(true);
-        
+
         // Get the 'next' parameter from URL if it exists
         const params = new URLSearchParams(window.location.search);
-        const nextPath = params.get('next') || '/home';
-        
+        const nextPath = params.get("next") || "/home";
+
         router.push(nextPath);
       }
       setIsPageReady(true);
@@ -112,24 +119,24 @@ export default function SignInPage() {
       transition: {
         duration: 0.4,
         when: "beforeChildren",
-        staggerChildren: 0.05
-      }
-    }
+        staggerChildren: 0.05,
+      },
+    },
   };
 
   const itemVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { duration: 0.3 }
-    }
+      transition: { duration: 0.3 },
+    },
   };
 
   const onSignInPress = async () => {
     // Reset all error states
-    setError('');
-    setEmailError('');
-    setPasswordError('');
+    setError("");
+    setEmailError("");
+    setPasswordError("");
 
     // Client-side validation
     let hasError = false;
@@ -157,33 +164,46 @@ export default function SignInPage() {
 
     // Add timeout for network issues
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Sign in timed out. Please check your connection and try again.')), 15000)
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              "Sign in timed out. Please check your connection and try again."
+            )
+          ),
+        15000
+      )
     );
 
     try {
       // Race against timeout
-      const result = await Promise.race([
+      const result = (await Promise.race([
         signIn({
           email: emailAddress,
           password,
         }),
-        timeoutPromise
-      ]) as any;
+        timeoutPromise,
+      ])) as any;
 
       // Handle authentication response
       if (result.error) {
         // Route errors to appropriate fields based on type
-        if (result.errorType === 'email' || result.errorType === 'verification') {
+        if (
+          result.errorType === "email" ||
+          result.errorType === "verification"
+        ) {
           setEmailError(result.error.message || "Invalid email address.");
-        } else if (result.errorType === 'password') {
+        } else if (result.errorType === "password") {
           setPasswordError(result.error.message || "Password is incorrect.");
-        } else if (result.errorType === 'credentials') {
+        } else if (result.errorType === "credentials") {
           // With credential errors, we don't know if it's email or password
           // Set as general error instead of highlighting a specific field
           setError(result.error.message || "Invalid email or password.");
         } else {
           // For unknown errors, show general error message
-          setError(result.error.message || "Authentication failed. Please try again.");
+          setError(
+            result.error.message || "Authentication failed. Please try again."
+          );
         }
         setIsLoading(false);
         return;
@@ -199,7 +219,7 @@ export default function SignInPage() {
 
             // Get the 'next' parameter from URL
             const params = new URLSearchParams(window.location.search);
-            const nextPath = params.get('next') || '/home';
+            const nextPath = params.get("next") || "/home";
 
             // Implement robust navigation with fallback
             try {
@@ -209,35 +229,40 @@ export default function SignInPage() {
               // Fallback in case router.push doesn't trigger navigation
               setTimeout(() => {
                 // Check if we're still on the signin page after attempt
-                if (window.location.href.includes('/auth/signin')) {
-                  console.log('Router navigation fallback triggered');
+                if (window.location.href.includes("/auth/signin")) {
+                  console.log("Router navigation fallback triggered");
                   window.location.href = nextPath;
                 }
               }, 1000);
             } catch (navError) {
-              console.error('Navigation error:', navError);
+              console.error("Navigation error:", navError);
               // Force navigation as last resort
               window.location.href = nextPath;
             }
           } else {
-            setError("Sign in successful but session not established. Please try again.");
+            setError(
+              "Sign in successful but session not established. Please try again."
+            );
             setIsLoading(false);
           }
         } catch (sessionError) {
           console.error("Session verification error:", sessionError);
-          setError("Sign in appeared successful but couldn't verify session. Please try again.");
+          setError(
+            "Sign in appeared successful but couldn't verify session. Please try again."
+          );
           setIsLoading(false);
         }
       }, 500);
-
     } catch (err: any) {
       console.error("Sign in process error:", err);
 
       // Handle timeout errors specifically
-      if (err.message && err.message.includes('timed out')) {
+      if (err.message && err.message.includes("timed out")) {
         setError(err.message);
       } else {
-        setError(err.message || "An unexpected error occurred. Please try again.");
+        setError(
+          err.message || "An unexpected error occurred. Please try again."
+        );
       }
       setIsLoading(false);
     }
@@ -245,7 +270,7 @@ export default function SignInPage() {
 
   const handleGuestSignIn = async () => {
     setIsGuestLoading(true);
-    setError('');
+    setError("");
 
     try {
       const result = await setGuestMode(true);
@@ -253,8 +278,8 @@ export default function SignInPage() {
       if (result) {
         // Get the 'next' parameter from URL if it exists
         const params = new URLSearchParams(window.location.search);
-        const nextPath = params.get('next') || '/home';
-        
+        const nextPath = params.get("next") || "/home";
+
         // Use router instead of direct location change
         router.push(nextPath);
       } else {
@@ -276,7 +301,7 @@ export default function SignInPage() {
   // Add a placeholder loading state to maintain consistent height
   if (!isPageReady) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <div className="w-full max-w-md h-[500px] flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-accent"></div>
         </div>
@@ -285,7 +310,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-black-light relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 relative overflow-hidden">
       {/* Background animation - using static opacity to prevent layout shifts */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(20)].map((_, i) => (
@@ -314,7 +339,7 @@ export default function SignInPage() {
       >
         <motion.div
           variants={itemVariants}
-          className="bg-background/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8 shadow-lg w-full"
+          className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl p-8 shadow-lg w-full"
         >
           <motion.h1
             variants={itemVariants}
@@ -324,26 +349,23 @@ export default function SignInPage() {
           </motion.h1>
 
           {/* Google Auth Handler - wrapped in placeholder div with min-height */}
-          <motion.div
-            variants={itemVariants}
-            className="min-h-[56px]"
-          >
+          <motion.div variants={itemVariants} className="min-h-[56px]">
             <GoogleAuthHandler />
             <AppleAuthHandler />
           </motion.div>
 
           <motion.div variants={itemVariants} className="space-y-4">
             <div className="flex items-center my-4">
-              <div className="flex-grow h-px bg-gray-700"></div>
-              <span className="px-3 text-sm text-gray-400">OR</span>
-              <div className="flex-grow h-px bg-gray-700"></div>
+              <div className="flex-grow h-px bg-gray-300"></div>
+              <span className="px-3 text-sm text-gray-500">OR</span>
+              <div className="flex-grow h-px bg-gray-300"></div>
             </div>
 
             {/* Error message area with minimum height to prevent layout shift */}
             <div className="min-h-[28px]">
               {error && (
-                <div className="p-3 bg-red-900/20 border border-red-800/40 rounded-lg">
-                  <p className="text-red-400 text-sm text-center">{error}</p>
+                <div className="p-3 bg-red-100 border border-red-200 rounded-lg">
+                  <p className="text-red-600 text-sm text-center">{error}</p>
                 </div>
               )}
             </div>
@@ -352,9 +374,9 @@ export default function SignInPage() {
             <div>
               <input
                 type="email"
-                className={`w-full px-4 py-3 bg-black-light border ${
-                  emailError ? 'border-red-500' : 'border-gray-700'
-                } rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-white`}
+                className={`w-full px-4 py-3 bg-gray-50 border ${
+                  emailError ? "border-red-500" : "border-gray-300"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-gray-800`}
                 placeholder="Email"
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
@@ -371,9 +393,9 @@ export default function SignInPage() {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                className={`w-full px-4 py-3 bg-black-light border ${
-                  passwordError ? 'border-red-500' : 'border-gray-700'
-                } rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-white pr-10`}
+                className={`w-full px-4 py-3 bg-gray-50 border ${
+                  passwordError ? "border-red-500" : "border-gray-300"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-gray-800 pr-10`}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -386,9 +408,9 @@ export default function SignInPage() {
                 disabled={isLoading || isGuestLoading}
               >
                 {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                  <EyeSlashIcon className="h-5 w-5 text-gray-500" />
                 ) : (
-                  <EyeIcon className="h-5 w-5 text-gray-400" />
+                  <EyeIcon className="h-5 w-5 text-gray-500" />
                 )}
               </button>
               <div className="min-h-[20px]">
@@ -406,13 +428,31 @@ export default function SignInPage() {
             >
               {isLoading ? (
                 <span className="flex justify-center items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Signing In...
                 </span>
-              ) : "Sign In"}
+              ) : (
+                "Sign In"
+              )}
             </button>
 
             {/* Guest Mode Button */}
@@ -423,40 +463,58 @@ export default function SignInPage() {
             >
               {isGuestLoading ? (
                 <span className="flex justify-center items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-accent"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Loading...
                 </span>
-              ) : "Continue as Guest"}
+              ) : (
+                "Continue as Guest"
+              )}
             </button>
           </motion.div>
 
-          <motion.div
-            variants={itemVariants}
-            className="mt-6 text-center"
-          >
-            <p className="text-gray-400">
-              Don't have an account?{' '}
-              <Link href="/auth/signup" className="text-accent hover:underline font-medium">
+          <motion.div variants={itemVariants} className="mt-6 text-center">
+            <p className="text-gray-600">
+              Don't have an account?{" "}
+              <Link
+                href="/auth/signup"
+                className="text-accent hover:underline font-medium"
+              >
                 Sign up
               </Link>
             </p>
 
             <Link
               href="/auth/forgot-password"
-              className="block mt-2 text-gray-300 hover:text-white"
+              className="block mt-2 text-gray-600 hover:text-gray-900"
             >
               Forgot password?
             </Link>
 
             <div className="text-xs text-gray-500 mt-4">
-              By using this service, you agree to our{' '}
+              By using this service, you agree to our{" "}
               <Link href="/terms" className="text-accent hover:underline">
                 Terms of Service
-              </Link>{' '}
-              and{' '}
+              </Link>{" "}
+              and{" "}
               <Link href="/privacy" className="text-accent hover:underline">
                 Privacy Policy
               </Link>

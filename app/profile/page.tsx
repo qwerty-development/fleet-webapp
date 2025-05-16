@@ -316,14 +316,14 @@ export default function ProfilePage() {
   // If still loading, show a spinner
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-neutral-900">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       {/* Guest Mode Overlay */}
@@ -331,7 +331,7 @@ export default function ProfilePage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/50 backdrop-blur-sm"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -371,8 +371,8 @@ export default function ProfilePage() {
             <div className="p-8 pb-16 text-center">
               {/* Avatar and Upload Button */}
               <div className="relative inline-block mb-6">
-                <div className="h-32 w-32 flex items-center justify-center rounded-full bg-gray-800 border-4 border-white/20">
-                  <UserCircleIcon className="h-24 w-24 text-gray-500" />
+                <div className="h-32 w-32 flex items-center justify-center rounded-full bg-white border-4 border-white/50">
+                  <UserCircleIcon className="h-24 w-24 text-gray-400" />
                 </div>
               </div>
 
@@ -390,7 +390,7 @@ export default function ProfilePage() {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-green-900/30 border border-green-800 text-green-400 px-4 py-3 rounded-lg mb-6"
+              className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6"
             >
               Your changes have been saved successfully.
             </motion.div>
@@ -401,7 +401,7 @@ export default function ProfilePage() {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-lg mb-6"
+              className="bg-red-100 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6"
             >
               {updateError}
             </motion.div>
@@ -410,7 +410,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 gap-6">
             {/* Profile Actions Section */}
             <div className="space-y-4">
-              <h2 className="text-sm font-semibold uppercase text-gray-400 tracking-wider ml-2">
+              <h2 className="text-sm font-semibold uppercase text-gray-500 tracking-wider ml-2">
                 Account Management
               </h2>
 
@@ -419,16 +419,16 @@ export default function ProfilePage() {
                 onClick={() => !isGuest && setIsEditMode(true)}
                 className={`w-full flex items-center p-4 rounded-xl transition-colors ${
                   isGuest
-                    ? "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700  opacity-75"
-                    : "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 hover:border-accent"
+                    ? "bg-white border border-gray-200 shadow-sm opacity-75"
+                    : "bg-white border border-gray-200 shadow-sm hover:border-accent"
                 }`}
               >
                 <div className="p-3 bg-accent/10 rounded-xl">
                   <UserCircleIcon className="h-6 w-6 text-accent" />
                 </div>
                 <div className="ml-4 text-left">
-                  <p className="font-medium text-white">Edit Profile</p>
-                  <p className="text-sm text-gray-400">
+                  <p className="font-medium text-gray-800">Edit Profile</p>
+                  <p className="text-sm text-gray-600">
                     {isGuest
                       ? "Sign in to edit your profile"
                       : "Update your personal information"}
@@ -442,16 +442,16 @@ export default function ProfilePage() {
                 onClick={() => !isGuest && setIsSecuritySettingsVisible(true)}
                 className={`w-full flex items-center p-4 rounded-xl transition-colors ${
                   isGuest
-                    ? "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 opacity-75"
-                    : "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 hover:border-accent"
+                    ? "bg-white border border-gray-200 shadow-sm opacity-75"
+                    : "bg-white border border-gray-200 shadow-sm hover:border-accent"
                 }`}
               >
                 <div className="p-3 bg-accent/10 rounded-xl">
                   <ShieldCheckIcon className="h-6 w-6 text-accent" />
                 </div>
                 <div className="ml-4 text-left">
-                  <p className="font-medium text-white">Security</p>
-                  <p className="text-sm text-gray-400">
+                  <p className="font-medium text-gray-800">Security</p>
+                  <p className="text-sm text-gray-600">
                     {isGuest
                       ? "Sign in to access security settings"
                       : "Password and privacy settings"}
@@ -463,21 +463,21 @@ export default function ProfilePage() {
 
             {/* Support Section */}
             <div className="space-y-4 mt-6">
-              <h2 className="text-sm font-semibold uppercase text-gray-400 tracking-wider ml-2">
+              <h2 className="text-sm font-semibold uppercase text-gray-500 tracking-wider ml-2">
                 Support & Help
               </h2>
 
               {/* WhatsApp Support Button */}
               <button
                 onClick={handleWhatsAppSupport}
-                className="w-full flex items-center p-4 rounded-xl bg-black-medium  hover:border-green-500 transition-colors bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700"
+                className="w-full flex items-center p-4 rounded-xl bg-white border border-gray-200 shadow-sm hover:border-green-500 transition-colors"
               >
                 <div className="p-3 bg-green-500/10 rounded-xl">
                   <ChatBubbleLeftRightIcon className="h-6 w-6 text-green-500" />
                 </div>
                 <div className="ml-4 text-left">
-                  <p className="font-medium text-white">WhatsApp Support</p>
-                  <p className="text-sm text-gray-400">Available 24/7</p>
+                  <p className="font-medium text-gray-800">WhatsApp Support</p>
+                  <p className="text-sm text-gray-600">Available 24/7</p>
                 </div>
                 <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
               </button>
@@ -485,14 +485,14 @@ export default function ProfilePage() {
               {/* Email Support Button */}
               <button
                 onClick={handleEmailSupport}
-                className="w-full flex items-center p-4 rounded-xl bg-black-medium  hover:border-blue-500 transition-colors bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700"
+                className="w-full flex items-center p-4 rounded-xl bg-white border border-gray-200 shadow-sm hover:border-blue-500 transition-colors"
               >
                 <div className="p-3 bg-blue-500/10 rounded-xl">
                   <EnvelopeIcon className="h-6 w-6 text-blue-500" />
                 </div>
                 <div className="ml-4 text-left">
-                  <p className="font-medium text-white">Email Support</p>
-                  <p className="text-sm text-gray-400">Detailed inquiries</p>
+                  <p className="font-medium text-gray-800">Email Support</p>
+                  <p className="text-sm text-gray-600">Detailed inquiries</p>
                 </div>
                 <ChevronRightIcon className="ml-auto h-5 w-5 text-gray-500" />
               </button>
@@ -500,19 +500,19 @@ export default function ProfilePage() {
 
             {/* Delete Account Section */}
             <div className="space-y-4 mt-6">
-              <h2 className="text-sm font-semibold uppercase text-gray-400 tracking-wider ml-2">
+              <h2 className="text-sm font-semibold uppercase text-gray-500 tracking-wider ml-2">
                 Delete Account
               </h2>
               <Link
                 href="/account/delete"
-                className="w-full flex items-center bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 opacity-75 p-4 rounded-xl bg-black-medium  hover:border-red-500 transition-colors"
+                className="w-full flex items-center bg-white border border-gray-200 shadow-sm opacity-75 p-4 rounded-xl hover:border-red-500 transition-colors"
               >
                 <div className="p-3 bg-red-500/10 rounded-xl">
                   <TrashIcon className="h-6 w-6 text-red-500" />
                 </div>
                 <div className="ml-4 text-left">
-                  <p className="font-medium text-white">Delete Account</p>
-                  <p className="text-sm text-gray-400">
+                  <p className="font-medium text-gray-800">Delete Account</p>
+                  <p className="text-sm text-gray-600">
                     Permanently remove your account and data
                   </p>
                 </div>

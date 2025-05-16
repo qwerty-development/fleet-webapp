@@ -40,7 +40,7 @@ interface AutoClip {
 
 // Loading fallback component
 const AutoClipsLoadingFallback = () => (
-  <div className="h-screen bg-black flex flex-col">
+  <div className="h-screen bg-white flex flex-col">
     <Navbar />
     <div className="flex-1 flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
@@ -428,11 +428,11 @@ const AutoClipsContent = () => {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center p-8 bg-gray-900 rounded-lg max-w-md">
-              <h3 className="text-white text-xl font-bold mb-2">
+            <div className="text-center p-8 bg-gray-100 border border-gray-200 rounded-lg max-w-md">
+              <h3 className="text-gray-800 text-xl font-bold mb-2">
                 No clips found
               </h3>
-              <p className="text-gray-400 mb-4">
+              <p className="text-gray-600 mb-4">
                 There are no AutoClips available at the moment. Check back
                 later!
               </p>
@@ -442,8 +442,8 @@ const AutoClipsContent = () => {
 
         {/* Authentication Required Modal */}
         {isAuthModalVisible && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 m-4 max-w-sm w-full shadow-2xl animate-fade-in">
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-gray-500/60 backdrop-blur-sm">
+            <div className="bg-white border border-gray-200 rounded-xl p-6 m-4 max-w-sm w-full shadow-2xl animate-fade-in">
               <div className="flex flex-col items-center text-center">
                 {/* Lock Icon */}
                 <div className="bg-accent/10 p-4 rounded-full mb-4">
@@ -469,10 +469,10 @@ const AutoClipsContent = () => {
                   </svg>
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
                   Sign In Required
                 </h3>
-                <p className="text-gray-400 mb-6">
+                <p className="text-gray-600 mb-6">
                   Please sign in to like autoclips and track your favorites.
                 </p>
 
@@ -485,7 +485,7 @@ const AutoClipsContent = () => {
                   </button>
                   <button
                     onClick={handleCloseModal}
-                    className="flex-1 border border-gray-700 text-gray-300 hover:bg-gray-800 py-3 px-6 rounded-lg font-semibold transition-colors"
+                    className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-100 py-3 px-6 rounded-lg font-semibold transition-colors"
                   >
                     Cancel
                   </button>

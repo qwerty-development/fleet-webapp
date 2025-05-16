@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname,useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   HomeIcon,
   ShoppingBagIcon,
@@ -12,7 +12,7 @@ import {
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -21,8 +21,7 @@ import {
   BuildingOfficeIcon as BuildingOfficeIconSolid,
   ChartBarIcon as ChartBarIconSolid,
   Cog6ToothIcon as Cog6ToothIconSolid,
-  ListBulletIcon as ListBulletIcon
-
+  ListBulletIcon as ListBulletIcon,
 } from "@heroicons/react/24/solid";
 
 import { useAuth } from "@/utils/AuthContext";
@@ -40,37 +39,37 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     href: "/admin",
     icon: HomeIcon,
-    iconActive: HomeIconSolid
+    iconActive: HomeIconSolid,
   },
   {
     name: "Listings",
     href: "/admin/listings",
     icon: ShoppingBagIcon,
-    iconActive: ShoppingBagIconSolid
+    iconActive: ShoppingBagIconSolid,
   },
   {
     name: "Users",
     href: "/admin/users",
     icon: UserGroupIcon,
-    iconActive: UserGroupIconSolid
+    iconActive: UserGroupIconSolid,
   },
   {
     name: "Dealerships",
     href: "/admin/dealerships",
     icon: BuildingOfficeIcon,
-    iconActive: BuildingOfficeIconSolid
+    iconActive: BuildingOfficeIconSolid,
   },
   {
     name: "Brands and Models",
     href: "/admin/allcars",
     icon: ListBulletIcon,
-    iconActive: ListBulletIcon
+    iconActive: ListBulletIcon,
   },
   {
     name: "Analytics",
     href: "/admin/analytics",
     icon: ChartBarIcon,
-    iconActive: ChartBarIconSolid
+    iconActive: ChartBarIconSolid,
   },
 ];
 
@@ -78,28 +77,24 @@ const AdminNavbar: React.FC = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-    const router = useRouter();
-const { signOut, isSigningOut, signOutError } = useAuth();
+  const router = useRouter();
+  const { signOut, isSigningOut, signOutError } = useAuth();
   const { isGuest, clearGuestMode } = useGuestUser();
 
-
   const handleSignOut = async () => {
-  try {
-
-
+    try {
       // Use enhanced signOut with options
       await signOut({
         forceRedirect: false,
-        redirectUrl: '/',
-        clearAllData: true
+        redirectUrl: "/",
+        clearAllData: true,
       });
       // No manual navigation needed - handled by signOut function
+    } catch (error) {
+      console.error("Error during sign-out:", error);
+      // Error is captured in signOutError state from AuthContext
     }
-   catch (error) {
-    console.error('Error during sign-out:', error);
-    // Error is captured in signOutError state from AuthContext
-  }
-};
+  };
 
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -117,8 +112,8 @@ const { signOut, isSigningOut, signOutError } = useAuth();
 
   // Check if a nav item is active
   const isActive = (href: string) => {
-    if (href === '/admin') {
-      return pathname === '/admin';
+    if (href === "/admin") {
+      return pathname === "/admin";
     }
     return pathname.startsWith(href);
   };
@@ -126,13 +121,19 @@ const { signOut, isSigningOut, signOutError } = useAuth();
   return (
     <>
       {/* Desktop Side Navigation */}
-      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 bg-gray-900 border-r border-gray-800 z-40">
+      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 border-b border-gray-800">
+          <div className="flex items-center justify-center h-16 border-b border-gray-200">
             <Link href="/admin" className="flex items-center">
-              <img src="/logo.png" alt="CarApp Admin" className="h-8 w-auto" />
-              <span className="ml-2 text-xl font-bold text-white">Admin</span>
+              <img
+                src="/logo-dark.png"
+                alt="CarApp Admin"
+                className="h-8 w-auto"
+              />
+              <span className="ml-2 text-xl font-bold text-gray-800">
+                Admin
+              </span>
             </Link>
           </div>
 
@@ -146,8 +147,8 @@ const { signOut, isSigningOut, signOutError } = useAuth();
                   href={item.href}
                   className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                     active
-                      ? "bg-indigo-600 text-white"
-                      : "text-gray-400 hover:text-white hover:bg-gray-800"
+                      ? "bg-accent text-white"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
                   {active ? (
@@ -162,11 +163,11 @@ const { signOut, isSigningOut, signOutError } = useAuth();
           </nav>
 
           {/* Logout Button */}
-          <div className="p-4 border-t border-gray-800">
+          <div className="p-4 border-t border-gray-200">
             <button
-                      onClick={handleSignOut}
-    disabled={isSigningOut}
-              className="flex items-center w-full px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="flex items-center w-full px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3" />
               <span className="font-medium">Logout</span>
@@ -177,19 +178,23 @@ const { signOut, isSigningOut, signOutError } = useAuth();
 
       {/* Mobile Top Navigation */}
       <header
-        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 transition-all duration-200 ${
-          scrolled ? 'shadow-md' : ''
+        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-white transition-all duration-200 ${
+          scrolled ? "shadow-md" : ""
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <Link href="/admin" className="flex items-center">
-            <img src="/logo.png" alt="CarApp Admin" className="h-8 w-auto" />
-            <span className="ml-2 text-lg font-bold text-white">Admin</span>
+            <img
+              src="/logo-dark.png"
+              alt="CarApp Admin"
+              className="h-8 w-auto"
+            />
+            <span className="ml-2 text-lg font-bold text-gray-800">Admin</span>
           </Link>
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-gray-400 hover:text-white rounded-md"
+            className="p-2 text-gray-600 hover:text-gray-900 rounded-md"
           >
             {isMobileMenuOpen ? (
               <XMarkIcon className="h-6 w-6" />
@@ -203,14 +208,14 @@ const { signOut, isSigningOut, signOutError } = useAuth();
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-30 bg-gray-500/50 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
 
       {/* Mobile Menu */}
       <aside
-        className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-gray-900 border-r border-gray-800 z-30 transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-30 transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -223,8 +228,8 @@ const { signOut, isSigningOut, signOutError } = useAuth();
                 href={item.href}
                 className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                   active
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800"
+                    ? "bg-accent text-white"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -241,16 +246,14 @@ const { signOut, isSigningOut, signOutError } = useAuth();
           {/* Mobile Logout Button */}
           <button
             onClick={handleSignOut}
-                       disabled={isSigningOut}
-
-            className="flex items-center w-full px-4 py-3 mt-6 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            disabled={isSigningOut}
+            className="flex items-center w-full px-4 py-3 mt-6 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3" />
             <span className="font-medium">Logout</span>
           </button>
         </nav>
       </aside>
-
     </>
   );
 };
