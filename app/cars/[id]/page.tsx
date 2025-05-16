@@ -411,18 +411,18 @@ interface SpecItemProps {
 }
 
 const SpecItem: React.FC<SpecItemProps> = ({ icon, title, value }) => (
-  <div className="flex items-center p-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
+  <div className="flex items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
     <div className="mr-2">{icon}</div>
     <div className="flex flex-col">
-      <span className="text-gray-400">{title}</span>
-      <span className="font-semibold text-white text-sm">{value}</span>
+      <span className="text-gray-500">{title}</span>
+      <span className="font-semibold text-gray-900 text-sm">{value}</span>
     </div>
   </div>
 );
 
 // Loading state component
 const LoadingState = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-900">
+  <div className="min-h-screen flex items-center justify-center bg-white">
     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-accent"></div>
   </div>
 );
@@ -521,34 +521,34 @@ const AppRedirectOverlay = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
-      <div className="bg-gray-800 rounded-xl max-w-md w-full p-6 text-center relative">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 text-center relative shadow-lg">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white"
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900"
         >
           ×
         </button>
 
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
-          <img src="/logo.png" alt="Fleet App" className="w-12 h-12" />
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+          <img src="/logo-dark.png" alt="Fleet App" className="w-12 h-12" />
         </div>
 
-        <h2 className="text-xl font-bold text-white mb-2">
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
           Opening in Fleet App
         </h2>
-        <p className="text-gray-300 mb-4">
+        <p className="text-gray-600 mb-4">
           {year} {make} {model}
         </p>
 
         {countdown > 0 ? (
           <div className="mb-6">
             <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-            <p className="text-gray-400">Redirecting in {countdown}...</p>
+            <p className="text-gray-500">Redirecting in {countdown}...</p>
           </div>
         ) : (
           <div className="mb-6">
-            <p className="text-gray-400">
+            <p className="text-gray-500">
               {redirectAttempted
                 ? "Couldn't open the app automatically."
                 : "Opening app..."}
@@ -566,14 +566,14 @@ const AppRedirectOverlay = ({
 
           <a
             href={getStoreLink()}
-            className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+            className="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium"
           >
             Download Fleet App
           </a>
 
           <button
             onClick={onClose}
-            className="block w-full py-3 bg-transparent hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-medium"
+            className="block w-full py-3 bg-transparent hover:bg-gray-100 text-gray-500 hover:text-gray-900 rounded-lg font-medium"
           >
             Continue to Website
           </button>
@@ -979,7 +979,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         )}`;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white relative">
+    <div className="min-h-screen bg-white text-gray-900 relative">
       {/* Fixed Navbar */}
       <Navbar />
 
@@ -999,14 +999,14 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         {/* Back Button - Adjusted position to account for navbar */}
         <button
           onClick={() => router.back()}
-          className="absolute top-24 left-5 z-40 py-2 px-4 bg-gray-800 rounded-full hover:bg-gray-700"
+          className="absolute top-24 left-5 z-40 py-2 px-4 bg-gray-200 rounded-full hover:bg-gray-300 text-gray-800"
         >
           ← Back
         </button>
 
         {/* Improved Image Carousel - Only render if images exist */}
         {car.images && car.images.length > 0 ? (
-          <div className="relative bg-black">
+          <div className="relative bg-white">
             <div id="test-div">
               {/* Main large image carousel */}
               <div
@@ -1021,7 +1021,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                 {car.images.map((img, index) => (
                   <div
                     key={index}
-                    className=" flex-shrink-0 h-full snap-center relative"
+                    className="flex-shrink-0 h-full snap-center relative"
                   >
                     <img
                       src={img}
@@ -1035,10 +1035,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
             {/* Thumbnail gallery at the bottom */}
             {car.images.length > 1 && (
-              <div className="hidden bg-gray-900 md:justify-center ">
+              <div className="hidden bg-gray-100 md:justify-center">
                 <div
                   ref={thumbnailsRef}
-                  className="flex  gap-2 overflow-x-auto py-2 pl-1  scrollbar-hide"
+                  className="flex gap-2 overflow-x-auto py-2 pl-1 scrollbar-hide"
                   style={{ scrollBehavior: "smooth" }}
                 >
                   {car.images.map((img, index) => (
@@ -1058,14 +1058,14 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               <>
                 <button
                   onClick={() => navigateCarousel("prev")}
-                  className="absolute left-1 sm:left-5 xl:left-20 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
+                  className="absolute left-1 sm:left-5 xl:left-20 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 rounded-full p-3 transition-colors z-10"
                   aria-label="Previous image"
                 >
                   <ChevronLeftIcon className="h-3 w-3 sm:h-6 sm:w-6 text-white" />
                 </button>
                 <button
                   onClick={() => navigateCarousel("next")}
-                  className="absolute right-5 xl:right-20 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 transition-colors z-10"
+                  className="absolute right-5 xl:right-20 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 rounded-full p-3 transition-colors z-10"
                   aria-label="Next image"
                 >
                   <ChevronRightIcon className="h-3 w-3 sm:h-6 sm:w-6 text-white" />
@@ -1075,7 +1075,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
             <div className="absolute top-5 right-5 gap-1 z-10 flex flex-row">
               {/* View Count Badge */}
-              <div className="z-50  bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-sm flex items-center">
+              <div className="z-50 bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-sm flex items-center text-white">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4 mr-1"
@@ -1106,15 +1106,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                 size="md"
               />
             </div>
-
-            {/* Image counter */}
-            <div className="absolute hidden bottom-24 right-5 bg-black/40 px-4 py-2 rounded-full text-sm">
-              {activeImageIndex + 1} / {car.images.length}
-            </div>
           </div>
         ) : (
-          <div className="relative h-64 md:h-96 bg-gray-800 flex items-center justify-center">
-            <p className="text-gray-400">No images available</p>
+          <div className="relative h-64 md:h-96 bg-gray-100 flex items-center justify-center">
+            <p className="text-gray-500">No images available</p>
           </div>
         )}
 
@@ -1132,11 +1127,11 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           <div className="p-4 3xl:w-9/12 xl:w-11/12 space-y-6">
             {/* Main Info - Always left-aligned on mobile */}
             <div className="flex items-start space-x-4 mt-4 md:mt-0">
-              <div className=" h-14 md:w-16 md:h-16 flex-shrink-0">
+              <div className="h-14 md:w-16 md:h-16 flex-shrink-0">
                 <img
                   src={getLogoUrl(car.make, true)}
                   alt={car.make}
-                  className=" h-10  rounded-full"
+                  className="h-10 rounded-full"
                 />
               </div>
               <div>
@@ -1144,7 +1139,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                   {car.make} {car.model}
                 </h1>
                 <p className="text-lg">{car.year}</p>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-500">
                   Posted {getRelativeTime(car.listed_at)}
                 </p>
               </div>
@@ -1209,8 +1204,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             {/* Description */}
             {car.description && (
               <div className="p-4">
-                <h2 className="text-xl  font-bold">Description</h2>
-                <p className="mt-2 text-gray-300">{car.description}</p>
+                <h2 className="text-xl font-bold">Description</h2>
+                <p className="mt-2 text-gray-700">{car.description}</p>
               </div>
             )}
 
@@ -1331,7 +1326,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
                           return (
                             <div key={category} className="mb-4">
-                              <h3 className="text-base font-semibold text-white/90 capitalize mb-2">
+                              <h3 className="text-base font-semibold text-gray-900 capitalize mb-2">
                                 {category}
                               </h3>
                               <div className="flex flex-wrap gap-2">
@@ -1339,7 +1334,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                                   (feature: string, index: number) => (
                                     <span
                                       key={index}
-                                      className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700 flex items-center"
+                                      className="bg-gray-100 text-gray-700 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-200 flex items-center"
                                     >
                                       {getFeatureIcon(feature)}
                                       {feature
@@ -1363,7 +1358,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                       {/* Display uncategorized features if any */}
                       {uncategorizedFeatures.length > 0 && (
                         <div>
-                          <h3 className="text-lg font-semibold  mb-2">
+                          <h3 className="text-lg font-semibold mb-2">
                             Other Features
                           </h3>
                           <div className="flex flex-wrap gap-2">
@@ -1371,7 +1366,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                               (feature: string, index: number) => (
                                 <span
                                   key={index}
-                                  className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700 flex items-center"
+                                  className="bg-gray-100 text-gray-700 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-200 flex items-center"
                                 >
                                   {getFeatureIcon(feature)}
                                   {feature
@@ -1396,7 +1391,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             )}
 
             {/* Dealership Section with Contact Buttons */}
-            <div className="bg-gray-800  rounded-xl p-4">
+            <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
               <h2 className="text-xl font-bold mb-5">Dealership</h2>
               <div className="flex items-center justify-between">
                 {/* Dealership Info */}
@@ -1410,7 +1405,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                   </div>
                   <div className="ml-3">
                     <h3 className="text-lg font-semibold">{dealershipName}</h3>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-500">
                       {dealershipLocation}
                     </p>
                   </div>
@@ -1424,7 +1419,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                       className="p-3 bg-blue-600 rounded-full hover:bg-blue-500 transition-colors"
                       aria-label="Call"
                     >
-                      <PhoneIcon className="h-5 w-5" />
+                      <PhoneIcon className="h-5 w-5 text-white" />
                     </button>
                     <button
                       onClick={handleWhatsApp}
@@ -1435,10 +1430,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     </button>
                     <button
                       onClick={handleShare}
-                      className="p-3 bg-gray-700 rounded-full hover:bg-gray-600 transition-colors"
+                      className="p-3 bg-gray-300 rounded-full hover:bg-gray-400 transition-colors"
                       aria-label="Share"
                     >
-                      <ShareIcon className="h-5 w-5" />
+                      <ShareIcon className="h-5 w-5 text-gray-700" />
                     </button>
                   </div>
                 )}
@@ -1469,14 +1464,14 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
         {/* Mobile app banner for non-mobile devices (optional) */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 flex items-center justify-between z-50">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between z-50">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <img src="/logo.png" alt="Fleet App" className="w-6 h-6" />
+                <img src="/logo-dark.png" alt="Fleet App" className="w-6 h-6" />
               </div>
               <div className="ml-3">
-                <h3 className="text-white font-medium">Fleet App</h3>
-                <p className="text-gray-300 text-xs">
+                <h3 className="text-gray-900 font-medium">Fleet App</h3>
+                <p className="text-gray-600 text-xs">
                   Get a better experience on our mobile app
                 </p>
               </div>
@@ -1485,7 +1480,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               href="https://fleetapp.me"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-accent text-whit px-4 py-2 rounded-lg font-medium hover:bg-accent/90 transition-colors"
+              className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-accent/90 transition-colors"
             >
               Get the App
             </a>
