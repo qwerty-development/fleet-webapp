@@ -84,22 +84,20 @@ export default function Home() {
     }
   }, [isLoaded, isSignedIn, isGuest, setGuestMode]);
 
+  useEffect(() => {
+    if (!isLoaded) return;
 
-
-useEffect(() => {
-  if (!isLoaded) return;
-
-  if (isSignedIn) {
-    // Redirect signed-in users based on role
-    if (profile?.role === "admin") {
-      router.push("/admin");
-    } else if(profile?.role==='dealer'){
-      router.push("/dealer");
-    } else {
-      router.push("/home");
+    if (isSignedIn) {
+      // Redirect signed-in users based on role
+      if (profile?.role === "admin") {
+        router.push("/admin");
+      } else if (profile?.role === "dealer") {
+        router.push("/dealer");
+      } else {
+        router.push("/home");
+      }
     }
-  }
-}, [isLoaded, isSignedIn, profile, router]);
+  }, [isLoaded, isSignedIn, profile, router]);
 
   // Local state for scroll tracking and splash screen
   const [scrollY, setScrollY] = useState(0);
@@ -203,7 +201,10 @@ useEffect(() => {
           {/* Content Sections */}
           <div className="relative bg-gray-100 flex flex-col justify-center items-center z-30">
             <AppShowcase />
-            <DealerDetails />
+            <div className="w-[98%]">
+              <DealerDetails />
+            </div>
+
             {/* <AboutSection /> */}
             <MarqueeLogos />
             <ContactSection />

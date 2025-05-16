@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getLogoUrl } from "./CarCard";
 import { motion } from "framer-motion";
+import { UserCircleIcon } from "@heroicons/react/24/outline";
 
 interface Brand {
   make: string;
@@ -57,76 +58,75 @@ const MarqueeLogos: React.FC = () => {
     }
   };
 
+  const fetchData = async () => {
+    setLoading(true);
 
-const fetchData = async () => {
-  setLoading(true);
+    // Fetch unique car brands and their counts
+    const { data: brandsData, error: brandsError } = await supabase
+      .from("cars")
+      .select("make")
+      .eq("status", "available");
 
-  // Fetch unique car brands and their counts
-  const { data: brandsData, error: brandsError } = await supabase
-    .from("cars")
-    .select("make")
-    .eq("status", "available");
+    if (brandsError) {
+      console.error("Error fetching brands:", brandsError);
+    } else if (brandsData) {
+      const brandCounts: Record<string, number> = {};
+      brandsData.forEach((car) => {
+        const brand = car.make;
+        brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+      });
 
-  if (brandsError) {
-    console.error("Error fetching brands:", brandsError);
-  } else if (brandsData) {
-    const brandCounts: Record<string, number> = {};
-    brandsData.forEach((car) => {
-      const brand = car.make;
-      brandCounts[brand] = (brandCounts[brand] || 0) + 1;
-    });
+      const brandsArray = Object.entries(brandCounts).map(([make, count]) => ({
+        make,
+        count,
+      }));
 
-    const brandsArray = Object.entries(brandCounts).map(([make, count]) => ({
-      make,
-      count,
-    }));
+      // Sort by count descending
+      setBrands(brandsArray.sort((a, b) => b.count - a.count));
+    }
 
-    // Sort by count descending
-    setBrands(brandsArray.sort((a, b) => b.count - a.count));
-  }
+    // FIXED: Fetch dealerships directly from the dealerships table
+    const { data: dealersData, error: dealersError } = await supabase
+      .from("dealerships")
+      .select("name, logo, id"); // Include id in the select
 
-  // FIXED: Fetch dealerships directly from the dealerships table
-  const { data: dealersData, error: dealersError } = await supabase
-    .from("dealerships")
-    .select("name, logo, id"); // Include id in the select
+    if (dealersError) {
+      console.error("Error fetching dealerships:", dealersError);
+    } else if (dealersData) {
+      // Now we need to count cars per dealership
+      const dealershipCounts = await Promise.all(
+        dealersData.map(async (dealer) => {
+          const { count, error } = await supabase
+            .from("cars")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "available")
+            .eq("dealership_id", dealer.id); // Assuming there's a dealership_id column
 
-  if (dealersError) {
-    console.error("Error fetching dealerships:", dealersError);
-  } else if (dealersData) {
-    // Now we need to count cars per dealership
-    const dealershipCounts = await Promise.all(
-      dealersData.map(async (dealer) => {
-        const { count, error } = await supabase
-          .from("cars")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "available")
-          .eq("dealership_id", dealer.id); // Assuming there's a dealership_id column
+          if (error) {
+            console.error(`Error counting cars for ${dealer.name}:`, error);
+            return {
+              name: dealer.name,
+              logo: dealer.logo,
+              count: 0,
+              id: dealer.id,
+            };
+          }
 
-        if (error) {
-          console.error(`Error counting cars for ${dealer.name}:`, error);
           return {
             name: dealer.name,
             logo: dealer.logo,
-            count: 0,
-            id: dealer.id
+            count: count || 0,
+            id: dealer.id,
           };
-        }
+        })
+      );
 
-        return {
-          name: dealer.name,
-          logo: dealer.logo,
-          count: count || 0,
-          id: dealer.id
-        };
-      })
-    );
+      // Sort by count descending
+      setDealerships(dealershipCounts.sort((a, b) => b.count - a.count));
+    }
 
-    // Sort by count descending
-    setDealerships(dealershipCounts.sort((a, b) => b.count - a.count));
-  }
-
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
   if (loading) {
     return (
@@ -205,7 +205,7 @@ const fetchData = async () => {
                       className="max-h-full max-w-full drop-shadow-lg"
                     />
                   </div>
-                  <p className="text-white text-lg mt-3 font-semibold">
+                  <p className="text-neutral-600 text-lg mt-3 font-semibold">
                     {brand.make}
                   </p>
                   <span className="text-accent text-sm mt-1 font-medium">
@@ -239,14 +239,19 @@ const fetchData = async () => {
                   className="flex flex-col items-center group hover:scale-110 transition-all duration-300 dealer-item flex-shrink-0"
                 >
                   <div className="h-40 w-40 flex items-center justify-center">
-                    <img
-                      src={dealer.logo }
-                      alt={dealer.name}
-                      className="max-h-full max-w-full object-contain drop-shadow-lg"
-
-                    />
+                    {dealer.logo ? (
+                      <img
+                        src={dealer.logo}
+                        alt={dealer.name}
+                        className="max-h-full rounded-xl max-w-full object-contain drop-shadow-lg"
+                      />
+                    ) : (
+                      <div className="w-40 h-40 rounded-full bg-gray-200 flex items-center justify-center">
+                        <UserCircleIcon className="h-32 w-32 text-gray-400" />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-white text-lg mt-3 font-semibold text-center max-w-[150px]">
+                  <p className="text-neutral-600 text-lg mt-3 font-semibold text-center max-w-[150px]">
                     {dealer.name}
                   </p>
                   <span className="text-accent text-sm mt-1 font-medium">
