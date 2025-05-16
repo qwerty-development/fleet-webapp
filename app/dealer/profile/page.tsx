@@ -593,7 +593,7 @@ export default function DealerProfilePage() {
                     <div className="flex space-x-2">
                       <button
                         onClick={handleCancel}
-                        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                        className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded-lg transition-colors"
                       >
                         Cancel
                       </button>
@@ -747,8 +747,9 @@ export default function DealerProfilePage() {
                         <div>
                           <label
                             htmlFor="name"
-                            className="block text-sm text-gray-400 mb-1"
+                            className="block text-sm text-gray-600 mb-1"
                           >
+                            {" "}
                             Company Name*
                           </label>
                           <input
@@ -774,23 +775,24 @@ export default function DealerProfilePage() {
                         <div>
                           <label
                             htmlFor="location"
-                            className="block text-sm text-gray-400 mb-1"
+                            className="block text-sm text-gray-600 mb-1"
                           >
+                            {" "}
                             Location*
                           </label>
                           <div className="relative">
-                            <MapPinIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <MapPinIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                             <input
                               type="text"
                               id="location"
                               name="location"
                               value={formData.location}
                               onChange={handleInputChange}
-                              className={`w-full pl-9 px-3 py-2 bg-gray-700 border ${
+                              className={`w-full pl-9 px-3 py-2 bg-white border ${
                                 errors.location
                                   ? "border-rose-500"
-                                  : "border-gray-600"
-                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors`}
+                                  : "border-gray-300"
+                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 transition-colors`}
                               placeholder="Enter your business address"
                             />
                           </div>
@@ -804,23 +806,24 @@ export default function DealerProfilePage() {
                         <div>
                           <label
                             htmlFor="phone"
-                            className="block text-sm text-gray-400 mb-1"
+                            className="block text-sm text-gray-600 mb-1"
                           >
+                            {" "}
                             Phone Number
                           </label>
                           <div className="relative">
-                            <PhoneIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <PhoneIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                             <input
                               type="tel"
                               id="phone"
                               name="phone"
                               value={formData.phone}
                               onChange={handleInputChange}
-                              className={`w-full pl-9 px-3 py-2 bg-gray-700 border ${
+                              className={`w-full pl-9 px-3 py-2 bg-white border ${
                                 errors.phone
                                   ? "border-rose-500"
-                                  : "border-gray-600"
-                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors`}
+                                  : "border-gray-300"
+                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 transition-colors`}
                               placeholder="Enter phone number"
                             />
                           </div>
@@ -835,7 +838,7 @@ export default function DealerProfilePage() {
                           <div>
                             <label
                               htmlFor="latitude"
-                              className="block text-sm text-gray-400 mb-1"
+                              className="block text-sm text-gray-600 mb-1"
                             >
                               Latitude
                             </label>
@@ -845,11 +848,11 @@ export default function DealerProfilePage() {
                               name="latitude"
                               value={formData.latitude}
                               onChange={handleInputChange}
-                              className={`w-full px-3 py-2 bg-gray-700 border ${
+                              className={`w-full px-3 py-2 bg-white border ${
                                 errors.latitude
                                   ? "border-rose-500"
-                                  : "border-gray-600"
-                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors`}
+                                  : "border-gray-300"
+                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 transition-colors`}
                               placeholder="e.g. 33.8814"
                             />
                             {errors.latitude && (
@@ -861,7 +864,7 @@ export default function DealerProfilePage() {
                           <div>
                             <label
                               htmlFor="longitude"
-                              className="block text-sm text-gray-400 mb-1"
+                              className="block text-sm text-gray-600 mb-1"
                             >
                               Longitude
                             </label>
@@ -871,11 +874,11 @@ export default function DealerProfilePage() {
                               name="longitude"
                               value={formData.longitude}
                               onChange={handleInputChange}
-                              className={`w-full px-3 py-2 bg-gray-700 border ${
+                              className={`w-full px-3 py-2 bg-white border ${
                                 errors.longitude
                                   ? "border-rose-500"
-                                  : "border-gray-600"
-                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-colors`}
+                                  : "border-gray-300"
+                              } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 transition-colors`}
                               placeholder="e.g. 35.5497"
                             />
                             {errors.longitude && (
