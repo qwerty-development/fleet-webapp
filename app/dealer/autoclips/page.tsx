@@ -515,14 +515,14 @@ export default function DealerAutoClipsPage() {
           disabled={currentPage === 1}
           className={`p-2 rounded-md ${
             currentPage === 1
-              ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : "bg-gray-700 text-white hover:bg-gray-600"
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center px-4 py-2 bg-gray-800 rounded-md text-white">
+        <div className="flex items-center px-4 py-2 bg-gray-100 rounded-md text-gray-700">
           Page {currentPage} of {totalPages}
         </div>
 
@@ -533,8 +533,8 @@ export default function DealerAutoClipsPage() {
           disabled={currentPage === totalPages}
           className={`p-2 rounded-md ${
             currentPage === totalPages
-              ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-              : "bg-gray-700 text-white hover:bg-gray-600"
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
           <ChevronRightIcon className="h-5 w-5" />
@@ -555,21 +555,21 @@ export default function DealerAutoClipsPage() {
         ></div>
 
         <div className="min-h-screen px-4 text-center flex items-center justify-center">
-          <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle bg-gray-800 shadow-xl rounded-2xl relative">
-            <h3 className="text-lg font-medium leading-6 text-white mb-4">
+          <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle bg-white shadow-xl rounded-2xl relative">
+            <h3 className="text-lg font-medium leading-6 text-gray-800 mb-4">
               Create New AutoClip
             </h3>
 
             <form onSubmit={handleCreateSubmit}>
               {/* Video Upload Section */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Video Upload*
                 </label>
                 {formData.videoFile ? (
-                  <div className="relative rounded-lg overflow-hidden h-40 bg-gray-700">
+                  <div className="relative rounded-lg overflow-hidden h-40 bg-gray-100">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <PlayIcon className="h-12 w-12 text-white" />
+                      <PlayIcon className="h-12 w-12 text-gray-500" />
                     </div>
                     <p className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
                       {formData.videoFile.name}
@@ -585,10 +585,10 @@ export default function DealerAutoClipsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-40 bg-gray-700 rounded-lg border-2 border-dashed border-gray-500 cursor-pointer hover:border-indigo-500 transition-colors">
+                  <div className="flex items-center justify-center h-40 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 cursor-pointer hover:border-accent transition-colors">
                     <label className="cursor-pointer flex flex-col items-center">
                       <VideoCameraIcon className="h-10 w-10 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-400">
+                      <span className="text-sm text-gray-500">
                         Click to select a video
                       </span>
                       <input
@@ -610,7 +610,7 @@ export default function DealerAutoClipsPage() {
               {/* Title and Description */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Title*
                   </label>
                   <input
@@ -618,7 +618,7 @@ export default function DealerAutoClipsPage() {
                     name="title"
                     value={formData.title}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     placeholder="Enter a title for your clip"
                     maxLength={50}
                   />
@@ -630,14 +630,14 @@ export default function DealerAutoClipsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
                   </label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     placeholder="Describe your clip"
                     rows={3}
                     maxLength={500}
@@ -652,7 +652,7 @@ export default function DealerAutoClipsPage() {
 
               {/* Car Selection */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Car*
                 </label>
 
@@ -664,8 +664,8 @@ export default function DealerAutoClipsPage() {
                         onClick={() => handleCarSelect(car.id)}
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
                           formData.carId === car.id
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            ? "bg-accent text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
                         <div className="font-medium">
@@ -676,7 +676,7 @@ export default function DealerAutoClipsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-gray-700 rounded-lg text-center text-gray-300">
+                  <div className="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
                     No cars available for new AutoClips. All cars already have
                     associated clips.
                   </div>
@@ -693,16 +693,16 @@ export default function DealerAutoClipsPage() {
               {isUploading && (
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-300">
+                    <span className="text-sm font-medium text-gray-700">
                       Uploading
                     </span>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-sm text-gray-600">
                       {uploadProgress}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2.5">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div
-                      className="bg-indigo-600 h-2.5 rounded-full"
+                      className="bg-accent h-2.5 rounded-full"
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
                   </div>
@@ -714,17 +714,17 @@ export default function DealerAutoClipsPage() {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUploading || cars.length === 0}
-                  className={`px-4 py-2 bg-indigo-600 text-white rounded-md transition-colors ${
+                  className={`px-4 py-2 bg-accent text-white rounded-md transition-colors ${
                     isUploading || cars.length === 0
                       ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-indigo-700"
+                      : "hover:bg-accent/90"
                   }`}
                 >
                   {isUploading ? "Uploading..." : "Create AutoClip"}
@@ -748,22 +748,22 @@ export default function DealerAutoClipsPage() {
         ></div>
 
         <div className="min-h-screen px-4 text-center flex items-center justify-center">
-          <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle bg-gray-800 shadow-xl rounded-2xl relative">
-            <h3 className="text-lg font-medium leading-6 text-white mb-4">
+          <div className="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle bg-white shadow-xl rounded-2xl relative">
+            <h3 className="text-lg font-medium leading-6 text-gray-800 mb-4">
               Edit AutoClip
             </h3>
 
             <form onSubmit={handleEditSubmit}>
               {/* Video Preview/Upload Section */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Video
                 </label>
 
                 {formData.videoFile ? (
-                  <div className="relative rounded-lg overflow-hidden h-40 bg-gray-700">
+                  <div className="relative rounded-lg overflow-hidden h-40 bg-gray-100">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <PlayIcon className="h-12 w-12 text-white" />
+                      <PlayIcon className="h-12 w-12 text-gray-500" />
                     </div>
                     <p className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
                       {formData.videoFile.name}
@@ -779,9 +779,9 @@ export default function DealerAutoClipsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="relative rounded-lg overflow-hidden h-40 bg-gray-700">
+                  <div className="relative rounded-lg overflow-hidden h-40 bg-gray-100">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <PlayIcon className="h-12 w-12 text-white" />
+                      <PlayIcon className="h-12 w-12 text-gray-500" />
                     </div>
                     <p className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
                       Current video
@@ -810,7 +810,7 @@ export default function DealerAutoClipsPage() {
               {/* Title and Description */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Title*
                   </label>
                   <input
@@ -818,7 +818,7 @@ export default function DealerAutoClipsPage() {
                     name="title"
                     value={formData.title}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     placeholder="Enter a title for your clip"
                     maxLength={50}
                   />
@@ -830,14 +830,14 @@ export default function DealerAutoClipsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
                   </label>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     placeholder="Describe your clip"
                     rows={3}
                     maxLength={500}
@@ -852,7 +852,7 @@ export default function DealerAutoClipsPage() {
 
               {/* Car Selection */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Car*
                 </label>
 
@@ -878,8 +878,8 @@ export default function DealerAutoClipsPage() {
                         onClick={() => handleCarSelect(car.id)}
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
                           formData.carId === car.id
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            ? "bg-accent text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
                         <div className="font-medium">
@@ -890,7 +890,7 @@ export default function DealerAutoClipsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-gray-700 rounded-lg text-center text-gray-300">
+                  <div className="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
                     No cars available. Please add cars to your inventory first.
                   </div>
                 )}
@@ -906,16 +906,16 @@ export default function DealerAutoClipsPage() {
               {isUploading && (
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-300">
+                    <span className="text-sm font-medium text-gray-700">
                       Uploading
                     </span>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-sm text-gray-600">
                       {uploadProgress}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2.5">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div
-                      className="bg-indigo-600 h-2.5 rounded-full"
+                      className="bg-accent h-2.5 rounded-full"
                       style={{ width: `${uploadProgress}%` }}
                     ></div>
                   </div>
@@ -927,17 +927,17 @@ export default function DealerAutoClipsPage() {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUploading}
-                  className={`px-4 py-2 bg-indigo-600 text-white rounded-md transition-colors ${
+                  className={`px-4 py-2 bg-accent text-white rounded-md transition-colors ${
                     isUploading
                       ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-indigo-700"
+                      : "hover:bg-accent/90"
                   }`}
                 >
                   {isUploading ? "Uploading..." : "Save Changes"}
@@ -965,9 +965,9 @@ export default function DealerAutoClipsPage() {
         ></div>
 
         <div className="min-h-screen px-4 text-center flex items-center justify-center">
-          <div className="inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left align-middle bg-gray-800 shadow-xl rounded-2xl relative">
+          <div className="inline-block w-full max-w-3xl p-6 my-8 overflow-hidden text-left align-middle bg-white shadow-xl rounded-2xl relative">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-medium leading-6 text-white">
+              <h3 className="text-lg font-medium leading-6 text-gray-800">
                 {selectedClip.title}
               </h3>
 
@@ -977,7 +977,7 @@ export default function DealerAutoClipsPage() {
                   setIsViewModalOpen(false);
                   setSelectedClip(null);
                 }}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-500 hover:text-gray-800"
               >
                 <XCircleIcon className="h-6 w-6" />
               </button>
@@ -998,7 +998,7 @@ export default function DealerAutoClipsPage() {
             {/* Clip Details */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-gray-600">
                   {selectedClip.cars && (
                     <span>
                       {selectedClip.cars.make} {selectedClip.cars.model}{" "}
@@ -1008,11 +1008,11 @@ export default function DealerAutoClipsPage() {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <span className="flex items-center text-gray-400 text-sm">
+                  <span className="flex items-center text-gray-600 text-sm">
                     <EyeIcon className="h-4 w-4 mr-1" />
                     {selectedClip.views || 0}
                   </span>
-                  <span className="flex items-center text-gray-400 text-sm">
+                  <span className="flex items-center text-gray-600 text-sm">
                     <HeartIcon className="h-4 w-4 mr-1" />
                     {selectedClip.likes || 0}
                   </span>
@@ -1020,25 +1020,25 @@ export default function DealerAutoClipsPage() {
               </div>
 
               {selectedClip.description && (
-                <p className="text-gray-300 mt-2">{selectedClip.description}</p>
+                <p className="text-gray-700 mt-2">{selectedClip.description}</p>
               )}
 
-              <div className="mt-4 pt-4 border-t border-gray-700">
+              <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="text-gray-400 text-sm mr-2">Status:</span>
+                    <span className="text-gray-600 text-sm mr-2">Status:</span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs ${
                         selectedClip.status === "published"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                          : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                          ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
+                          : "bg-amber-100 text-amber-600 border border-amber-200"
                       }`}
                     >
                       {selectedClip.status}
                     </span>
                   </div>
 
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-gray-600">
                     Created:{" "}
                     {new Date(selectedClip.created_at).toLocaleDateString()}
                   </div>
@@ -1053,8 +1053,8 @@ export default function DealerAutoClipsPage() {
                 onClick={() => toggleStatus(selectedClip)}
                 className={`px-4 py-2 rounded-md transition-colors ${
                   selectedClip.status === "published"
-                    ? "bg-amber-600 hover:bg-amber-700 text-white"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    ? "bg-amber-500 hover:bg-amber-600 text-white"
+                    : "bg-emerald-500 hover:bg-emerald-600 text-white"
                 }`}
               >
                 {selectedClip.status === "published"
@@ -1068,7 +1068,7 @@ export default function DealerAutoClipsPage() {
                   setIsViewModalOpen(false);
                   openEditModal(selectedClip);
                 }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors"
+                className="px-4 py-2 bg-accent hover:bg-accent/90 text-white rounded-md transition-colors"
               >
                 Edit
               </button>
@@ -1079,7 +1079,7 @@ export default function DealerAutoClipsPage() {
                   setIsViewModalOpen(false);
                   setIsDeleteConfirmOpen(true);
                 }}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
               >
                 Delete
               </button>
@@ -1102,20 +1102,20 @@ export default function DealerAutoClipsPage() {
         ></div>
 
         <div className="min-h-screen px-4 text-center flex items-center justify-center">
-          <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle bg-gray-800 shadow-xl rounded-2xl relative">
-            <h3 className="text-lg font-medium leading-6 text-white mb-4">
+          <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle bg-white shadow-xl rounded-2xl relative">
+            <h3 className="text-lg font-medium leading-6 text-gray-800 mb-4">
               Confirm Deletion
             </h3>
 
             <div className="mt-2">
-              <p className="text-gray-300">
+              <p className="text-gray-700">
                 Are you sure you want to delete this AutoClip?
                 <span className="block mt-2 font-semibold">
                   {selectedClip.title}
                 </span>
               </p>
 
-              <p className="mt-3 text-sm text-gray-400">
+              <p className="mt-3 text-sm text-gray-500">
                 This action cannot be undone.
               </p>
             </div>
@@ -1124,14 +1124,14 @@ export default function DealerAutoClipsPage() {
               <button
                 type="button"
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
               >
                 Delete
               </button>
@@ -1144,16 +1144,16 @@ export default function DealerAutoClipsPage() {
 
   // Main component return
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+    <div className="min-h-screen bg-white">
       <DealerNavbar />
 
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-white mb-2">AutoClips</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">AutoClips</h1>
             <button
               onClick={openCreateModal}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
+              className="px-4 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg flex items-center"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               Add New Clip
@@ -1162,21 +1162,21 @@ export default function DealerAutoClipsPage() {
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : autoClips.length === 0 ? (
-            <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-8 text-center">
-              <VideoCameraIcon className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+              <VideoCameraIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
                 No AutoClips Found
               </h3>
-              <p className="text-gray-400 mb-6">
+              <p className="text-gray-500 mb-6">
                 You haven't created any AutoClips yet. Create video content to
                 showcase your vehicles.
               </p>
               <button
                 onClick={openCreateModal}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white transition-colors"
+                className="px-4 py-2 bg-accent hover:bg-accent/90 rounded-lg text-white transition-colors"
               >
                 Create Your First Clip
               </button>
@@ -1187,7 +1187,7 @@ export default function DealerAutoClipsPage() {
                 {autoClips.map((clip) => (
                   <div
                     key={clip.id}
-                    className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300"
+                    className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-300"
                   >
                     <div className="h-48 overflow-hidden relative">
                       {/* Use related car image as thumbnail if available */}
@@ -1198,8 +1198,8 @@ export default function DealerAutoClipsPage() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                          <VideoCameraIcon className="h-12 w-12 text-gray-500" />
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                          <VideoCameraIcon className="h-12 w-12 text-gray-400" />
                         </div>
                       )}
                       <div
@@ -1219,31 +1219,31 @@ export default function DealerAutoClipsPage() {
                           setIsViewModalOpen(true);
                         }}
                       >
-                        <button className="p-3 bg-indigo-600 rounded-full">
+                        <button className="p-3 bg-accent rounded-full">
                           <PlayIcon className="h-6 w-6 text-white" />
                         </button>
                       </div>
                     </div>
 
                     <div className="p-4">
-                      <h3 className="text-white text-lg font-semibold truncate">
+                      <h3 className="text-gray-800 text-lg font-semibold truncate">
                         {clip.title}
                       </h3>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-gray-600 text-sm">
                         {clip.cars &&
                           `${clip.cars.make} ${clip.cars.model} ${clip.cars.year}`}
                       </p>
 
                       <div className="flex justify-between items-center mt-3">
-                        <p className="text-gray-400 text-xs">
+                        <p className="text-gray-500 text-xs">
                           {new Date(clip.created_at).toLocaleDateString()}
                         </p>
                         <div className="flex items-center space-x-2">
-                          <div className="flex items-center text-gray-400 text-sm">
+                          <div className="flex items-center text-gray-600 text-sm">
                             <EyeIcon className="h-4 w-4 mr-1" />
                             {clip.views || 0}
                           </div>
-                          <div className="flex items-center text-gray-400 text-sm">
+                          <div className="flex items-center text-gray-600 text-sm">
                             <HeartIcon className="h-4 w-4 mr-1" />
                             {clip.likes || 0}
                           </div>
@@ -1253,7 +1253,7 @@ export default function DealerAutoClipsPage() {
                       <div className="flex space-x-2 mt-4">
                         <button
                           onClick={() => openEditModal(clip)}
-                          className="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded transition-colors"
+                          className="flex-1 px-3 py-1.5 bg-accent hover:bg-accent/90 text-white text-sm rounded transition-colors"
                         >
                           Edit
                         </button>
@@ -1262,7 +1262,7 @@ export default function DealerAutoClipsPage() {
                             setSelectedClip(clip);
                             setIsDeleteConfirmOpen(true);
                           }}
-                          className="flex-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
+                          className="flex-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm rounded transition-colors"
                         >
                           Delete
                         </button>

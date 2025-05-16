@@ -77,19 +77,19 @@ const KPICard = ({
   icon: React.ReactNode;
   trend?: number | null;
 }) => (
-  <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 flex-1 mx-1 shadow-sm">
+  <div className="bg-white border border-gray-200 rounded-xl p-5 flex-1 mx-1 shadow-sm">
     <div className="flex justify-between items-center mb-2">
-      <p className="text-gray-400 text-sm font-medium">{title}</p>
-      <span className="flex items-center justify-center p-1.5 rounded-md bg-indigo-500/20 text-indigo-300">
+      <p className="text-gray-600 text-sm font-medium">{title}</p>
+      <span className="flex items-center justify-center p-1.5 rounded-md bg-accent/10 text-accent/80">
         {icon}
       </span>
     </div>
-    <p className="text-white text-2xl font-semibold">{value}</p>
+    <p className="text-gray-800 text-2xl font-semibold">{value}</p>
     {trend !== null && (
       <div className="flex items-center text-xs mt-1">
         <span
           className={`flex items-center ${
-            trend >= 0 ? "text-emerald-400" : "text-rose-400"
+            trend >= 0 ? "text-emerald-600" : "text-rose-600"
           }`}
         >
           {trend >= 0 ? (
@@ -121,7 +121,7 @@ const KPICard = ({
           )}
           {Math.abs(trend)}%
         </span>
-        <span className="ml-2 text-gray-400">from last period</span>
+        <span className="ml-2 text-gray-500">from last period</span>
       </div>
     )}
   </div>
@@ -145,20 +145,20 @@ const SaleCard = ({
 
   return (
     <div
-      className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl mb-4 overflow-hidden cursor-pointer hover:shadow-xl hover:border-gray-600 transition-all duration-300"
+      className="bg-white border border-gray-200 rounded-xl mb-4 overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-300 transition-all duration-300"
       onClick={onViewDetails}
     >
       <div className="p-4">
         {/* Header: Vehicle Name and Profit */}
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-bold text-white">
+          <h3 className="text-lg font-bold text-gray-800">
             {sale.year} {sale.make} {sale.model}
           </h3>
           <div
             className={`px-3 py-1.5 rounded-full flex items-center space-x-1 ${
               profit >= 0
-                ? "bg-green-500/20 text-green-400"
-                : "bg-rose-500/20 text-rose-400"
+                ? "bg-green-100 text-green-600"
+                : "bg-rose-100 text-rose-600"
             }`}
           >
             {profit >= 0 ? (
@@ -186,21 +186,21 @@ const SaleCard = ({
         </div>
 
         {/* Buyer and Seller Info */}
-        <div className="flex justify-between items-center py-2 border-b border-t border-gray-700/30">
+        <div className="flex justify-between items-center py-2 border-b border-t border-gray-200">
           <div className="flex items-center space-x-2">
-            <UserIcon className="h-4 w-4 text-indigo-400" />
+            <UserIcon className="h-4 w-4 text-accent/80" />
             <div>
-              <p className="text-xs text-gray-400">Bought From</p>
-              <p className="text-sm font-medium text-white">
+              <p className="text-xs text-gray-500">Bought From</p>
+              <p className="text-sm font-medium text-gray-800">
                 {sale.seller_name || "N/A"}
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <BuildingStorefrontIcon className="h-4 w-4 text-indigo-400" />
+            <BuildingStorefrontIcon className="h-4 w-4 text-accent/80" />
             <div>
-              <p className="text-xs text-gray-400">Sold To</p>
-              <p className="text-sm font-medium text-white">
+              <p className="text-xs text-gray-500">Sold To</p>
+              <p className="text-sm font-medium text-gray-800">
                 {sale.buyer_name || "N/A"}
               </p>
             </div>
@@ -210,19 +210,19 @@ const SaleCard = ({
         {/* Price and Stock Information */}
         <div className="flex justify-between items-center py-2">
           <div className="flex items-center space-x-2">
-            <ClockIcon className="h-4 w-4 text-indigo-400" />
+            <ClockIcon className="h-4 w-4 text-accent/80" />
             <div>
-              <p className="text-xs text-gray-400">In Stock</p>
-              <p className="text-sm font-medium text-white">
+              <p className="text-xs text-gray-500">In Stock</p>
+              <p className="text-sm font-medium text-gray-800">
                 {daysInStock} days
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <BanknotesIcon className="h-4 w-4 text-indigo-400" />
+            <BanknotesIcon className="h-4 w-4 text-accent/80" />
             <div>
-              <p className="text-xs text-gray-400">Listed Price</p>
-              <p className="text-sm font-medium text-white">
+              <p className="text-xs text-gray-500">Listed Price</p>
+              <p className="text-sm font-medium text-gray-800">
                 ${sale.price.toLocaleString()}
               </p>
             </div>
@@ -230,21 +230,21 @@ const SaleCard = ({
         </div>
 
         {/* Dates */}
-        <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-700/30">
+        <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200">
           <div className="flex items-center space-x-2">
-            <CalendarIcon className="h-4 w-4 text-indigo-400" />
+            <CalendarIcon className="h-4 w-4 text-accent/80" />
             <div>
-              <p className="text-xs text-gray-400">Bought</p>
-              <p className="text-sm font-medium text-white">
+              <p className="text-xs text-gray-500">Bought</p>
+              <p className="text-sm font-medium text-gray-800">
                 {new Date(sale.date_bought).toLocaleDateString()}
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <CheckCircleIcon className="h-4 w-4 text-indigo-400" />
+            <CheckCircleIcon className="h-4 w-4 text-accent/80" />
             <div>
-              <p className="text-xs text-gray-400">Sold</p>
-              <p className="text-sm font-medium text-white">
+              <p className="text-xs text-gray-500">Sold</p>
+              <p className="text-sm font-medium text-gray-800">
                 {new Date(sale.date_sold).toLocaleDateString()}
               </p>
             </div>
@@ -267,18 +267,18 @@ const StatsCard = ({
   trend?: number | null;
   subValue?: string | null;
 }) => (
-  <div className="bg-gray-800 p-4 rounded-xl flex-1 mx-1">
-    <p className="text-xs text-gray-400 mb-2">{title}</p>
+  <div className="bg-gray-50 p-4 rounded-xl flex-1 mx-1">
+    <p className="text-xs text-gray-500 mb-2">{title}</p>
     <div className="flex items-baseline">
-      <p className="text-lg font-bold text-white">
+      <p className="text-lg font-bold text-gray-800">
         {typeof value === "number" ? `$${value?.toLocaleString()}` : value}
       </p>
       {trend !== null && (
         <div
           className={`ml-2 px-2 py-1 rounded-full ${
             trend >= 0
-              ? "bg-green-500/20 text-green-400"
-              : "bg-rose-500/20 text-rose-400"
+              ? "bg-green-100 text-green-600"
+              : "bg-rose-100 text-rose-600"
           }`}
         >
           <span className="text-xs">
@@ -287,7 +287,7 @@ const StatsCard = ({
         </div>
       )}
     </div>
-    {subValue && <p className="text-xs mt-1 text-gray-400">{subValue}</p>}
+    {subValue && <p className="text-xs mt-1 text-gray-500">{subValue}</p>}
   </div>
 );
 
@@ -303,16 +303,16 @@ const StatsCardPlain = ({
   trend?: number | null;
   subValue?: string | null;
 }) => (
-  <div className="bg-gray-800 p-4 rounded-xl flex-1 mx-1">
-    <p className="text-xs text-gray-400 mb-2">{title}</p>
+  <div className="bg-gray-50 p-4 rounded-xl flex-1 mx-1">
+    <p className="text-xs text-gray-500 mb-2">{title}</p>
     <div className="flex items-baseline">
-      <p className="text-lg font-bold text-white">{value}</p>
+      <p className="text-lg font-bold text-gray-800">{value}</p>
       {trend !== null && (
         <div
           className={`ml-2 px-2 py-1 rounded-full ${
             trend >= 0
-              ? "bg-green-500/20 text-green-400"
-              : "bg-rose-500/20 text-rose-400"
+              ? "bg-green-100 text-green-600"
+              : "bg-rose-100 text-rose-600"
           }`}
         >
           <span className="text-xs">
@@ -321,7 +321,7 @@ const StatsCardPlain = ({
         </div>
       )}
     </div>
-    {subValue && <p className="text-xs mt-1 text-gray-400">{subValue}</p>}
+    {subValue && <p className="text-xs mt-1 text-gray-500">{subValue}</p>}
   </div>
 );
 
@@ -376,20 +376,20 @@ const SaleDetailsModal = ({
           ></div>
         </div>
 
-        <div className="inline-block align-bottom bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <div>
-              <h3 className="text-2xl font-bold text-white">Sale Details</h3>
-              <p className="text-gray-300">
+              <h3 className="text-2xl font-bold text-gray-800">Sale Details</h3>
+              <p className="text-gray-600">
                 {sale.year} {sale.make} {sale.model}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <XMarkIcon className="h-6 w-6 text-gray-400" />
+              <XMarkIcon className="h-6 w-6 text-gray-500" />
             </button>
           </div>
 
@@ -432,16 +432,16 @@ const SaleDetailsModal = ({
 
             {/* Transaction Details */}
             <div className="px-6 pb-6">
-              <div className="bg-gray-800 border border-gray-700 p-5 rounded-xl">
-                <h4 className="text-lg font-semibold text-white mb-4">
+              <div className="bg-white border border-gray-200 p-5 rounded-xl">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">
                   Transaction Details
                 </h4>
 
                 <div className="space-y-3">
                   {sale.buyer_name && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Buyer</span>
-                      <span className="font-medium text-white">
+                      <span className="text-gray-600">Buyer</span>
+                      <span className="font-medium text-gray-800">
                         {sale.buyer_name}
                       </span>
                     </div>
@@ -449,23 +449,23 @@ const SaleDetailsModal = ({
 
                   {sale.seller_name && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Seller</span>
-                      <span className="font-medium text-white">
+                      <span className="text-gray-600">Seller</span>
+                      <span className="font-medium text-gray-800">
                         {sale.seller_name}
                       </span>
                     </div>
                   )}
 
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Purchase Date</span>
-                    <span className="font-medium text-white">
+                    <span className="text-gray-600">Purchase Date</span>
+                    <span className="font-medium text-gray-800">
                       {new Date(sale.date_bought)?.toLocaleDateString()}
                     </span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Sale Date</span>
-                    <span className="font-medium text-white">
+                    <span className="text-gray-600">Sale Date</span>
+                    <span className="font-medium text-gray-800">
                       {new Date(sale.date_sold)?.toLocaleDateString()}
                     </span>
                   </div>
@@ -475,22 +475,22 @@ const SaleDetailsModal = ({
 
             {/* Price Chart */}
             <div className="px-6 pb-6">
-              <h4 className="text-lg font-semibold text-white mb-4">
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">
                 Price Breakdown
               </h4>
-              <div className="h-64 bg-gray-900/50 rounded-xl p-4">
+              <div className="h-64 bg-gray-50 rounded-xl p-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={barChartData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="name" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="name" stroke="#6B7280" />
+                    <YAxis stroke="#6B7280" />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1F2937",
-                        borderColor: "#4B5563",
+                        backgroundColor: "#FFFFFF",
+                        borderColor: "#E5E7EB",
                       }}
                       formatter={(value) => [`$${value}`, "Price"]}
                     />
@@ -547,16 +547,16 @@ const ExportSalesModal = ({
           ></div>
         </div>
 
-        <div className="inline-block align-bottom bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="px-6 py-4 border-b border-gray-700">
-            <h3 className="text-xl font-semibold text-white">
+        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800">
               Export Sales Data
             </h3>
           </div>
 
           <div className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Choose Export Format
               </label>
               <div className="grid grid-cols-3 gap-4">
@@ -564,8 +564,8 @@ const ExportSalesModal = ({
                   onClick={() => setExportFormat("csv")}
                   className={`py-3 px-4 rounded-lg flex flex-col items-center justify-center border ${
                     exportFormat === "csv"
-                      ? "border-indigo-500 bg-indigo-900/20 text-indigo-400"
-                      : "border-gray-700 hover:border-gray-600 hover:bg-gray-700/50 text-gray-300"
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
                   }`}
                 >
                   <DocumentArrowDownIcon className="h-6 w-6 mb-2" />
@@ -576,8 +576,8 @@ const ExportSalesModal = ({
                   onClick={() => setExportFormat("excel")}
                   className={`py-3 px-4 rounded-lg flex flex-col items-center justify-center border ${
                     exportFormat === "excel"
-                      ? "border-indigo-500 bg-indigo-900/20 text-indigo-400"
-                      : "border-gray-700 hover:border-gray-600 hover:bg-gray-700/50 text-gray-300"
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
                   }`}
                 >
                   <svg
@@ -594,8 +594,8 @@ const ExportSalesModal = ({
                   onClick={() => setExportFormat("pdf")}
                   className={`py-3 px-4 rounded-lg flex flex-col items-center justify-center border ${
                     exportFormat === "pdf"
-                      ? "border-indigo-500 bg-indigo-900/20 text-indigo-400"
-                      : "border-gray-700 hover:border-gray-600 hover:bg-gray-700/50 text-gray-300"
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700"
                   }`}
                 >
                   <svg
@@ -611,7 +611,7 @@ const ExportSalesModal = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Data to Include
               </label>
               <div className="space-y-3">
@@ -620,12 +620,12 @@ const ExportSalesModal = ({
                     id="include-all"
                     name="include-all"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800"
+                    className="h-4 w-4 rounded border-gray-300 bg-white text-accent focus:ring-accent"
                     defaultChecked
                   />
                   <label
                     htmlFor="include-all"
-                    className="ml-2 text-sm text-gray-300"
+                    className="ml-2 text-sm text-gray-700"
                   >
                     All sale records ({salesData.length} items)
                   </label>
@@ -635,12 +635,12 @@ const ExportSalesModal = ({
                     id="include-details"
                     name="include-details"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800"
+                    className="h-4 w-4 rounded border-gray-300 bg-white text-accent focus:ring-accent"
                     defaultChecked
                   />
                   <label
                     htmlFor="include-details"
-                    className="ml-2 text-sm text-gray-300"
+                    className="ml-2 text-sm text-gray-700"
                   >
                     Include detailed price information
                   </label>
@@ -650,12 +650,12 @@ const ExportSalesModal = ({
                     id="include-summary"
                     name="include-summary"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800"
+                    className="h-4 w-4 rounded border-gray-300 bg-white text-accent focus:ring-accent"
                     defaultChecked
                   />
                   <label
                     htmlFor="include-summary"
-                    className="ml-2 text-sm text-gray-300"
+                    className="ml-2 text-sm text-gray-700"
                   >
                     Include summary statistics
                   </label>
@@ -664,12 +664,12 @@ const ExportSalesModal = ({
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-700 flex flex-row-reverse">
+          <div className="px-6 py-4 border-t border-gray-200 flex flex-row-reverse">
             <button
               type="button"
               onClick={handleExport}
               disabled={isExporting}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isExporting ? (
                 <>
@@ -687,7 +687,7 @@ const ExportSalesModal = ({
               type="button"
               onClick={onClose}
               disabled={isExporting}
-              className="mr-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+              className="mr-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg"
             >
               Cancel
             </button>
@@ -743,16 +743,18 @@ const EnhancedSalesChart = ({ salesData }: { salesData: any[] }) => {
   const [chartType, setChartType] = useState<"profit" | "revenue">("profit");
 
   return (
-    <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 mb-6">
+    <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-sm">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-white">Sales Performance</h3>
+        <h3 className="text-lg font-semibold text-gray-800">
+          Sales Performance
+        </h3>
         <div className="flex space-x-2">
           <button
             onClick={() => setChartType("profit")}
             className={`px-3 py-1.5 text-xs rounded-lg ${
               chartType === "profit"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "bg-accent text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
             Profit
@@ -761,8 +763,8 @@ const EnhancedSalesChart = ({ salesData }: { salesData: any[] }) => {
             onClick={() => setChartType("revenue")}
             className={`px-3 py-1.5 text-xs rounded-lg ${
               chartType === "revenue"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                ? "bg-accent text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
             Revenue
@@ -783,14 +785,14 @@ const EnhancedSalesChart = ({ salesData }: { salesData: any[] }) => {
                   <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="month" stroke="#6B7280" />
+              <YAxis stroke="#6B7280" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1F2937",
-                  borderColor: "#4B5563",
-                  color: "#F9FAFB",
+                  backgroundColor: "#FFFFFF",
+                  borderColor: "#E5E7EB",
+                  color: "#111827",
                 }}
                 formatter={(value: any) => [
                   `$${value.toLocaleString()}`,
@@ -816,14 +818,14 @@ const EnhancedSalesChart = ({ salesData }: { salesData: any[] }) => {
                   <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="month" stroke="#6B7280" />
+              <YAxis stroke="#6B7280" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1F2937",
-                  borderColor: "#4B5563",
-                  color: "#F9FAFB",
+                  backgroundColor: "#FFFFFF",
+                  borderColor: "#E5E7EB",
+                  color: "#111827",
                 }}
                 formatter={(value: any) => [
                   `$${value.toLocaleString()}`,
@@ -1002,7 +1004,7 @@ export default function DealerSalesHistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+    <div className="min-h-screen bg-white">
       <DealerNavbar />
 
       <div className="pt-16 lg:pt-0 lg:pl-64">
@@ -1010,7 +1012,7 @@ export default function DealerSalesHistoryPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Sales History
               </h1>
               {dealership && (
@@ -1022,7 +1024,7 @@ export default function DealerSalesHistoryPage() {
                       className="h-6 w-6 rounded-full mr-2 object-cover"
                     />
                   )}
-                  <p className="text-gray-400">{dealership.name}</p>
+                  <p className="text-gray-600">{dealership.name}</p>
                 </div>
               )}
             </div>
@@ -1030,7 +1032,7 @@ export default function DealerSalesHistoryPage() {
             <div className="mt-4 md:mt-0 flex space-x-3">
               <button
                 onClick={handleRefresh}
-                className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg"
+                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"
                 disabled={isRefreshing}
               >
                 <ArrowPathIcon
@@ -1042,7 +1044,7 @@ export default function DealerSalesHistoryPage() {
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : (
             <>
@@ -1074,7 +1076,7 @@ export default function DealerSalesHistoryPage() {
               {/* Export Button */}
               <button
                 onClick={() => setIsExportModalOpen(true)}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl flex items-center justify-center mb-6"
+                className="w-full bg-accent hover:bg-accent/90 text-white py-3 px-4 rounded-xl flex items-center justify-center mb-6"
               >
                 <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
                 Export Sales Data
@@ -1086,12 +1088,12 @@ export default function DealerSalesHistoryPage() {
               {/* Sales List */}
               <div id="recent-sales" className="mb-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-lg font-semibold text-gray-800">
                     Recent Sales
                   </h3>
                   <button
                     onClick={toggleSortOrder}
-                    className="flex items-center text-gray-400 hover:text-white"
+                    className="flex items-center text-gray-600 hover:text-gray-800"
                   >
                     <span className="mr-1">
                       {sortOrder === "desc" ? "Newest first" : "Oldest first"}
@@ -1116,10 +1118,10 @@ export default function DealerSalesHistoryPage() {
                     />
                   ))
                 ) : (
-                  <div className="bg-gray-800/50 rounded-xl py-12 px-4 text-center">
+                  <div className="bg-gray-50 rounded-xl py-12 px-4 text-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-12 w-12 mx-auto text-gray-600 mb-4"
+                      className="h-12 w-12 mx-auto text-gray-400 mb-4"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1131,7 +1133,7 @@ export default function DealerSalesHistoryPage() {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    <p className="text-gray-400">No sales records found</p>
+                    <p className="text-gray-600">No sales records found</p>
                     <p className="text-sm text-gray-500 mt-1">
                       Complete a sale to see it listed here
                     </p>
