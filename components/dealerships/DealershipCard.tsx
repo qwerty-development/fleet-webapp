@@ -53,7 +53,7 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
   };
 
   return (
-    <div className="relative pt-14 bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out hover:scale-105">
+    <div className="relative pt-14 bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 ease-in-out hover:scale-105 border border-gray-200">
       {/* Badge for available cars */}
       <div className="absolute top-4 right-4 bg-accent text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
         {dealership.carsAvailable} Cars
@@ -70,17 +70,17 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
                 aria-label={`${dealership.name} Logo`}
               />
             ) : (
-              <div className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-gray-700 flex items-center justify-center">
+              <div className="w-16 h-16 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-gray-100 flex items-center justify-center">
                 <UserCircleIcon className="h-12 w-12 sm:h-10 sm:w-10 md:h-12 md:w-12 text-gray-400" />
               </div>
             )}
           </div>
           <div className="ml-4">
-            <h3 className="text-white font-semibold text-lg sm:text-base">
+            <h3 className="text-gray-900 font-semibold text-lg sm:text-base">
               {dealership.name}
             </h3>
-            <p className="text-gray-400 text-sm">{dealership.location}</p>
-            <p className="text-gray-400 text-sm">Number: {dealership.phone}</p>
+            <p className="text-gray-600 text-sm">{dealership.location}</p>
+            <p className="text-gray-600 text-sm">Number: {dealership.phone}</p>
           </div>
         </div>
       </Link>
@@ -89,9 +89,9 @@ const DealershipCard: React.FC<DealershipCardProps> = ({ dealership }) => {
         {/* Share Button */}
         <button
           onClick={handleShare}
-          className="flex items-center space-x-2 bg-gray-700 bg-opacity-50 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm hover:scale-105 transition-all duration-300 ease-in-out shadow"
+          className="flex items-center space-x-2 bg-gray-200 px-4 py-2 rounded-full text-gray-700 text-sm hover:scale-105 transition-all duration-300 ease-in-out shadow"
         >
-          <ShareIcon className="h-5 w-5 text-white" />
+          <ShareIcon className="h-5 w-5 text-gray-700" />
           <span>Share</span>
         </button>
         {/* WhatsApp Button */}

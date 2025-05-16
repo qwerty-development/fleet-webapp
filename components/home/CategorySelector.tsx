@@ -150,7 +150,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       {/* Gradient fade left: visible only on md+ */}
       {showScrollIndicator && (
         <div
-          className="hidden md:block absolute left-0 top-[50px] bottom-0 w-12 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none transition-opacity duration-300"
+          className="hidden md:block absolute left-0 top-[50px] bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none transition-opacity duration-300"
           style={{ opacity: canScrollLeft ? 1 : 0 }}
         />
       )}
@@ -159,7 +159,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       {canScrollLeft && (
         <button
           onClick={scrollLeft}
-          className="hidden md:flex absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 items-center justify-center transition-all duration-300"
+          className="hidden md:flex absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/60 hover:bg-white/80 text-gray-800 rounded-full p-2 items-center justify-center transition-all duration-300 shadow-md"
           aria-label="Scroll left"
         >
           <ChevronLeft size={24} />
@@ -197,7 +197,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                 className={`mt-2 text-sm ${
                   selectedCategories.includes(category.id)
                     ? "text-accent font-semibold"
-                    : "text-gray-300"
+                    : "text-gray-600"
                 }`}
               >
                 {category.label}
@@ -211,7 +211,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       {canScrollRight && (
         <button
           onClick={scrollRight}
-          className="hidden md:flex absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 items-center justify-center transition-all duration-300"
+          className="hidden md:flex absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-white/60 hover:bg-white/80 text-gray-800 rounded-full p-2 items-center justify-center transition-all duration-300 shadow-md"
           aria-label="Scroll right"
         >
           <ChevronRight size={24} />
@@ -221,7 +221,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       {/* Gradient fade right: visible only on md+ */}
       {showScrollIndicator && (
         <div
-          className="hidden md:block absolute right-0 top-[50px] bottom-0 w-12 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none transition-opacity duration-300"
+          className="hidden md:block absolute right-0 top-[50px] bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none transition-opacity duration-300"
           style={{ opacity: canScrollRight ? 1 : 0 }}
         />
       )}

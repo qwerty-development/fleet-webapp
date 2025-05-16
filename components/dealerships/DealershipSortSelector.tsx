@@ -50,13 +50,13 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
       {/* Desktop Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full md:flex md:items-center md:justify-between md:px-4 md:py-3 md:bg-gray-800 md:border md:border-gray-700 md:rounded-full text-white focus:outline-none focus:ring-2 focus:ring-accent hidden md:inline-flex"
+        className="w-full md:flex md:items-center md:justify-between md:px-4 md:py-3 md:bg-white md:border md:border-gray-300 md:rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-accent hidden md:inline-flex"
         type="button"
       >
         <div className="flex items-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2 text-gray-400"
+            className="h-5 w-5 mr-2 text-gray-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -91,13 +91,13 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
       {/* Mobile Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden flex items-center justify-center w-12 h-12 bg-gray-800 border border-gray-700 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-accent"
+        className="md:hidden flex items-center justify-center w-12 h-12 bg-white border border-gray-300 rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-accent"
         type="button"
         aria-label="Sort options"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5 text-gray-400"
+          className="h-5 w-5 text-gray-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -118,7 +118,7 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-20 mt-2 right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-lg w-48 md:w-full"
+            className="absolute z-20 mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg w-48 md:w-full"
           >
             <div className="py-1">
               {DEALERSHIP_SORT_OPTIONS.map((option) => (
@@ -128,7 +128,7 @@ const DealershipSortSelector: React.FC<DealershipSortSelectorProps> = ({
                   className={`w-full text-left px-4 py-2 text-sm ${
                     selectedOption === option.id
                       ? "bg-accent text-white"
-                      : "text-gray-300 hover:bg-gray-700"
+                      : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   {option.label}

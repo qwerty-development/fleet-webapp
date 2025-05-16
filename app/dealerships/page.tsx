@@ -183,18 +183,18 @@ export default function DealershipsPage() {
   };
 
   return (
-    <div className="min-h-screen pb-10 flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
+    <div className="min-h-screen pb-10 flex flex-col bg-white">
       {/* Fixed Navbar */}
       <Navbar />
       <div className="flex flex-1 pt-20">
         <main className="flex-1 w-full max-w-7xl mx-auto">
           {/* Fixed Search and Sort Bar - Styled to match All Brands page */}
-          <div className="sticky top-16 z-40 bg-gray-900 bg-opacity-80 backdrop-blur-md py-4 mb-6 border-b border-gray-700 shadow-lg">
+          <div className="sticky top-16 z-40 bg-white bg-opacity-90 backdrop-blur-md py-4 mb-6 border-b border-gray-200 shadow-md">
             <div className="flex justify-between items-center mb-4 px-6">
-              <h1 className="text-3xl md:text-4xl font-bold text-white">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
                 Dealerships
               </h1>
-              <p className="text-gray-400 text-base">
+              <p className="text-gray-600 text-base">
                 {totalDealershipCount}{" "}
                 {totalDealershipCount === 1 ? "dealership" : "dealerships"}{" "}
                 available
@@ -240,11 +240,11 @@ export default function DealershipsPage() {
               </motion.div>
             </div>
           ) : (
-            <div className="text-center mt-12 p-8 bg-gray-800 bg-opacity-40 backdrop-blur-sm rounded-2xl shadow-lg">
-              <h3 className="text-white text-xl font-bold mb-2">
+            <div className="text-center mt-12 p-8 bg-gray-100 rounded-2xl shadow-md">
+              <h3 className="text-gray-900 text-xl font-bold mb-2">
                 No dealerships found
               </h3>
-              <p className="text-gray-400 mb-4">
+              <p className="text-gray-600 mb-4">
                 Try adjusting your search query to find more results.
               </p>
               <button
@@ -261,7 +261,7 @@ export default function DealershipsPage() {
               <button
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors duration-300 ease-in-out rounded-full uppercase tracking-wide text-white font-semibold shadow-lg disabled:bg-gray-700 disabled:opacity-50"
+                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors duration-300 ease-in-out rounded-full uppercase tracking-wide text-white font-semibold shadow-lg disabled:bg-gray-300 disabled:opacity-50"
               >
                 {isLoadingMore ? (
                   <span className="flex items-center">
