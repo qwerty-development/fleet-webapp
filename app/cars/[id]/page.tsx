@@ -22,8 +22,296 @@ import FavoriteButton from "@/components/home/FavoriteButton";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { FaWhatsapp } from "react-icons/fa";
+// Import Material Design Icons for feature icons
+import {
+  MdBluetooth,
+  MdMap,
+  MdCamera,
+  MdApps,
+  MdAndroid,
+  MdSpeaker,
+  MdSettingsRemote,
+  MdKey,
+  MdPower,
+  MdTurnSlightRight,
+  MdVisibilityOff,
+  MdLocalParking,
+  MdSpeed,
+  MdAirlineSeatReclineExtra,
+  MdAirlineSeatReclineNormal,
+  MdPerson,
+  MdWbSunny,
+  MdDirectionsCar,
+  MdSettings,
+  MdWindow,
+  MdInfo,
+  // Additional icons for other categories
+  MdLightbulb,
+  MdTireRepair,
+  MdFlipToFront, // For mirrors
+  MdSensors, // Instead of MdCameraOutdoor
+  MdRoofing,
+  MdOpacity,
+  MdChair,
+  MdLightMode,
+  MdStorage,
+  MdShoppingBag,
+  MdEngineering,
+  MdElectricCar,
+  MdModeStandby,
+  MdTune,
+} from "react-icons/md";
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+// VEHICLE_FEATURES mapping
+const VEHICLE_FEATURES = {
+  tech: [
+    {
+      id: "bluetooth",
+      label: "Bluetooth",
+      icon: <MdBluetooth className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "navigation",
+      label: "Navigation System",
+      icon: <MdMap className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "backup_camera",
+      label: "Backup Camera",
+      icon: <MdCamera className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "apple_carplay",
+      label: "Apple CarPlay",
+      icon: <MdApps className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "android_auto",
+      label: "Android Auto",
+      icon: <MdAndroid className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "premium_audio",
+      label: "Premium Audio",
+      icon: <MdSpeaker className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "remote_start",
+      label: "Remote Start",
+      icon: <MdSettingsRemote className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "keyless_entry",
+      label: "Keyless Entry",
+      icon: <MdKey className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "keyless_start",
+      label: "Keyless Start",
+      icon: <MdPower className="w-4 h-4 mr-1" />,
+    },
+  ],
+  safety: [
+    {
+      id: "lane_assist",
+      label: "Lane Departure Warning",
+      icon: <MdTurnSlightRight className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "blind_spot",
+      label: "Blind Spot Monitoring",
+      icon: <MdVisibilityOff className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "parking_sensors",
+      label: "Parking Sensors",
+      icon: <MdLocalParking className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "backup_camera",
+      label: "Backup Camera",
+      icon: <MdCamera className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "cruise_control",
+      label: "Cruise Control",
+      icon: <MdSpeed className="w-4 h-4 mr-1" />,
+    },
+  ],
+  comfort: [
+    {
+      id: "heated_seats",
+      label: "Heated Seats",
+      icon: <MdAirlineSeatReclineExtra className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "leather_seats",
+      label: "Leather Seats",
+      icon: <MdAirlineSeatReclineNormal className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "third_row_seats",
+      label: "Third Row Seats",
+      icon: <MdPerson className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "sunroof",
+      label: "Sunroof",
+      icon: <MdWbSunny className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "power_mirrors",
+      label: "Power Mirrors",
+      icon: <MdDirectionsCar className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "power_steering",
+      label: "Power Steering",
+      icon: <MdSettings className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "power_windows",
+      label: "Power Windows",
+      icon: <MdWindow className="w-4 h-4 mr-1" />,
+    },
+  ],
+  exterior: [
+    {
+      id: "light",
+      label: "Lights",
+      icon: <MdLightbulb className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "wheel",
+      label: "Wheels",
+      icon: <MdTireRepair className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "mirror",
+      label: "Mirrors",
+      icon: <MdFlipToFront className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "sensor",
+      label: "Sensors",
+      icon: <MdSensors className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "camera",
+      label: "Camera",
+      icon: <MdCamera className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "exterior",
+      label: "Exterior",
+      icon: <MdDirectionsCar className="w-4 h-4 mr-1" />,
+    },
+    { id: "roof", label: "Roof", icon: <MdRoofing className="w-4 h-4 mr-1" /> },
+    { id: "tint", label: "Tint", icon: <MdOpacity className="w-4 h-4 mr-1" /> },
+  ],
+  interior: [
+    {
+      id: "interior",
+      label: "Interior",
+      icon: <MdChair className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "cabin",
+      label: "Cabin",
+      icon: <MdDirectionsCar className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "storage",
+      label: "Storage",
+      icon: <MdStorage className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "cargo",
+      label: "Cargo",
+      icon: <MdShoppingBag className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "trunk",
+      label: "Trunk",
+      icon: <MdShoppingBag className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "ambient",
+      label: "Ambient",
+      icon: <MdLightMode className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "lighting",
+      label: "Lighting",
+      icon: <MdLightbulb className="w-4 h-4 mr-1" />,
+    },
+  ],
+  performance: [
+    {
+      id: "engine",
+      label: "Engine",
+      icon: <MdEngineering className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "power",
+      label: "Power",
+      icon: <MdElectricCar className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "drive",
+      label: "Drive",
+      icon: <MdDirectionsCar className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "sport",
+      label: "Sport",
+      icon: <MdSpeed className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "eco",
+      label: "Eco",
+      icon: <MdElectricCar className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "mode",
+      label: "Mode",
+      icon: <MdModeStandby className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "transmission",
+      label: "Transmission",
+      icon: <MdSettings className="w-4 h-4 mr-1" />,
+    },
+    {
+      id: "suspension",
+      label: "Suspension",
+      icon: <MdTune className="w-4 h-4 mr-1" />,
+    },
+  ],
+};
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+
+// Helper function to get icon for feature
+const getFeatureIcon = (feature: string) => {
+  // Normalize the feature ID by converting to lowercase, removing spaces, and replacing spaces with underscores
+  const normalizedFeature = feature.toLowerCase().replace(/\s+/g, "_");
+
+  // Check each category in VEHICLE_FEATURES
+  for (const category in VEHICLE_FEATURES) {
+    const found = VEHICLE_FEATURES[
+      category as keyof typeof VEHICLE_FEATURES
+    ].find(
+      (item) =>
+        item.id === normalizedFeature ||
+        item.label.toLowerCase() === feature.toLowerCase()
+    );
+    if (found) return found.icon;
+  }
+
+  // Default icon if no match found
+  return <MdInfo className="w-4 h-4 mr-1" />;
+};
 
 // Updated Car interface to match your global types
 export interface Car {
@@ -555,7 +843,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
-
   // Set the active image directly by clicking a thumbnail
   const setActiveImage = (index: number) => {
     setActiveImageIndex(index);
@@ -683,10 +970,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     car.dealerships?.longitude || car.dealership_longitude;
   const dealershipPhone = car.dealerships?.phone || car.dealership_phone;
 
-  const googleMapsUrl = dealershipLatitude && dealershipLongitude
-  ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${dealershipLatitude},${dealershipLongitude}`
-  : `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(dealershipLocation || dealershipName)}`;
-
+  const googleMapsUrl =
+    dealershipLatitude && dealershipLongitude
+      ? `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${dealershipLatitude},${dealershipLongitude}`
+      : `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(
+          dealershipLocation || dealershipName
+        )}`;
 
   return (
     <div className="min-h-screen pb-20  bg-gray-900 text-white relative">
@@ -1042,8 +1331,9 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                                 (feature: string, index: number) => (
                                   <span
                                     key={index}
-                                    className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700"
+                                    className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700 flex items-center"
                                   >
+                                    {getFeatureIcon(feature)}
                                     {feature
                                       .replace(/_/g, " ")
                                       .split(" ")
@@ -1073,8 +1363,9 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                             (feature: string, index: number) => (
                               <span
                                 key={index}
-                                className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700"
+                                className="bg-gray-800 text-gray-300 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-700 flex items-center"
                               >
+                                {getFeatureIcon(feature)}
                                 {feature
                                   .replace(/_/g, " ")
                                   .split(" ")
@@ -1097,7 +1388,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           )}
 
           {/* Dealership Section with Contact Buttons */}
-          <div className="bg-gray-800 rounded-xl p-4">
+          <div className="bg-gray-800  rounded-xl p-4">
             <h2 className="text-xl font-bold mb-5">Dealership</h2>
             <div className="flex items-center justify-between">
               {/* Dealership Info */}
@@ -1145,14 +1436,15 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
             {/* Map */}
             {dealershipLatitude && dealershipLongitude && (
-              <div className="mt-4">
+              <div className="mt-10 4">
                 <iframe
-                  width='100%'
-                  height='150%'
-                  style={{ border: 0, borderRadius: '4px' }}
-                  loading='lazy'
+                  width="100%"
+                  height="550%"
+                  style={{ border: 0, borderRadius: "4px" }}
+                  loading="lazy"
                   allowFullScreen
-                  src={googleMapsUrl}></iframe>
+                  src={googleMapsUrl}
+                ></iframe>
               </div>
             )}
           </div>
@@ -1183,7 +1475,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             href="https://fleetapp.me"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-accent/90 transition-colors"
+            className="bg-accent text-whit px-4 py-2 rounded-lg font-medium hover:bg-accent/90 transition-colors"
           >
             Get the App
           </a>
