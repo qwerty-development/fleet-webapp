@@ -404,14 +404,14 @@ export default function DealerInventoryPage() {
   const showWarning = daysUntilExpiration <= 7 && daysUntilExpiration > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+    <div className="min-h-screen bg-white">
       <DealerNavbar />
 
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto">
           {/* Header with title and add button */}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
               Inventory Management
             </h1>
             <button
@@ -419,8 +419,8 @@ export default function DealerInventoryPage() {
               disabled={subscriptionExpired}
               className={`px-4 py-2 ${
                 subscriptionExpired
-                  ? "bg-gray-600"
-                  : "bg-indigo-600 hover:bg-indigo-700"
+                  ? "bg-gray-400"
+                  : "bg-accent hover:bg-accent/90"
               } text-white rounded-lg flex items-center transition-colors`}
             >
               <svg
@@ -449,8 +449,8 @@ export default function DealerInventoryPage() {
               }`}
             >
               <div className="flex items-center">
-                <InformationCircleIcon className="h-5 w-5 mr-2 text-white" />
-                <span className="text-white font-medium">
+                <InformationCircleIcon className="h-5 w-5 mr-2 text-gray-800" />
+                <span className="text-gray-800 font-medium">
                   {subscriptionExpired
                     ? "Your subscription has expired. Please renew to manage listings."
                     : `Your subscription will expire in ${daysUntilExpiration} days. Please renew soon.`}
@@ -460,24 +460,24 @@ export default function DealerInventoryPage() {
           )}
 
           {/* Search and filter bar */}
-          <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Search input */}
               <div className="relative flex-1">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search by make, model, year, price..."
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-10 pr-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2"
                   >
-                    <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-white" />
+                    <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   </button>
                 )}
               </div>
@@ -488,9 +488,9 @@ export default function DealerInventoryPage() {
                 disabled={subscriptionExpired}
                 className={`flex items-center px-4 py-2 ${
                   subscriptionExpired
-                    ? "bg-gray-700 cursor-not-allowed"
-                    : "bg-gray-700 hover:bg-gray-600"
-                } rounded-lg text-white`}
+                    ? "bg-gray-200 cursor-not-allowed"
+                    : "bg-gray-100 hover:bg-gray-200"
+                } rounded-lg text-gray-800 border border-gray-200`}
               >
                 <FunnelIcon className="h-5 w-5 mr-2" />
                 <span>Filter</span>
@@ -508,9 +508,9 @@ export default function DealerInventoryPage() {
                     handleSortChange(SORT_OPTIONS[e.target.value])
                   }
                   disabled={subscriptionExpired}
-                  className={`appearance-none bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 pr-8 text-white ${
+                  className={`appearance-none bg-gray-50 border border-gray-300 rounded-lg px-4 py-2 pr-8 text-gray-800 ${
                     subscriptionExpired ? "cursor-not-allowed" : ""
-                  } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  } focus:outline-none focus:ring-2 focus:ring-accent`}
                 >
                   {SORT_OPTIONS.map((option, index) => (
                     <option key={index} value={index}>
@@ -518,7 +518,7 @@ export default function DealerInventoryPage() {
                     </option>
                   ))}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                   <svg
                     className="fill-current h-4 w-4"
                     xmlns="http://www.w3.org/2000/svg"
@@ -534,7 +534,7 @@ export default function DealerInventoryPage() {
             {Object.entries(filters).some(([key, value]) => value !== "") && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {filters.status && (
-                  <div className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full px-3 py-1 text-sm flex items-center">
+                  <div className="bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 text-sm flex items-center">
                     <span>Status: {filters.status}</span>
                     <button
                       onClick={() =>
@@ -547,7 +547,7 @@ export default function DealerInventoryPage() {
                   </div>
                 )}
                 {filters.condition && (
-                  <div className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full px-3 py-1 text-sm flex items-center">
+                  <div className="bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 text-sm flex items-center">
                     <span>Condition: {filters.condition}</span>
                     <button
                       onClick={() =>
@@ -560,7 +560,7 @@ export default function DealerInventoryPage() {
                   </div>
                 )}
                 {(filters.minPrice || filters.maxPrice) && (
-                  <div className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full px-3 py-1 text-sm flex items-center">
+                  <div className="bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 text-sm flex items-center">
                     <span>
                       Price:
                       {filters.minPrice ? ` $${filters.minPrice}` : " $0"}
@@ -582,7 +582,7 @@ export default function DealerInventoryPage() {
                   </div>
                 )}
                 {(filters.minYear || filters.maxYear) && (
-                  <div className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full px-3 py-1 text-sm flex items-center">
+                  <div className="bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 text-sm flex items-center">
                     <span>
                       Year:
                       {filters.minYear || "Any"}
@@ -604,7 +604,7 @@ export default function DealerInventoryPage() {
                   </div>
                 )}
                 {filters.transmission && (
-                  <div className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full px-3 py-1 text-sm flex items-center">
+                  <div className="bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 text-sm flex items-center">
                     <span>Transmission: {filters.transmission}</span>
                     <button
                       onClick={() =>
@@ -628,7 +628,7 @@ export default function DealerInventoryPage() {
                       transmission: "",
                     })
                   }
-                  className="bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-full px-3 py-1 text-sm"
+                  className="bg-rose-500/10 text-rose-600 border border-rose-500/30 rounded-full px-3 py-1 text-sm"
                 >
                   Clear All
                 </button>
@@ -638,7 +638,7 @@ export default function DealerInventoryPage() {
 
           {/* Results count and pagination info */}
           {!isLoading && (
-            <div className="text-gray-400 mb-4">
+            <div className="text-gray-600 mb-4">
               Showing{" "}
               {inventory.length > 0
                 ? (currentPage - 1) * ITEMS_PER_PAGE + 1
@@ -653,13 +653,13 @@ export default function DealerInventoryPage() {
           {/* Inventory grid */}
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : inventory.length === 0 ? (
-            <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-8 text-center">
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-gray-500 mx-auto mb-4"
+                className="h-12 w-12 text-gray-400 mx-auto mb-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -671,10 +671,10 @@ export default function DealerInventoryPage() {
                   d="M4 6h16M4 10h16M4 14h16M4 18h16"
                 />
               </svg>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
                 No Vehicles Found
               </h3>
-              <p className="text-gray-400 mb-6">
+              <p className="text-gray-600 mb-6">
                 {searchQuery || Object.values(filters).some((val) => val !== "")
                   ? "No vehicles match your search criteria. Try adjusting your filters."
                   : "Your dealership doesn't have any cars in inventory yet. Add your first car listing to get started."}
@@ -686,8 +686,8 @@ export default function DealerInventoryPage() {
                     disabled={subscriptionExpired}
                     className={`px-4 py-2 ${
                       subscriptionExpired
-                        ? "bg-gray-600"
-                        : "bg-indigo-600 hover:bg-indigo-700"
+                        ? "bg-gray-300"
+                        : "bg-accent hover:bg-accent/90"
                     } rounded-lg text-white transition-colors`}
                   >
                     Add Your First Car
@@ -699,7 +699,7 @@ export default function DealerInventoryPage() {
               {inventory.map((car) => (
                 <div
                   key={car.id}
-                  className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300"
+                  className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-300"
                 >
                   <div className="h-48 overflow-hidden relative">
                     {car.images && car.images.length > 0 ? (
@@ -709,10 +709,10 @@ export default function DealerInventoryPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-12 w-12 text-gray-500"
+                          className="h-12 w-12 text-gray-400"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -736,23 +736,23 @@ export default function DealerInventoryPage() {
                   </div>
 
                   <div className="p-4">
-                    <h3 className="text-white text-lg font-semibold">
+                    <h3 className="text-gray-800 text-lg font-semibold">
                       {car.make} {car.model}
                     </h3>
-                    <p className="text-gray-400 text-sm">
+                    <p className="text-gray-600 text-sm">
                       {car.year} • {car.mileage?.toLocaleString() || 0} miles
                     </p>
 
                     <div className="flex justify-between items-center mt-3">
-                      <p className="text-indigo-400 font-bold">
+                      <p className="text-accent font-bold">
                         ${car.price?.toLocaleString()}
                       </p>
                       <div className="flex items-center space-x-2">
-                        <div className="flex items-center text-gray-400 text-sm">
+                        <div className="flex items-center text-gray-500 text-sm">
                           <EyeIcon className="h-4 w-4 mr-1" />
                           {car.views || 0}
                         </div>
-                        <div className="flex items-center text-gray-400 text-sm">
+                        <div className="flex items-center text-gray-500 text-sm">
                           <HeartIcon className="h-4 w-4 mr-1" />
                           {car.likes || 0}
                         </div>
@@ -768,8 +768,8 @@ export default function DealerInventoryPage() {
                             disabled={subscriptionExpired}
                             className={`flex-1 px-3 py-1.5 ${
                               subscriptionExpired
-                                ? "bg-gray-700"
-                                : "bg-indigo-600 hover:bg-indigo-700"
+                                ? "bg-gray-300"
+                                : "bg-accent hover:bg-accent/90"
                             } text-white text-sm rounded transition-colors flex items-center justify-center`}
                           >
                             <PencilIcon className="h-4 w-4 mr-1" />
@@ -778,7 +778,7 @@ export default function DealerInventoryPage() {
                         )}
                         <button
                           onClick={() => handleViewCarDetails(car)}
-                          className="flex-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors flex items-center justify-center"
+                          className="flex-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm rounded transition-colors flex items-center justify-center border border-gray-200"
                         >
                           <InformationCircleIcon className="h-4 w-4 mr-1" />
                           Details
@@ -791,7 +791,7 @@ export default function DealerInventoryPage() {
                           <button
                             onClick={() => handleMarkAsSold(car)}
                             disabled={subscriptionExpired}
-                            className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors flex items-center justify-center"
+                            className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded transition-colors flex items-center justify-center"
                           >
                             <CheckCircleIcon className="h-4 w-4 mr-1" />
                             Sold
@@ -800,7 +800,7 @@ export default function DealerInventoryPage() {
                         <button
                           onClick={() => handleDeleteCar(car)}
                           disabled={subscriptionExpired}
-                          className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors flex items-center justify-center"
+                          className="flex-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-sm rounded transition-colors flex items-center justify-center"
                         >
                           <TrashIcon className="h-4 w-4 mr-1" />
                           Delete
@@ -822,8 +822,8 @@ export default function DealerInventoryPage() {
                   disabled={currentPage === 1}
                   className={`px-3 py-1 rounded-md ${
                     currentPage === 1
-                      ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-800 text-white hover:bg-gray-700"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
                   }`}
                 >
                   First
@@ -834,8 +834,8 @@ export default function DealerInventoryPage() {
                   disabled={currentPage === 1}
                   className={`px-3 py-1 rounded-md ${
                     currentPage === 1
-                      ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-800 text-white hover:bg-gray-700"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
                   }`}
                 >
                   Previous
@@ -865,8 +865,8 @@ export default function DealerInventoryPage() {
                           onClick={() => handlePageChange(pageToRender)}
                           className={`px-3 py-1 rounded-md ${
                             currentPage === pageToRender
-                              ? "bg-indigo-600 text-white"
-                              : "bg-gray-800 text-white hover:bg-gray-700"
+                              ? "bg-accent text-white"
+                              : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
                           }`}
                         >
                           {pageToRender}
@@ -884,8 +884,8 @@ export default function DealerInventoryPage() {
                   }
                   className={`px-3 py-1 rounded-md ${
                     currentPage === Math.ceil(totalCount / ITEMS_PER_PAGE)
-                      ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-800 text-white hover:bg-gray-700"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
                   }`}
                 >
                   Next
@@ -900,8 +900,8 @@ export default function DealerInventoryPage() {
                   }
                   className={`px-3 py-1 rounded-md ${
                     currentPage === Math.ceil(totalCount / ITEMS_PER_PAGE)
-                      ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-800 text-white hover:bg-gray-700"
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
                   }`}
                 >
                   Last
@@ -916,15 +916,15 @@ export default function DealerInventoryPage() {
       {isFilterModalOpen && (
         <div className="fixed inset-0 z-30 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black bg-opacity-70"
+            className="absolute inset-0 bg-black bg-opacity-50"
             onClick={() => setIsFilterModalOpen(false)}
           ></div>
-          <div className="relative bg-gray-900 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-white">Filters</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Filters</h3>
               <button
                 onClick={() => setIsFilterModalOpen(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-500 hover:text-gray-800"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -938,7 +938,7 @@ export default function DealerInventoryPage() {
             >
               {/* Status Filter */}
               <div className="mb-4">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Status
                 </label>
                 <select
@@ -946,7 +946,7 @@ export default function DealerInventoryPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, status: e.target.value })
                   }
-                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -958,7 +958,7 @@ export default function DealerInventoryPage() {
 
               {/* Condition Filter */}
               <div className="mb-4">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Condition
                 </label>
                 <select
@@ -966,7 +966,7 @@ export default function DealerInventoryPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, condition: e.target.value })
                   }
-                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   {CONDITION_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -978,7 +978,7 @@ export default function DealerInventoryPage() {
 
               {/* Price Range */}
               <div className="mb-4">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Price Range
                 </label>
                 <div className="flex space-x-2">
@@ -990,7 +990,7 @@ export default function DealerInventoryPage() {
                         setFilters({ ...filters, minPrice: e.target.value })
                       }
                       placeholder="Min Price"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
                   <div className="flex-1">
@@ -1001,7 +1001,7 @@ export default function DealerInventoryPage() {
                         setFilters({ ...filters, maxPrice: e.target.value })
                       }
                       placeholder="Max Price"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
                 </div>
@@ -1009,7 +1009,7 @@ export default function DealerInventoryPage() {
 
               {/* Year Range */}
               <div className="mb-4">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Year Range
                 </label>
                 <div className="flex space-x-2">
@@ -1021,7 +1021,7 @@ export default function DealerInventoryPage() {
                         setFilters({ ...filters, minYear: e.target.value })
                       }
                       placeholder="Min Year"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
                   <div className="flex-1">
@@ -1032,7 +1032,7 @@ export default function DealerInventoryPage() {
                         setFilters({ ...filters, maxYear: e.target.value })
                       }
                       placeholder="Max Year"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
                 </div>
@@ -1040,7 +1040,7 @@ export default function DealerInventoryPage() {
 
               {/* Transmission */}
               <div className="mb-6">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Transmission
                 </label>
                 <select
@@ -1048,7 +1048,7 @@ export default function DealerInventoryPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, transmission: e.target.value })
                   }
-                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   {TRANSMISSION_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1073,15 +1073,15 @@ export default function DealerInventoryPage() {
                       transmission: "",
                     })
                   }
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2"
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg py-2 border border-gray-300"
                 >
                   Reset
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2"
+                  className="flex-1 bg-accent hover:bg-accent/90 text-white rounded-lg py-2"
                 >
-                  Done
+                  Apply Filters
                 </button>
               </div>
             </form>
@@ -1093,14 +1093,14 @@ export default function DealerInventoryPage() {
       {isDeleteModalOpen && selectedCar && (
         <div className="fixed inset-0 z-30 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black bg-opacity-70"
+            className="absolute inset-0 bg-black bg-opacity-50"
             onClick={() => setIsDeleteModalOpen(false)}
           ></div>
-          <div className="relative bg-gray-900 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-white mb-4">
+          <div className="relative bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
               Delete Listing
             </h3>
-            <p className="text-gray-300 mb-6">
+            <p className="text-gray-600 mb-6">
               Are you sure you want to delete the listing for {selectedCar.make}{" "}
               {selectedCar.model} ({selectedCar.year})? This action cannot be
               undone.
@@ -1108,13 +1108,13 @@ export default function DealerInventoryPage() {
             <div className="flex space-x-3">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2"
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg py-2 border border-gray-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-lg py-2"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg py-2"
               >
                 Delete
               </button>
@@ -1127,14 +1127,14 @@ export default function DealerInventoryPage() {
       {isSoldModalOpen && selectedCar && (
         <div className="fixed inset-0 z-30 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black bg-opacity-70"
+            className="absolute inset-0 bg-black bg-opacity-50"
             onClick={() => setIsSoldModalOpen(false)}
           ></div>
-          <div className="relative bg-gray-900 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-white mb-4">
+          <div className="relative bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
               Mark as Sold
             </h3>
-            <p className="text-gray-300 mb-4">
+            <p className="text-gray-600 mb-4">
               Please provide the sale details for {selectedCar.make}{" "}
               {selectedCar.model} ({selectedCar.year}).
             </p>
@@ -1146,7 +1146,7 @@ export default function DealerInventoryPage() {
               }}
             >
               <div className="mb-4">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Sold Price
                 </label>
                 <input
@@ -1156,13 +1156,13 @@ export default function DealerInventoryPage() {
                     setSoldInfo({ ...soldInfo, price: e.target.value })
                   }
                   placeholder="Enter the sold price"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                   required
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Date Sold
                 </label>
                 <input
@@ -1171,13 +1171,13 @@ export default function DealerInventoryPage() {
                   onChange={(e) =>
                     setSoldInfo({ ...soldInfo, date: e.target.value })
                   }
-                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                   required
                 />
               </div>
 
               <div className="mb-6">
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
                   Buyer Name
                 </label>
                 <input
@@ -1187,7 +1187,7 @@ export default function DealerInventoryPage() {
                     setSoldInfo({ ...soldInfo, buyer_name: e.target.value })
                   }
                   placeholder="Enter the buyer's name"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-50 border border-gray-300 rounded-md px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
                   required
                 />
               </div>
@@ -1196,15 +1196,15 @@ export default function DealerInventoryPage() {
                 <button
                   type="button"
                   onClick={() => setIsSoldModalOpen(false)}
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg py-2 border border-gray-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg py-2"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2"
                 >
-                  Confirm
+                  Confirm Sale
                 </button>
               </div>
             </form>

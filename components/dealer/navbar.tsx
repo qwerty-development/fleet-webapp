@@ -121,17 +121,17 @@ const DealerNavbar: React.FC = () => {
   return (
     <>
       {/* Desktop Side Navigation */}
-      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 bg-gray-900 border-r border-gray-800 z-40">
+      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40 shadow-sm">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 border-b border-gray-800">
+          <div className="flex items-center justify-center h-16 border-b border-gray-200">
             <Link href="/dealer" className="flex items-center">
               <img
-                src="/logo.png"
+                src="/logo-dark.png"
                 alt="Fleet Dealer Portal"
                 className="h-8 w-auto"
               />
-              <span className="ml-2 text-xl font-bold text-white">
+              <span className="ml-2 text-xl font-bold text-gray-800">
                 Dealer Portal
               </span>
             </Link>
@@ -147,8 +147,8 @@ const DealerNavbar: React.FC = () => {
                   href={item.href}
                   className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                     active
-                      ? "bg-indigo-600 text-white"
-                      : "text-gray-400 hover:text-white hover:bg-gray-800"
+                      ? "bg-accent text-white"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
                   {active ? (
@@ -163,10 +163,10 @@ const DealerNavbar: React.FC = () => {
           </nav>
 
           {/* Logout Button */}
-          <div className="p-4 border-t border-gray-800">
+          <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+              className="flex items-center w-full px-4 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3" />
               <span className="font-medium">Logout</span>
@@ -177,19 +177,23 @@ const DealerNavbar: React.FC = () => {
 
       {/* Mobile Top Navigation */}
       <header
-        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-gray-900 transition-all duration-200 ${
+        className={`lg:hidden fixed top-0 left-0 right-0 z-40 bg-white transition-all duration-200 ${
           scrolled ? "shadow-md" : ""
         }`}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <Link href="/dealer" className="flex items-center">
-            <img src="/logo.png" alt="Fleet Dealer" className="h-8 w-auto" />
-            <span className="ml-2 text-lg font-bold text-white">Dealer</span>
+            <img
+              src="/logo-dark.png"
+              alt="Fleet Dealer"
+              className="h-8 w-auto"
+            />
+            <span className="ml-2 text-lg font-bold text-gray-800">Dealer</span>
           </Link>
 
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-gray-400 hover:text-white rounded-md"
+            className="p-2 text-gray-600 hover:text-gray-900 rounded-md"
           >
             {isMobileMenuOpen ? (
               <XMarkIcon className="h-6 w-6" />
@@ -203,16 +207,16 @@ const DealerNavbar: React.FC = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
 
       {/* Mobile Menu */}
       <aside
-        className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-gray-900 border-r border-gray-800 z-30 transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-30 transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } shadow-lg`}
       >
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
@@ -223,8 +227,8 @@ const DealerNavbar: React.FC = () => {
                 href={item.href}
                 className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                   active
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800"
+                    ? "bg-accent text-white"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -241,7 +245,7 @@ const DealerNavbar: React.FC = () => {
           {/* Mobile Logout Button */}
           <button
             onClick={handleLogout}
-            className="flex items-center w-full px-4 py-3 mt-6 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className="flex items-center w-full px-4 py-3 mt-6 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeftOnRectangleIcon className="h-5 w-5 mr-3" />
             <span className="font-medium">Logout</span>

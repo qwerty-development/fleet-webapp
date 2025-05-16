@@ -219,46 +219,46 @@ export default function DealerDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+        return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30";
       case "pending":
-        return "bg-amber-500/10 text-amber-400 border border-amber-500/30";
+        return "bg-amber-500/10 text-amber-600 border border-amber-500/30";
       case "sold":
-        return "bg-rose-500/10 text-rose-400 border border-rose-500/30";
+        return "bg-rose-500/10 text-rose-600 border border-rose-500/30";
       default:
-        return "bg-gray-500/10 text-gray-400 border border-gray-500/30";
+        return "bg-gray-500/10 text-gray-600 border border-gray-500/30";
     }
   };
 
   // Get subscription status class
   const getSubscriptionStatusClass = () => {
     if (!stats.subscription.isActive) {
-      return "bg-rose-500/10 text-rose-400 border border-rose-500/30";
+      return "bg-rose-500/10 text-rose-600 border border-rose-500/30";
     }
     if (stats.subscription.daysRemaining <= 30) {
-      return "bg-amber-500/10 text-amber-400 border border-amber-500/30";
+      return "bg-amber-500/10 text-amber-600 border border-amber-500/30";
     }
-    return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+    return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30";
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
+    <div className="min-h-screen bg-white">
       <DealerNavbar />
 
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto pb-16">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Dealer Dashboard
               </h1>
-              <p className="text-gray-400">
+              <p className="text-gray-600">
                 Manage your inventory, monitor activity, and track performance
               </p>
             </div>
 
             {dealershipData && (
               <div className="mt-4 md:mt-0 flex items-center">
-                <div className="px-4 py-2 rounded-lg bg-gray-800 text-white">
+                <div className="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 border border-gray-200">
                   <span className="font-semibold">{dealershipData.name}</span>
                 </div>
               </div>
@@ -289,31 +289,31 @@ export default function DealerDashboard() {
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
             </div>
           ) : (
             <>
               {/* Quick Stats */}
               <div className="flex justify-center grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                <div className="bg-white flex-1 border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
-                    <p className="text-gray-400 text-sm font-medium">
+                    <p className="text-gray-600 text-sm font-medium">
                       Total Cars
                     </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-indigo-500/20 text-indigo-300">
+                    <span className="flex items-center justify-center p-1.5 rounded-md bg-indigo-100 text-indigo-600">
                       <ShoppingBagIcon className="h-4 w-4" />
                     </span>
                   </div>
                   <div className="mt-2">
-                    <p className="text-white text-2xl font-semibold">
+                    <p className="text-gray-800 text-2xl font-semibold">
                       {stats.inventory.total}
                     </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-400">
+                    <div className="flex items-center text-xs mt-1 text-gray-500">
                       <span
                         className={`flex items-center ${
                           stats.inventory.available > 0
-                            ? "text-emerald-400"
-                            : "text-gray-400"
+                            ? "text-emerald-600"
+                            : "text-gray-500"
                         }`}
                       >
                         {stats.inventory.available} Available
@@ -322,49 +322,49 @@ export default function DealerDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                <div className="bg-white flex-1 border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
-                    <p className="text-gray-400 text-sm font-medium">
+                    <p className="text-gray-600 text-sm font-medium">
                       Average Price
                     </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-amber-500/20 text-amber-300">
+                    <span className="flex items-center justify-center p-1.5 rounded-md bg-amber-100 text-amber-600">
                       <CurrencyDollarIcon className="h-4 w-4" />
                     </span>
                   </div>
                   <div className="mt-2">
-                    <p className="text-white text-2xl font-semibold">
+                    <p className="text-gray-800 text-2xl font-semibold">
                       {formatCurrency(stats.inventory.avgPrice)}
                     </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-400">
-                      <span className="text-emerald-400">
+                    <div className="flex items-center text-xs mt-1 text-gray-500">
+                      <span className="text-emerald-600">
                         Based on {stats.inventory.total} cars
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-800/80 flex-1 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                <div className="bg-white flex-1 border border-gray-200 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
-                    <p className="text-gray-400 text-sm font-medium">
+                    <p className="text-gray-600 text-sm font-medium">
                       Engagement
                     </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-purple-500/20 text-purple-300">
+                    <span className="flex items-center justify-center p-1.5 rounded-md bg-purple-100 text-purple-600">
                       <EyeIcon className="h-4 w-4" />
                     </span>
                   </div>
                   <div className="mt-2">
-                    <p className="text-white text-2xl font-semibold">
+                    <p className="text-gray-800 text-2xl font-semibold">
                       {stats.inventory.totalViews}
                     </p>
                     <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-400">
-                        <span className="text-rose-400">
+                      <span className="text-gray-500">
+                        <span className="text-rose-600">
                           {stats.inventory.totalLikes}
                         </span>{" "}
                         likes
                       </span>
-                      <span className="text-gray-400">
-                        <span className="text-emerald-400">
+                      <span className="text-gray-500">
+                        <span className="text-emerald-600">
                           {stats.inventory.totalViews > 0
                             ? Math.round(
                                 (stats.inventory.totalLikes /
@@ -382,42 +382,42 @@ export default function DealerDashboard() {
               </div>
 
               {/* Cars by Status */}
-              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4">
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
                   Car Inventory Status
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-emerald-200">
                     <div className="flex items-center mb-2">
-                      <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
-                      <h4 className="text-white font-medium">Available</h4>
+                      <CheckCircleIcon className="h-5 w-5 text-emerald-600 mr-2" />
+                      <h4 className="text-gray-800 font-medium">Available</h4>
                     </div>
-                    <p className="text-3xl text-emerald-400 font-bold">
+                    <p className="text-3xl text-emerald-600 font-bold">
                       {stats.inventory.available}
                     </p>
-                    <p className="text-gray-400 text-sm mt-1">Ready for sale</p>
+                    <p className="text-gray-600 text-sm mt-1">Ready for sale</p>
                   </div>
 
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-amber-200">
                     <div className="flex items-center mb-2">
-                      <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
-                      <h4 className="text-white font-medium">Pending</h4>
+                      <ClockIcon className="h-5 w-5 text-amber-600 mr-2" />
+                      <h4 className="text-gray-800 font-medium">Pending</h4>
                     </div>
-                    <p className="text-3xl text-amber-400 font-bold">
+                    <p className="text-3xl text-amber-600 font-bold">
                       {stats.inventory.pending}
                     </p>
-                    <p className="text-gray-400 text-sm mt-1">In process</p>
+                    <p className="text-gray-600 text-sm mt-1">In process</p>
                   </div>
 
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-rose-200">
                     <div className="flex items-center mb-2">
-                      <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
-                      <h4 className="text-white font-medium">Sold</h4>
+                      <BanknotesIcon className="h-5 w-5 text-rose-600 mr-2" />
+                      <h4 className="text-gray-800 font-medium">Sold</h4>
                     </div>
-                    <p className="text-3xl text-rose-400 font-bold">
+                    <p className="text-3xl text-rose-600 font-bold">
                       {stats.inventory.sold}
                     </p>
-                    <p className="text-gray-400 text-sm mt-1">
+                    <p className="text-gray-600 text-sm mt-1">
                       Completed sales
                     </p>
                   </div>
@@ -430,7 +430,7 @@ export default function DealerDashboard() {
                   <div
                     key={section.id}
                     onClick={() => navigateToSection(section.id)}
-                    className="bg-gray-800/70 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl hover:border-gray-600 transition-all duration-300"
+                    className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-lg hover:border-gray-300 transition-all duration-300"
                   >
                     <div
                       className={`h-2 bg-gradient-to-r ${section.color}`}
@@ -442,15 +442,15 @@ export default function DealerDashboard() {
                         >
                           <section.icon className="h-6 w-6" />
                         </div>
-                        <h3 className="ml-3 text-xl font-semibold text-white">
+                        <h3 className="ml-3 text-xl font-semibold text-gray-800">
                           {section.name}
                         </h3>
                       </div>
-                      <p className="text-gray-400 text-sm">
+                      <p className="text-gray-600 text-sm">
                         {section.description}
                       </p>
                       <div className="mt-4 flex justify-end">
-                        <button className="flex items-center text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors">
+                        <button className="flex items-center text-accent hover:text-accent/80 text-sm font-medium transition-colors">
                           Manage
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -473,14 +473,14 @@ export default function DealerDashboard() {
 
               {/* Popular Cars */}
               {popularCars.length > 0 && (
-                <div className="bg-gray-800/70 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 shadow-lg mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-4">
+                <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-8">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">
                     Most Popular Cars
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
+                        <tr className="text-left text-gray-600 text-sm border-b border-gray-200">
                           <th className="pb-2 font-medium">Car</th>
                           <th className="pb-2 font-medium">Price</th>
                           <th className="pb-2 font-medium">Status</th>
@@ -488,20 +488,20 @@ export default function DealerDashboard() {
                           <th className="pb-2 font-medium text-right">Likes</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-800">
+                      <tbody className="divide-y divide-gray-200">
                         {popularCars.map((car) => (
-                          <tr key={car.id} className="hover:bg-gray-800/50">
+                          <tr key={car.id} className="hover:bg-gray-50">
                             <td className="py-3">
                               <div>
-                                <p className="text-white font-medium">
+                                <p className="text-gray-800 font-medium">
                                   {car.make} {car.model}
                                 </p>
-                                <p className="text-gray-400 text-xs">
+                                <p className="text-gray-500 text-xs">
                                   {car.year}
                                 </p>
                               </div>
                             </td>
-                            <td className="py-3 text-white">
+                            <td className="py-3 text-gray-800">
                               {formatCurrency(car.price)}
                             </td>
                             <td className="py-3">
@@ -516,10 +516,10 @@ export default function DealerDashboard() {
                                   : car.status}
                               </span>
                             </td>
-                            <td className="py-3 text-right text-white">
+                            <td className="py-3 text-right text-gray-800">
                               {car.views || 0}
                             </td>
-                            <td className="py-3 text-right text-white">
+                            <td className="py-3 text-right text-gray-800">
                               {car.likes || 0}
                             </td>
                           </tr>
