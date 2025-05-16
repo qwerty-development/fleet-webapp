@@ -1,86 +1,86 @@
-'use client';
+"use client";
 
-import React, { useRef, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useRef, useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const CATEGORIES = [
   {
-    id: 'Convertible',
-    label: 'Convertible',
+    id: "Convertible",
+    label: "Convertible",
     icon: (
       <img
         src="/types/convertible.png"
         alt="Convertible"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
   {
-    id: 'Coupe',
-    label: 'Coupe',
+    id: "Coupe",
+    label: "Coupe",
     icon: (
       <img
         src="/types/coupe.png"
         alt="Coupe"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
   {
-    id: 'Hatchback',
-    label: 'Hatchback',
+    id: "Hatchback",
+    label: "Hatchback",
     icon: (
       <img
         src="/types/hatchback.png"
         alt="Hatchback"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
   {
-    id: 'Sedan',
-    label: 'Sedan',
+    id: "Sedan",
+    label: "Sedan",
     icon: (
       <img
         src="/types/sedan.png"
         alt="Sedan"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
   {
-    id: 'Sports',
-    label: 'Sports',
+    id: "Sports",
+    label: "Sports",
     icon: (
       <img
         src="/types/sports.png"
         alt="Sports"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
   {
-    id: 'SUV',
-    label: 'SUV',
+    id: "SUV",
+    label: "SUV",
     icon: (
       <img
         src="/types/suv.png"
         alt="SUV"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
   {
-    id: 'Classic',
-    label: 'Classic',
+    id: "Classic",
+    label: "Classic",
     icon: (
       <img
         src="/types/classic.png"
         alt="Classic"
         className="w-full h-full object-contain"
       />
-    )
+    ),
   },
 ];
 
@@ -93,7 +93,7 @@ interface CategorySelectorProps {
 const CategorySelector: React.FC<CategorySelectorProps> = ({
   selectedCategories,
   onCategoryPress,
-  className = ""
+  className = "",
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
@@ -110,8 +110,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   useEffect(() => {
     checkScrollPosition();
-    window.addEventListener('resize', checkScrollPosition);
-    return () => window.removeEventListener('resize', checkScrollPosition);
+    window.addEventListener("resize", checkScrollPosition);
+    return () => window.removeEventListener("resize", checkScrollPosition);
   }, []);
 
   const containerVariants = {
@@ -133,17 +133,19 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 
   const scrollLeft = () => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    scrollRef.current.scrollBy({ left: -200, behavior: "smooth" });
   };
 
   const scrollRight = () => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    scrollRef.current.scrollBy({ left: 200, behavior: "smooth" });
   };
 
   return (
     <div className={`relative pb-5 w-full ${className}`}>
-      <h2 className="text-xl mb-5 font-bold text-white">Browse by Category</h2>
+      <h2 className="text-xl mb-5 font-bold text-gray-800">
+        Browse by Category
+      </h2>
 
       {/* Gradient fade left: visible only on md+ */}
       {showScrollIndicator && (
@@ -155,7 +157,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 
       {/* Left arrow navigation button */}
       {canScrollLeft && (
-        <button 
+        <button
           onClick={scrollLeft}
           className="hidden md:flex absolute left-0 top-1/2 transform -translate-y-1/2 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 items-center justify-center transition-all duration-300"
           aria-label="Scroll left"
@@ -172,7 +174,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         initial="hidden"
         animate="visible"
       >
-        {CATEGORIES.map(category => (
+        {CATEGORIES.map((category) => (
           <motion.div
             key={category.id}
             variants={itemVariants}
@@ -189,9 +191,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                     : "bg-gray-800 hover:bg-gray-700"
                 }`}
               >
-                <div className="w-20 h-20 relative">
-                  {category.icon}
-                </div>
+                <div className="w-20 h-20 relative">{category.icon}</div>
               </div>
               <span
                 className={`mt-2 text-sm ${
@@ -209,7 +209,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 
       {/* Right arrow navigation button */}
       {canScrollRight && (
-        <button 
+        <button
           onClick={scrollRight}
           className="hidden md:flex absolute right-0 top-1/2 transform -translate-y-1/2 z-20 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 items-center justify-center transition-all duration-300"
           aria-label="Scroll right"

@@ -138,7 +138,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
         } rounded-full transition-all focus:outline-none relative group ${
           favorited
             ? "bg-accent/10 hover:bg-accent/20 text-accent"
-            : "bg-black/40 backdrop-blur-sm hover:bg-black/60 text-white hover:text-accent"
+            : "bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 hover:text-accent"
         } ${className}`}
         aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
       >
@@ -155,7 +155,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
         )}
 
         {/* Tooltip */}
-        <span className="absolute top-full left-1/2 -ml-20 mt-2 px-2 py-1 bg-gray-800/70 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+        <span className="absolute top-full left-1/2 -ml-20 mt-2 px-2 py-1 bg-white text-gray-800 text-xs rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
           {favorited ? "Remove favorite" : "Add to favorites"}
         </span>
       </button>

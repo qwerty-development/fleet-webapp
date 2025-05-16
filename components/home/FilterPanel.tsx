@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { createClient } from '@/utils/supabase/client';
-import { FilterState } from '@/types';
+import React, { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { createClient } from "@/utils/supabase/client";
+import { FilterState } from "@/types";
 
 // Define filter panel props interface
 interface FilterPanelProps {
@@ -81,7 +81,7 @@ const FilterSection: React.FC<{
   className?: string;
 }> = ({ title, children, className = "" }) => (
   <div className={`mb-6 ${className}`}>
-    <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
+    <h3 className="text-lg font-semibold text-gray-800 mb-3">{title}</h3>
     {children}
   </div>
 );
@@ -96,7 +96,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   filters,
   onFilterChange,
   onResetFilters,
-  className = ""
+  className = "",
 }) => {
   const [dealerships, setDealerships] = useState<Dealership[]>([]);
   const [models, setModels] = useState<string[]>([]);
@@ -108,20 +108,22 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
   // Calculate the max height for the fixed container
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const updateMaxHeight = () => {
         if (filterContainerRef.current) {
           const windowHeight = window.innerHeight;
           const offsetTop = 80; // Adjust based on your header height
-          filterContainerRef.current.style.maxHeight = `${windowHeight - offsetTop}px`;
+          filterContainerRef.current.style.maxHeight = `${
+            windowHeight - offsetTop
+          }px`;
         }
       };
-      
+
       updateMaxHeight();
-      window.addEventListener('resize', updateMaxHeight);
-      
+      window.addEventListener("resize", updateMaxHeight);
+
       return () => {
-        window.removeEventListener('resize', updateMaxHeight);
+        window.removeEventListener("resize", updateMaxHeight);
       };
     }
   }, []);
@@ -171,11 +173,16 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     if (filters.color.length > 0) count++;
     if (filters.transmission.length > 0) count++;
     if (filters.drivetrain.length > 0) count++;
-    
+
     // Check if ranges are different from defaults
     if (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000000) count++;
-    if (filters.mileageRange[0] > 0 || filters.mileageRange[1] < 500000) count++;
-    if (filters.yearRange[0] > 1900 || filters.yearRange[1] < new Date().getFullYear()) count++;
+    if (filters.mileageRange[0] > 0 || filters.mileageRange[1] < 500000)
+      count++;
+    if (
+      filters.yearRange[0] > 1900 ||
+      filters.yearRange[1] < new Date().getFullYear()
+    )
+      count++;
 
     if (filters.specialFilter) count++;
     if (filters.sortBy) count++;
@@ -189,7 +196,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const value = parseInt(e.target.value) || 0;
     onFilterChange({
       ...filters,
-      priceRange: [value, filters.priceRange[1]]
+      priceRange: [value, filters.priceRange[1]],
     });
   };
 
@@ -197,7 +204,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const value = parseInt(e.target.value) || 0;
     onFilterChange({
       ...filters,
-      priceRange: [filters.priceRange[0], value]
+      priceRange: [filters.priceRange[0], value],
     });
   };
 
@@ -205,7 +212,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const value = parseInt(e.target.value) || 0;
     onFilterChange({
       ...filters,
-      mileageRange: [value, filters.mileageRange[1]]
+      mileageRange: [value, filters.mileageRange[1]],
     });
   };
 
@@ -213,7 +220,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const value = parseInt(e.target.value) || 0;
     onFilterChange({
       ...filters,
-      mileageRange: [filters.mileageRange[0], value]
+      mileageRange: [filters.mileageRange[0], value],
     });
   };
 
@@ -221,7 +228,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const value = parseInt(e.target.value) || 1900;
     onFilterChange({
       ...filters,
-      yearRange: [value, filters.yearRange[1]]
+      yearRange: [value, filters.yearRange[1]],
     });
   };
 
@@ -229,38 +236,38 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const value = parseInt(e.target.value) || new Date().getFullYear();
     onFilterChange({
       ...filters,
-      yearRange: [filters.yearRange[0], value]
+      yearRange: [filters.yearRange[0], value],
     });
   };
 
   // Quick filter handlers
-  const handleQuickFilterClick = (quickFilter: typeof QUICK_FILTERS[0]) => {
+  const handleQuickFilterClick = (quickFilter: (typeof QUICK_FILTERS)[0]) => {
     if (filters.specialFilter === quickFilter.filter.specialFilter) {
       // Deselect if already selected
       onFilterChange({
         ...filters,
         specialFilter: null,
-        ...(quickFilter.filter.sortBy ? { sortBy: null } : {})
+        ...(quickFilter.filter.sortBy ? { sortBy: null } : {}),
       });
     } else {
       // Apply new quick filter
       const newFilters = { ...filters };
-      
+
       // Handle price range if present
-      if ('priceRange' in quickFilter.filter) {
+      if ("priceRange" in quickFilter.filter) {
         newFilters.priceRange = quickFilter.filter.priceRange as number[];
       }
-      
+
       // Handle special filter if present
-      if ('specialFilter' in quickFilter.filter) {
+      if ("specialFilter" in quickFilter.filter) {
         newFilters.specialFilter = quickFilter.filter.specialFilter as string;
       }
-      
+
       // Handle sort option if present
-      if ('sortBy' in quickFilter.filter) {
+      if ("sortBy" in quickFilter.filter) {
         newFilters.sortBy = quickFilter.filter.sortBy as string;
       }
-      
+
       onFilterChange(newFilters);
     }
   };
@@ -268,91 +275,97 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   // Toggle filters for arrays
   const toggleModelFilter = (model: string) => {
     const newModels = filters.model.includes(model)
-      ? filters.model.filter(m => m !== model)
+      ? filters.model.filter((m) => m !== model)
       : [...filters.model, model];
-    
+
     onFilterChange({
       ...filters,
-      model: newModels
+      model: newModels,
     });
   };
 
   const toggleTransmissionFilter = (transmission: string) => {
     const newTransmission = filters.transmission.includes(transmission)
-      ? filters.transmission.filter(t => t !== transmission)
+      ? filters.transmission.filter((t) => t !== transmission)
       : [...filters.transmission, transmission];
-    
+
     onFilterChange({
       ...filters,
-      transmission: newTransmission
+      transmission: newTransmission,
     });
   };
 
   const toggleDrivetrainFilter = (drivetrain: string) => {
     const newDrivetrain = filters.drivetrain.includes(drivetrain)
-      ? filters.drivetrain.filter(d => d !== drivetrain)
+      ? filters.drivetrain.filter((d) => d !== drivetrain)
       : [...filters.drivetrain, drivetrain];
-    
+
     onFilterChange({
       ...filters,
-      drivetrain: newDrivetrain
+      drivetrain: newDrivetrain,
     });
   };
 
   const toggleColorFilter = (color: string) => {
     const newColors = filters.color.includes(color)
-      ? filters.color.filter(c => c !== color)
+      ? filters.color.filter((c) => c !== color)
       : [...filters.color, color];
-    
+
     onFilterChange({
       ...filters,
-      color: newColors
+      color: newColors,
     });
   };
 
-  const toggleDealershipFilter = (dealershipId: string, dealershipName: string) => {
+  const toggleDealershipFilter = (
+    dealershipId: string,
+    dealershipName: string
+  ) => {
     const newDealerships = filters.dealership.includes(dealershipId)
-      ? filters.dealership.filter(d => d !== dealershipId)
+      ? filters.dealership.filter((d) => d !== dealershipId)
       : [...filters.dealership, dealershipId];
 
     const newDealershipNames = filters.dealershipName.includes(dealershipName)
-      ? filters.dealershipName.filter(n => n !== dealershipName)
+      ? filters.dealershipName.filter((n) => n !== dealershipName)
       : [...filters.dealershipName, dealershipName];
-    
+
     onFilterChange({
       ...filters,
       dealership: newDealerships,
-      dealershipName: newDealershipNames
+      dealershipName: newDealershipNames,
     });
   };
 
   const selectPriceRange = (min: number, max: number) => {
     onFilterChange({
       ...filters,
-      priceRange: [min, max]
+      priceRange: [min, max],
     });
   };
 
   return (
-    <div 
-      className={`${className} sticky bg-gray-900  rounded-xl overflow-y p-2 `} 
-      style={{ height: 'fit-content' }}
+    <div
+      className={`${className} sticky bg-white border border-gray-200 rounded-xl overflow-y p-2 `}
+      style={{ height: "fit-content" }}
     >
-      <div 
+      <div
         ref={filterContainerRef}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div 
-          className={`py-4 transition-all duration-300 ${isHovered ? "overflow-y-auto" : "overflow-y-hidden"}`}
-          style={{ 
-            maxHeight: '100%',
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#4a4a4a #1e1e1e'
+        <div
+          className={`py-4 transition-all duration-300 ${
+            isHovered ? "overflow-y-auto" : "overflow-y-hidden"
+          }`}
+          style={{
+            maxHeight: "100%",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#4a4a4a #1e1e1e",
           }}
         >
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">Filters</h2>
+            {" "}
+            <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
             {hasFiltersSelected && (
               <button
                 onClick={onResetFilters}
@@ -364,7 +377,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           </div>
 
           {/* Quick Filters */}
-          
+
           <FilterSection title="Quick Filters">
             <div className="grid grid-cols-2 gap-2">
               {QUICK_FILTERS.map((quickFilter) => (
@@ -374,7 +387,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                     filters.specialFilter === quickFilter.filter.specialFilter
                       ? "bg-accent text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {quickFilter.label}
@@ -389,37 +402,44 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               {PRICE_RANGES.map((range, index) => (
                 <button
                   key={index}
-                  onClick={() => selectPriceRange(range.value[0], range.value[1])}
+                  onClick={() =>
+                    selectPriceRange(range.value[0], range.value[1])
+                  }
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-                    filters.priceRange[0] === range.value[0] && filters.priceRange[1] === range.value[1]
+                    filters.priceRange[0] === range.value[0] &&
+                    filters.priceRange[1] === range.value[1]
                       ? "bg-accent text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {range.label}
                 </button>
               ))}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Min ($)</label>
+                <label className="block text-gray-500 text-xs mb-1">
+                  Min ($)
+                </label>
                 <input
                   type="number"
                   min="0"
                   value={filters.priceRange[0]}
                   onChange={handlePriceMinChange}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Max ($)</label>
+                <label className="block text-gray-500 text-xs mb-1">
+                  Max ($)
+                </label>
                 <input
                   type="number"
                   min="0"
                   value={filters.priceRange[1]}
                   onChange={handlePriceMaxChange}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
                 />
               </div>
             </div>
@@ -429,25 +449,25 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           <FilterSection title="Year Range">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-gray-400 text-xs mb-1">From</label>
+                <label className="block text-gray-500 text-xs mb-1">From</label>
                 <input
                   type="number"
                   min="1900"
                   max={new Date().getFullYear()}
                   value={filters.yearRange[0]}
                   onChange={handleYearMinChange}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-xs mb-1">To</label>
+                <label className="block text-gray-500 text-xs mb-1">To</label>
                 <input
                   type="number"
                   min="1900"
                   max={new Date().getFullYear()}
                   value={filters.yearRange[1]}
                   onChange={handleYearMaxChange}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
                 />
               </div>
             </div>
@@ -457,23 +477,27 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           <FilterSection title="Mileage Range">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Min (mi)</label>
+                <label className="block text-gray-500 text-xs mb-1">
+                  Min (mi)
+                </label>
                 <input
                   type="number"
                   min="0"
                   value={filters.mileageRange[0]}
                   onChange={handleMileageMinChange}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-xs mb-1">Max (mi)</label>
+                <label className="block text-gray-500 text-xs mb-1">
+                  Max (mi)
+                </label>
                 <input
                   type="number"
                   min="0"
                   value={filters.mileageRange[1]}
                   onChange={handleMileageMaxChange}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                  className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 text-sm"
                 />
               </div>
             </div>
@@ -489,7 +513,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                     filters.transmission.includes(option.value)
                       ? "bg-accent text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {option.label}
@@ -508,7 +532,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                     filters.drivetrain.includes(option.value)
                       ? "bg-accent text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {option.label}
@@ -531,8 +555,8 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   }`}
                   title={colorOption.name}
                 >
-                  <div 
-                    className="w-8 h-8 rounded-md border border-gray-700"
+                  <div
+                    className="w-8 h-8 rounded-md border border-gray-300"
                     style={{ backgroundColor: colorOption.color }}
                   ></div>
                 </button>
@@ -542,7 +566,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
           {/* Models (if makes are selected) */}
           {filters.make.length > 0 && models.length > 0 && (
-            <FilterSection title={`Models (${filters.make.join(', ')})`}>
+            <FilterSection title={`Models (${filters.make.join(", ")})`}>
               <div className="flex flex-wrap gap-2 max-h-40 overflow-hidden hover:overflow-y-auto pr-2">
                 {models.map((model) => (
                   <button
@@ -551,7 +575,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                     className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                       filters.model.includes(model)
                         ? "bg-accent text-white"
-                        : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
                     {model}
@@ -571,7 +595,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                     filters.dealership.includes(dealer.id)
                       ? "bg-accent text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {dealer.name}
@@ -588,25 +612,25 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         ::-webkit-scrollbar {
           width: 8px;
         }
-        
+
         ::-webkit-scrollbar-track {
-          background: #1e1e1e;
+          background: #f3f4f6;
           border-radius: 4px;
         }
-        
+
         ::-webkit-scrollbar-thumb {
-          background: #4a4a4a;
+          background: #d1d5db;
           border-radius: 4px;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
-          background: #666;
+          background: #9ca3af;
         }
 
         /* Firefox */
         * {
           scrollbar-width: thin;
-          scrollbar-color: #4a4a4a #1e1e1e;
+          scrollbar-color: #d1d5db #f3f4f6;
         }
       `}</style>
     </div>

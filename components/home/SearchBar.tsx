@@ -57,14 +57,14 @@ const SearchBar: React.FC<SearchBarProps> = ({
             value={localQuery}
             onChange={handleInputChange}
             placeholder="Search..."
-            className="w-full py-3 pl-12 pr-12 bg-gray-800 border border-gray-700 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-accent"
+            className="w-full py-3 pl-12 pr-12 bg-white border border-gray-300 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-accent"
           />
           
           {localQuery && (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700"
             >
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useRef, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import React, { useRef, useEffect, useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 
 interface Brand {
   name: string;
@@ -20,7 +20,7 @@ const BrandRow: React.FC<BrandRowProps> = ({
   brands,
   onBrandSelect,
   selectedBrands,
-  className = ""
+  className = "",
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -42,8 +42,8 @@ const BrandRow: React.FC<BrandRowProps> = ({
   // Initialize scroll indicators
   useEffect(() => {
     checkScrollPosition();
-    window.addEventListener('resize', checkScrollPosition);
-    return () => window.removeEventListener('resize', checkScrollPosition);
+    window.addEventListener("resize", checkScrollPosition);
+    return () => window.removeEventListener("resize", checkScrollPosition);
   }, [brands]);
 
   // Animation variants
@@ -52,9 +52,9 @@ const BrandRow: React.FC<BrandRowProps> = ({
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05
-      }
-    }
+        staggerChildren: 0.05,
+      },
+    },
   };
 
   const itemVariants = {
@@ -63,9 +63,9 @@ const BrandRow: React.FC<BrandRowProps> = ({
       opacity: 1,
       y: 0,
       transition: {
-        duration: 0.4
-      }
-    }
+        duration: 0.4,
+      },
+    },
   };
 
   // Scroll handler
@@ -73,17 +73,31 @@ const BrandRow: React.FC<BrandRowProps> = ({
     checkScrollPosition();
   };
 
-
   return (
     <div className={`relative pt-16 ${className} pb-5`}>
       <div className="flex justify-between items-center">
-        <h2 className="text-xl z-40 font-bold text-white mb-5">
-          Explore by Brands
+        <h2 className="text-xl z-40 font-bold text-gray-800 mb-5">
+          {" "}
+          Explore by Brands{" "}
         </h2>
-        <Link href="/allbrands" className="text-accent z-20 hover:text-accent-light transition-colors flex items-center">
+        <Link
+          href="/allbrands"
+          className="text-accent z-20 hover:text-accent-light transition-colors flex items-center"
+        >
           <span>View All</span>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 ml-1">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-4 h-4 ml-1"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.25 4.5l7.5 7.5-7.5 7.5"
+            />
           </svg>
         </Link>
       </div>
@@ -91,8 +105,8 @@ const BrandRow: React.FC<BrandRowProps> = ({
       {/* Gradient fade on left side (shows when scrollable left) */}
       {showScrollIndicator && (
         <div
-          className={`hidden md:block absolute left-0 top-[50px] bottom-0 w-12 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none transition-opacity duration-300 ${
-            canScrollLeft ? 'opacity-100' : 'opacity-0'
+          className={`hidden md:block absolute left-0 top-[50px] bottom-0 w-12 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none transition-opacity duration-300 ${
+            canScrollLeft ? "opacity-100" : "opacity-0"
           }`}
         />
       )}
@@ -120,7 +134,7 @@ const BrandRow: React.FC<BrandRowProps> = ({
                 className={`p-3 rounded-lg transition-all duration-300 ${
                   selectedBrands.includes(brand.name)
                     ? "bg-accent/20 ring-2 ring-accent"
-                    : "bg-gray-800 hover:bg-gray-700"
+                    : "bg-gray-100 hover:bg-gray-200"
                 }`}
               >
                 <div className="w-20 h-20 relative">
@@ -130,16 +144,18 @@ const BrandRow: React.FC<BrandRowProps> = ({
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       // Fallback if logo fails to load
-                      (e.target as HTMLImageElement).src = '';
+                      (e.target as HTMLImageElement).src = "";
                     }}
                   />
                 </div>
               </div>
-              <span className={`mt-2 text-sm ${
-                selectedBrands.includes(brand.name)
-                  ? "text-accent font-semibold"
-                  : "text-gray-300"
-              }`}>
+              <span
+                className={`mt-2 text-sm ${
+                  selectedBrands.includes(brand.name)
+                    ? "text-accent font-semibold"
+                    : "text-gray-600"
+                }`}
+              >
                 {brand.name}
               </span>
             </button>
@@ -150,8 +166,8 @@ const BrandRow: React.FC<BrandRowProps> = ({
       {/* Gradient fade on right side (shows when scrollable right) */}
       {showScrollIndicator && (
         <div
-          className={`hidden md:block absolute right-0 top-[50px] bottom-0 w-12 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none transition-opacity duration-300 ${
-            canScrollRight ? 'opacity-100' : 'opacity-0'
+          className={`hidden md:block absolute right-0 top-[50px] bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none transition-opacity duration-300 ${
+            canScrollRight ? "opacity-100" : "opacity-0"
           }`}
         />
       )}

@@ -252,6 +252,12 @@ const DealerNavbar: React.FC = () => {
           </button>
         </nav>
       </aside>
+
+      {/* Content Padding for Desktop */}
+      <div className="hidden lg:block w-64"></div>
+
+      {/* Content Padding for Mobile */}
+      <div className="lg:hidden h-16"></div>
     </>
   );
 };

@@ -695,17 +695,17 @@ export default function HomePage() {
   // Show loading state if role is being determined
   if (isRoleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-neutral-900">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-accent mb-4"></div>
-          <p className="text-white text-lg">Loading your account...</p>
+          <p className="text-gray-700 text-lg">Loading your account...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-neutral-900">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Fixed Navbar at the top */}
       <Navbar />
 
@@ -713,7 +713,7 @@ export default function HomePage() {
       <div className="flex flex-1 pt-3">
         {/* Left Sidebar Filter Panel - Fixed position with proper height and scrollable content */}
         <aside className="hidden md:block w-1/4 shrink-0">
-          <div className="fixed top-[80px] bottom-0 w-1/4 border-r border-gray-800 p-4 overflow-y-auto custom-scrollbar">
+          <div className="fixed top-[80px] bottom-0 w-1/4 border-r border-gray-200 p-4 overflow-y-auto custom-scrollbar">
             <FilterPanel
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -725,7 +725,7 @@ export default function HomePage() {
         {/* Main Content - Scrollable area */}
         <main className="flex-1 p-4 min-w-0 overflow-x-hidden">
           {/* Fixed search bar that stays at the top */}
-          <div className="sticky top-16 z-40 py-4 mb-4 border-b border-gray-700 shadow-md">
+          <div className="sticky top-16 z-40 py-4 mb-4 border-b border-gray-200 shadow-sm">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar
@@ -741,7 +741,7 @@ export default function HomePage() {
               />
               <button
                 onClick={() => setIsFilterModalOpen(true)}
-                className="md:hidden flex-shrink-0 p-3 bg-gray-800 border border-gray-700 rounded-full text-white focus:outline-none"
+                className="md:hidden flex-shrink-0 p-3 bg-gray-100 border border-gray-200 rounded-full text-gray-700 focus:outline-none"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -790,11 +790,11 @@ export default function HomePage() {
               ))}
             </motion.div>
           ) : (
-            <div className="text-center mt-12 p-8 bg-gray-900 rounded-lg">
-              <h3 className="text-white text-xl font-bold mb-2">
+            <div className="text-center mt-12 p-8 bg-gray-100 rounded-lg shadow-sm">
+              <h3 className="text-gray-800 text-xl font-bold mb-2">
                 No cars found
               </h3>
-              <p className="text-gray-400 mb-4">
+              <p className="text-gray-600 mb-4">
                 Try adjusting your filters or search query to find more results.
               </p>
               <button
@@ -811,7 +811,7 @@ export default function HomePage() {
               <button
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold disabled:bg-gray-700"
+                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold disabled:bg-gray-300"
               >
                 {isLoadingMore ? (
                   <span className="flex items-center">
