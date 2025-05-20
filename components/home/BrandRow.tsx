@@ -76,7 +76,7 @@ const BrandRow: React.FC<BrandRowProps> = ({
   return (
     <div className={`relative pt-16 ${className} pb-5`}>
       <div className="flex justify-between items-center">
-        <h2 className="text-xl z-40 font-bold text-gray-800 mb-5">
+        <h2 className="text-xl z-20 font-bold text-gray-800 mb-5">
           {" "}
           Explore by Brands{" "}
         </h2>

@@ -365,7 +365,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         >
           <div className="flex justify-between items-center mb-6">
             {" "}
-            <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
+            <h2 className="text-2xl font-bold hidden lg:block text-gray-800">Filters</h2>
             {hasFiltersSelected && (
               <button
                 onClick={onResetFilters}

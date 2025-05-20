@@ -60,7 +60,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({
       {/* Button changes to circular on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full z-100 md:flex md:items-center md:justify-between md:px-4 md:py-3 md:bg-white md:border md:border-gray-300 md:rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-accent hidden md:inline-flex"
+        className="w-full z-200 md:flex md:items-center md:justify-between md:px-4 md:py-3 md:bg-white md:border md:border-gray-300 md:rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-accent hidden md:inline-flex"
         type="button"
       >
         <div className="flex items-center">

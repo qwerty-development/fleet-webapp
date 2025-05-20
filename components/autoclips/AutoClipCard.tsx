@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 import Link from "next/link";
+import ScrollIndicator from "../ScrollIndicator";
 
 interface AutoClipCardProps {
   clip: {
@@ -363,7 +364,9 @@ const AutoClipCard: React.FC<AutoClipCardProps> = ({
           </Link>
         </div>
       </div>
+      <ScrollIndicator scrollContainerSelector=".hide-scrollbar" autoHideTime={5000} />
     </div>
+    
   );
 };
 

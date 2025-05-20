@@ -62,7 +62,7 @@ import {
   MdTune,
 } from "react-icons/md";
 import Navbar from "@/components/home/Navbar";
-
+import MobileAppBanner from "@/components/MobileBanner";
 // VEHICLE_FEATURES mapping
 const VEHICLE_FEATURES = {
   tech: [
@@ -995,14 +995,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
       )}
 
       {/* Main Content - Add padding-top to position below navbar */}
-      <div className="pt-16 pb-20">
+      <div className="pt-16">
         {/* Back Button - Adjusted position to account for navbar */}
-        <button
-          onClick={() => router.back()}
-          className="absolute top-24 left-5 z-40 py-2 px-4 bg-gray-200 rounded-full hover:bg-gray-300 text-gray-800"
-        >
-          ← Back
-        </button>
 
         {/* Improved Image Carousel - Only render if images exist */}
         {car.images && car.images.length > 0 ? (
@@ -1074,30 +1068,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             )}
 
             <div className="absolute top-5 right-5 gap-1 z-10 flex flex-row">
-              {/* View Count Badge */}
-              <div className="z-50 bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-sm flex items-center text-white">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 mr-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
-                {car.views || 0}
-              </div>
               {/* Favorite Button - Top Right */}
               <FavoriteButton
                 carId={Number(car.id)}
@@ -1126,7 +1096,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         <div className="flex justify-center">
           <div className="p-4 3xl:w-9/12 xl:w-11/12 space-y-6">
             {/* Main Info - Always left-aligned on mobile */}
-            <div className="flex items-start space-x-4 mt-4 md:mt-0">
+            <div className="flex items-start space-x-4">
               <div className="h-14 md:w-16 md:h-16 flex-shrink-0">
                 <img
                   src={getLogoUrl(car.make, true)}
@@ -1139,9 +1109,33 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                   {car.make} {car.model}
                 </h1>
                 <p className="text-lg">{car.year}</p>
+
                 <p className="text-sm text-gray-500">
                   Posted {getRelativeTime(car.listed_at)}
                 </p>
+                <div className=" flex text-sm items-center text-gray-400">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                  {car.views || 0}
+                </div>
               </div>
             </div>
 
@@ -1203,172 +1197,63 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
             {/* Description */}
             {car.description && (
-              <div className="p-4">
+              <div className="p-1">
                 <h2 className="text-xl font-bold">Description</h2>
-                <p className="mt-2 text-gray-700">{car.description}</p>
+                <p className="mt-2 p-2 text-gray-700">{car.description}</p>
               </div>
             )}
 
             {/* Features */}
             {car.features && car.features.length > 0 && (
-              <div className="p-4">
-                <h2 className="text-xl font-bold mb-5">Features</h2>
+              <div className="p-1">
+                <h2 className="text-xl font-bold mb-6">Features</h2>
 
-                {/* Categorize features */}
-                {(() => {
-                  // Define categories and related keywords
-                  const categories: Record<string, string[]> = {
-                    safety: [
-                      "safety",
-                      "airbag",
-                      "assist",
-                      "brake",
-                      "control",
-                      "warning",
-                      "alert",
-                      "security",
-                    ],
-                    comfort: [
-                      "comfort",
-                      "seat",
-                      "climate",
-                      "air",
-                      "conditioning",
-                      "heated",
-                      "ventilated",
-                      "leather",
-                    ],
-                    technology: [
-                      "bluetooth",
-                      "connectivity",
-                      "navigation",
-                      "audio",
-                      "sound",
-                      "speaker",
-                      "system",
-                      "smart",
-                      "tech",
-                    ],
-                    exterior: [
-                      "light",
-                      "wheel",
-                      "mirror",
-                      "sensor",
-                      "camera",
-                      "exterior",
-                      "roof",
-                      "tint",
-                    ],
-                    interior: [
-                      "interior",
-                      "cabin",
-                      "storage",
-                      "cargo",
-                      "trunk",
-                      "ambient",
-                      "lighting",
-                    ],
-                    performance: [
-                      "engine",
-                      "power",
-                      "drive",
-                      "sport",
-                      "eco",
-                      "mode",
-                      "transmission",
-                      "suspension",
-                    ],
-                  };
+                {/* Use predefined VEHICLE_FEATURES categories */}
+                <div className="space-y-6 p-2">
+                  {Object.entries(VEHICLE_FEATURES).map(
+                    ([category, featuresArray]) => {
+                      // Filter car features that match this category
+                      const matchingFeatures = car.features?.filter(
+                        (feature) => {
+                          if (typeof feature !== "string") return false;
 
-                  // Sort features into categories
-                  const categorizedFeatures: Record<string, string[]> = {};
-                  const uncategorizedFeatures: string[] = [];
-
-                  // Initialize categories
-                  Object.keys(categories).forEach((cat) => {
-                    categorizedFeatures[cat] = [];
-                  });
-
-                  // Categorize each feature
-                  car.features?.forEach((feature) => {
-                    if (typeof feature !== "string") return;
-
-                    const lowerFeature = feature.toLowerCase();
-                    let assigned = false;
-
-                    // Check each category for keyword matches
-                    for (const [category, keywords] of Object.entries(
-                      categories
-                    )) {
-                      if (
-                        keywords.some((keyword) =>
-                          lowerFeature.includes(keyword)
-                        )
-                      ) {
-                        categorizedFeatures[category].push(feature);
-                        assigned = true;
-                        break;
-                      }
-                    }
-
-                    // If no category matched, add to uncategorized
-                    if (!assigned) {
-                      uncategorizedFeatures.push(feature);
-                    }
-                  });
-
-                  // Display categorized features
-                  return (
-                    <div className="space-y-6">
-                      {Object.entries(categorizedFeatures).map(
-                        ([category, features]) => {
-                          if (features.length === 0) return null;
-
-                          return (
-                            <div key={category} className="mb-4">
-                              <h3 className="text-base font-semibold text-gray-900 capitalize mb-2">
-                                {category}
-                              </h3>
-                              <div className="flex flex-wrap gap-2">
-                                {features.map(
-                                  (feature: string, index: number) => (
-                                    <span
-                                      key={index}
-                                      className="bg-gray-100 text-gray-700 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-200 flex items-center"
-                                    >
-                                      {getFeatureIcon(feature)}
-                                      {feature
-                                        .replace(/_/g, " ")
-                                        .split(" ")
-                                        .map(
-                                          (word: string) =>
-                                            word.charAt(0).toUpperCase() +
-                                            word.slice(1).toLowerCase()
-                                        )
-                                        .join(" ")}
-                                    </span>
-                                  )
-                                )}
-                              </div>
-                            </div>
+                          // Check if this feature matches any of the predefined features in this category
+                          return featuresArray.some(
+                            (predefinedFeature) =>
+                              feature
+                                .toLowerCase()
+                                .includes(predefinedFeature.id.toLowerCase()) ||
+                              feature
+                                .toLowerCase()
+                                .includes(predefinedFeature.label.toLowerCase())
                           );
                         }
-                      )}
+                      );
 
-                      {/* Display uncategorized features if any */}
-                      {uncategorizedFeatures.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-semibold mb-2">
-                            Other Features
-                          </h3>
+                      // Skip categories with no matching features
+                      if (!matchingFeatures || matchingFeatures.length === 0)
+                        return null;
+
+                      return (
+                        <div key={category} className="mb-5 last:mb-0">
+                          <div className="relative pb-1 mb-3">
+                            <h3 className="capitalize text-base font-bold">
+                              {category}
+                            </h3>
+                            <div className="absolute bottom-0 left-0 w-8 h-0.5 bg-accent"></div>
+                          </div>
+
+                          {/* Single container for both mobile and desktop - let it wrap naturally */}
                           <div className="flex flex-wrap gap-2">
-                            {uncategorizedFeatures.map(
+                            {matchingFeatures.map(
                               (feature: string, index: number) => (
                                 <span
                                   key={index}
-                                  className="bg-gray-100 text-gray-700 text-xs sm:text-sm px-3 py-1 rounded-full border border-gray-200 flex items-center"
+                                  className="bg-gray-50 text-gray-700 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-gray-200 flex items-center mb-1"
                                 >
-                                  {getFeatureIcon(feature)}
+                                  <span className="text-accent mr-1.5">
+                                    {getFeatureIcon(feature)}
+                                  </span>
                                   {feature
                                     .replace(/_/g, " ")
                                     .split(" ")
@@ -1383,16 +1268,83 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                             )}
                           </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                      );
+                    }
+                  )}
+
+                  {/* Find features that didn't match any category */}
+                  {(() => {
+                    const allPredefinedIds = Object.values(VEHICLE_FEATURES)
+                      .flat()
+                      .map((f) => f.id.toLowerCase());
+                    const allPredefinedLabels = Object.values(VEHICLE_FEATURES)
+                      .flat()
+                      .map((f) => f.label.toLowerCase());
+
+                    const uncategorizedFeatures = car.features?.filter(
+                      (feature) => {
+                        if (typeof feature !== "string") return false;
+                        const lowerFeature = feature.toLowerCase();
+
+                        return (
+                          !allPredefinedIds.some((id) =>
+                            lowerFeature.includes(id)
+                          ) &&
+                          !allPredefinedLabels.some((label) =>
+                            lowerFeature.includes(label)
+                          )
+                        );
+                      }
+                    );
+
+                    if (
+                      !uncategorizedFeatures ||
+                      uncategorizedFeatures.length === 0
+                    )
+                      return null;
+
+                    return (
+                      <div className="mb-5 last:mb-0">
+                        <div className="relative pb-1 mb-3">
+                          <h3 className="text-base font-bold">
+                            Other Features
+                          </h3>
+                          <div className="absolute bottom-0 left-0 w-8 h-0.5 bg-accent"></div>
+                        </div>
+
+                        {/* Single container for both mobile and desktop */}
+                        <div className="flex flex-wrap gap-2">
+                          {uncategorizedFeatures.map(
+                            (feature: string, index: number) => (
+                              <span
+                                key={index}
+                                className="bg-gray-50 text-gray-700 text-xs sm:text-sm px-3 py-1.5 rounded-full border border-gray-200 flex items-center mb-1"
+                              >
+                                <span className="text-accent mr-1.5">
+                                  {getFeatureIcon(feature)}
+                                </span>
+                                {feature
+                                  .replace(/_/g, " ")
+                                  .split(" ")
+                                  .map(
+                                    (word: string) =>
+                                      word.charAt(0).toUpperCase() +
+                                      word.slice(1).toLowerCase()
+                                  )
+                                  .join(" ")}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             )}
-
+            <h2 className="text-xl font-bold p-1 mb-5">Dealership</h2>
             {/* Dealership Section with Contact Buttons */}
             <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
-              <h2 className="text-xl font-bold mb-5">Dealership</h2>
               <div className="flex items-center justify-between">
                 {/* Dealership Info */}
                 <div className="flex items-center">
@@ -1455,6 +1407,9 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             </div>
 
             {/* More Cars from this Dealership Section */}
+            <h2 className="text-xl font-bold mb-5">
+              More from {dealershipName}
+            </h2>
             <DealershipCarsSection
               dealershipID={car.dealership_id}
               currentCarId={params.id}
@@ -1463,29 +1418,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         </div>
 
         {/* Mobile app banner for non-mobile devices (optional) */}
-        {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between z-50">
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <img src="/logo-dark.png" alt="Fleet App" className="w-6 h-6" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-gray-900 font-medium">Fleet App</h3>
-                <p className="text-gray-600 text-xs">
-                  Get a better experience on our mobile app
-                </p>
-              </div>
-            </div>
-            <a
-              href="https://fleetapp.me"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-accent/90 transition-colors"
-            >
-              Get the App
-            </a>
-          </div>
-        )}
+        <MobileAppBanner />
 
         {/* Hide scrollbar */}
         <style jsx global>{`

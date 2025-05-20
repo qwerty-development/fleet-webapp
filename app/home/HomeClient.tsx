@@ -706,14 +706,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      {/* Fixed Navbar at the top */}
       <Navbar />
 
       {/* Main content area */}
       <div className="flex flex-1 pt-3">
         {/* Left Sidebar Filter Panel - Fixed position with proper height and scrollable content */}
         <aside className="hidden md:block w-1/4 shrink-0">
-          <div className="fixed top-[80px] bottom-0 w-1/4 border-r border-gray-200 p-4 overflow-y-auto custom-scrollbar">
+          <div className="fixed top-16 bottom-0 w-1/4 border-r border-gray-200 p-4 overflow-y-auto custom-scrollbar">
             <FilterPanel
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -725,7 +724,7 @@ export default function HomePage() {
         {/* Main Content - Scrollable area */}
         <main className="flex-1 p-4 min-w-0 overflow-x-hidden">
           {/* Fixed search bar that stays at the top */}
-          <div className="sticky top-16 z-40 py-4 mb-4 border-b border-gray-200 shadow-sm">
+          <div className="sticky top-9 z-40 py-4 mb-4 border-b border-gray-200 shadow-sm">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar
