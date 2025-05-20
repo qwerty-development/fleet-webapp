@@ -272,25 +272,25 @@ export default function BrandPage() {
   const displayBrandName = formatBrandName(brand);
 
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Navbar */}
       <Navbar />
 
       <div className="flex flex-1 pt-20">
         <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
           {/* Search bar and header */}
-          <div className="sticky top-16 z-40 bg-black py-4 mb-6 border-b border-gray-800 shadow-md">
+          <div className="sticky top-16 z-40 bg-white py-4 mb-6 border-b border-gray-200 shadow-sm">
             <div className="flex items-center mb-4 gap-4">
               <button
                 onClick={() => router.push('/allbrands')}
-                className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition-colors"
+                className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
                 aria-label="Back to all brands"
               >
-                <ChevronLeftIcon className="h-5 w-5 text-white" />
+                <ChevronLeftIcon className="h-5 w-5 text-gray-700" />
               </button>
 
               <div className="flex items-center">
-                <div className="w-12 h-12 mr-3 bg-gray-900 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="w-12 h-12 mr-3 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden shadow-sm">
                   <img
                     src={brandLogo}
                     alt={displayBrandName}
@@ -299,8 +299,8 @@ export default function BrandPage() {
                   />
                 </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-white">{displayBrandName}</h1>
-                  <p className="text-gray-400">{totalCarCount} {totalCarCount === 1 ? 'car' : 'cars'} available</p>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{displayBrandName}</h1>
+                  <p className="text-gray-500">{totalCarCount} {totalCarCount === 1 ? 'car' : 'cars'} available</p>
                 </div>
               </div>
             </div>
@@ -345,11 +345,11 @@ export default function BrandPage() {
               ))}
             </motion.div>
           ) : (
-            <div className="text-center mt-12 p-8 bg-gray-900 rounded-lg">
-              <h3 className="text-white text-xl font-bold mb-2">
+            <div className="text-center mt-12 p-8 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+              <h3 className="text-gray-900 text-xl font-bold mb-2">
                 No {displayBrandName} cars found
               </h3>
-              <p className="text-gray-400 mb-4">
+              <p className="text-gray-600 mb-4">
                 {searchQuery ?
                   "Try adjusting your search query to find more results." :
                   `We couldn't find any ${displayBrandName} cars available at the moment.`}
@@ -357,7 +357,7 @@ export default function BrandPage() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold"
+                  className="px-6 py-3 bg-accent hover:bg-accent/90 transition-colors rounded-lg text-white font-semibold"
                 >
                   Reset Search
                 </button>
@@ -371,7 +371,7 @@ export default function BrandPage() {
               <button
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold disabled:bg-gray-700"
+                className="px-6 py-3 bg-accent hover:bg-accent/90 transition-colors rounded-lg text-white font-semibold disabled:bg-gray-300 disabled:text-gray-500"
               >
                 {isLoadingMore ? (
                   <span className="flex items-center">

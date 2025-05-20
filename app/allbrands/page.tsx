@@ -132,16 +132,16 @@ export default function AllBrandsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Navbar */}
       <Navbar />
 
       <div className="flex flex-1 pt-20">
         <main className="flex-1 p-4 w-full max-w-7xl mx-auto">
           {/* Search bar */}
-          <div className="sticky top-16 z-40 bg-black py-4 mb-6 border-b border-gray-800 shadow-md">
+          <div className="sticky top-16 z-40 bg-white py-4 mb-6 border-b border-gray-200 shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl md:text-3xl font-bold text-white">All Car Brands</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">All Car Brands</h1>
             </div>
             <SearchBar
               searchQuery={searchQuery}
@@ -165,8 +165,8 @@ export default function AllBrandsPage() {
               {filteredBrands.map((brand) => (
                 <motion.div key={brand.name} variants={itemVariants}>
                   <Link href={`/allbrands/${encodeURIComponent(brand.name.toLowerCase())}`}>
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:border-accent hover:shadow-lg transition-all duration-300 flex flex-col items-center p-4">
-                      <div className="w-20 h-20 p-2 bg-gray-900 rounded-full mb-3 flex items-center justify-center">
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-accent hover:shadow-md transition-all duration-300 flex flex-col items-center p-4">
+                      <div className="w-20 h-20 p-2 bg-gray-100 rounded-full mb-3 flex items-center justify-center shadow-sm">
                         <img
                           src={brand.logoUrl}
                           alt={brand.name}
@@ -174,22 +174,22 @@ export default function AllBrandsPage() {
                           onError={handleImageError}
                         />
                       </div>
-                      <h3 className="text-white font-semibold text-center">{brand.name}</h3>
-                      <p className="text-gray-400 text-sm mt-1">{brand.carCount} {brand.carCount === 1 ? 'car' : 'cars'}</p>
+                      <h3 className="text-gray-900 font-semibold text-center">{brand.name}</h3>
+                      <p className="text-gray-500 text-sm mt-1">{brand.carCount} {brand.carCount === 1 ? 'car' : 'cars'}</p>
                     </div>
                   </Link>
                 </motion.div>
               ))}
             </motion.div>
           ) : (
-            <div className="text-center mt-12 p-8 bg-gray-900 rounded-lg">
-              <h3 className="text-white text-xl font-bold mb-2">No brands found</h3>
-              <p className="text-gray-400 mb-4">
+            <div className="text-center mt-12 p-8 bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
+              <h3 className="text-gray-900 text-xl font-bold mb-2">No brands found</h3>
+              <p className="text-gray-600 mb-4">
                 Try adjusting your search query.
               </p>
               <button
-                onClick={() => setSearchQuery("")}
-                className="px-6 py-3 bg-accent hover:bg-accent-dark transition-colors rounded-lg text-white font-semibold"
+                onClick={() => handleSearch("")}
+                className="px-6 py-3 bg-accent hover:bg-accent/90 transition-colors rounded-lg text-white font-semibold"
               >
                 Reset Search
               </button>
