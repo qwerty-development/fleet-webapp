@@ -170,7 +170,6 @@ const WebSplashScreen = ({ onAnimationComplete }:any) => {
                   />
                 </div>
               </motion.div>
-              <FleetText isVisible={showFleetLogo} />
             </div>
           )}
         </motion.div>
