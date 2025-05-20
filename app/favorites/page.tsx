@@ -27,7 +27,7 @@ interface Car {
 
 export default function FavoritesPage() {
   const { user, profile, isLoaded, isSignedIn } = useAuth();
-  const { isGuest, guestId,clearGuestMode } = useGuestUser();
+  const { isGuest, guestId, clearGuestMode } = useGuestUser();
   const router = useRouter();
   const supabase = createClient();
 
@@ -156,34 +156,36 @@ export default function FavoritesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-neutral-900">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
-         {isGuest && (
+      {isGuest && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: "spring", duration: 0.6 }}
-            className="bg-accent text-white p-8 rounded-xl max-w-md mx-4 shadow-lg"
+            className="bg-white p-8 rounded-xl max-w-md mx-4 shadow-lg border border-gray-200"
           >
             <div className="flex flex-col items-center text-center">
-              <LockClosedIcon className="h-16 w-16 mb-4" />
-              <h2 className="text-2xl font-bold mb-2">You're browsing as a guest</h2>
-              <p className="mb-6">Please sign in to access and manage your profile.</p>
+              <div className="bg-accent/10 p-4 rounded-full mb-4">
+                <LockClosedIcon className="h-12 w-12 text-accent" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2 text-gray-900">You're browsing as a guest</h2>
+              <p className="mb-6 text-gray-600">Please sign in to access and manage your profile.</p>
               <button
                 onClick={handleSignIn}
-                className="bg-white text-accent font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors"
+                className="bg-accent hover:bg-accent/90 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
                 Sign In
               </button>
               <button
                 onClick={() => router.push('/')}
-                className="mt-4 text-white/80 hover:text-white"
+                className="mt-4 text-gray-500 hover:text-gray-700"
               >
                 Return to Home
               </button>
@@ -199,7 +201,7 @@ export default function FavoritesPage() {
           transition={{ duration: 0.6 }}
           className="max-w-6xl mx-auto"
         >
-          <h1 className="text-4xl font-bold text-white mb-8 mt-4">Your Favorites</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-4">Your Favorites</h1>
 
           {loading ? (
             <div className="flex justify-center items-center h-64">
@@ -213,7 +215,7 @@ export default function FavoritesPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.6 }}
-                  className="bg-black-medium border border-gray-800 rounded-xl overflow-hidden shadow-lg hover:border-accent transition-colors duration-300"
+                  className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-md hover:shadow-lg hover:border-accent transition-all duration-300"
                 >
                   <div className="relative h-48 overflow-hidden">
                     {car.images && car.images.length > 0 ? (
@@ -223,7 +225,7 @@ export default function FavoritesPage() {
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                       />
                     ) : (
-                      <div className="w-full h-full bg-black-light flex items-center justify-center">
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                         <span className="text-gray-500">No image available</span>
                       </div>
                     )}
@@ -231,21 +233,21 @@ export default function FavoritesPage() {
                     <div className="absolute top-3 right-3">
                       <button
                         onClick={() => removeFavorite(car.id)}
-                        className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-accent hover:bg-black/60 transition-colors"
+                        className="p-2 bg-white/90 backdrop-blur-sm rounded-full text-accent hover:bg-white shadow-md transition-colors"
                       >
                         <HeartIcon className="h-6 w-6" />
                       </button>
                     </div>
 
                     {car.status === 'sold' && (
-                      <div className="absolute top-3 left-3 bg-red-900/80 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                         SOLD
                       </div>
                     )}
                   </div>
 
                   <div className="p-5">
-                    <h3 className="text-xl font-bold text-white mb-1">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">
                       {car.year} {car.make} {car.model}
                     </h3>
 
@@ -254,31 +256,31 @@ export default function FavoritesPage() {
                     </p>
 
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="bg-black-light px-3 py-2 rounded-lg">
-                        <span className="text-gray-400 text-xs">Condition</span>
-                        <p className="text-white text-sm font-medium">{car.condition}</p>
+                      <div className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                        <span className="text-gray-500 text-xs">Condition</span>
+                        <p className="text-gray-900 text-sm font-medium">{car.condition}</p>
                       </div>
 
-                      <div className="bg-black-light px-3 py-2 rounded-lg">
-                        <span className="text-gray-400 text-xs">Color</span>
-                        <p className="text-white text-sm font-medium">{car.color}</p>
+                      <div className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                        <span className="text-gray-500 text-xs">Color</span>
+                        <p className="text-gray-900 text-sm font-medium">{car.color}</p>
                       </div>
 
-                      <div className="bg-black-light px-3 py-2 rounded-lg">
-                        <span className="text-gray-400 text-xs">Mileage</span>
-                        <p className="text-white text-sm font-medium">{formatMileage(car.mileage)} mi</p>
+                      <div className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                        <span className="text-gray-500 text-xs">Mileage</span>
+                        <p className="text-gray-900 text-sm font-medium">{formatMileage(car.mileage)} mi</p>
                       </div>
 
-                      <div className="bg-black-light px-3 py-2 rounded-lg">
-                        <span className="text-gray-400 text-xs">Status</span>
-                        <p className="text-white text-sm font-medium capitalize">{car.status}</p>
+                      <div className="bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                        <span className="text-gray-500 text-xs">Status</span>
+                        <p className="text-gray-900 text-sm font-medium capitalize">{car.status}</p>
                       </div>
                     </div>
 
                     <div className="pt-2">
                       <button
                         onClick={() => router.push(`/cars/${car.id}`)}
-                        className="w-full bg-accent/10 hover:bg-accent/20 text-accent border border-accent/30 font-bold py-2 px-4 rounded-lg transition-colors"
+                        className="w-full bg-accent text-white hover:bg-accent/90 font-bold py-2 px-4 rounded-lg transition-colors"
                       >
                         View Details
                       </button>
@@ -288,14 +290,17 @@ export default function FavoritesPage() {
               ))}
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-gray-900 to-neutral-900 border border-gray-800 rounded-xl p-12 shadow-xl text-center">
-              <h3 className="text-2xl font-semibold text-white mb-4">No Favorites Yet</h3>
-              <p className="text-gray-400 max-w-md mx-auto mb-8">
+            <div className="bg-white border border-gray-200 rounded-xl p-12 shadow-md text-center">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <HeartIcon className="h-10 w-10 text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">No Favorites Yet</h3>
+              <p className="text-gray-600 max-w-md mx-auto mb-8">
                 You haven't added any cars to your favorites. Browse the available cars and click the heart icon to add favorites.
               </p>
               <button
                 onClick={() => router.push('/home')}
-                className="bg-accent hover:bg-accent-dark text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                className="bg-accent hover:bg-accent/90 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
                 Browse Cars
               </button>
