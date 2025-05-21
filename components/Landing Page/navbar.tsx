@@ -8,11 +8,7 @@ import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { useRouter } from "next/navigation";
 
-const navigation = [
-  { name: "Hero Section", href: "#hero" },
-  { name: "About", href: "#about" },
-  { name: "Our App", href: "#app" },
-  { name: "Contact", href: "#contact" },
+const navigation:any = [
 ];
 
 export default function Navbar() {
@@ -101,7 +97,7 @@ export default function Navbar() {
           </Link>
         </div>
         <div className="hidden lg:flex lg:gap-x-12">
-          {navigation.map((item) => (
+          {navigation.map((item:any) => (
             <a
               key={item.name}
               href={item.href}
@@ -230,7 +226,7 @@ export default function Navbar() {
               scrolled ? "divide-gray-200" : "divide-gray-700"
             }`}>
               <div className="space-y-2 py-6">
-                {navigation.map((item) => (
+                {navigation.map((item:any) => (
                   <a
                     key={item.name}
                     href={item.href}

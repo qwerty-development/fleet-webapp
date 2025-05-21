@@ -245,10 +245,10 @@ export default function Hero() {
 <div className="relative overflow-hidden">
   {/* Background image container with proper sizing and positioning */}
   <div 
-    className="h-[30vh] md:h-[40vh] lg:h-[50vh] w-full bg-cover bg-center relative"
+    className="h-[40vh] md:h-[40vh] lg:h-[50vh] w-full bg-cover bg-center relative"
     style={{ 
-      backgroundImage: "url('/buycar.png')",
-      backgroundPosition: "center 20%" // Adjust this value to ensure heads aren't cut off
+      backgroundImage: "url('/landing page/cars2.jpg')",
+      backgroundPosition: "center 15%" // Adjust this value to ensure heads aren't cut off
     }}
   >
     
