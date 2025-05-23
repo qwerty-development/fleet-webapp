@@ -821,25 +821,38 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
     setActiveImageIndex(newIndex);
 
-    // Scroll to the new image
+    // Scroll to the new image with iOS Safari compatibility
     if (carouselRef.current) {
-      carouselRef.current.scrollTo({
-        left: newIndex * carouselRef.current.clientWidth,
-        behavior: "smooth",
-      });
+      const scrollTarget = newIndex * carouselRef.current.clientWidth;
+
+      // For iOS Safari, use both methods for better compatibility
+      try {
+        carouselRef.current.scrollTo({
+          left: scrollTarget,
+          behavior: "smooth",
+        });
+      } catch (error) {
+        // Fallback for older iOS versions
+        carouselRef.current.scrollLeft = scrollTarget;
+      }
     }
 
     // Ensure the active thumbnail is visible
     if (thumbnailsRef.current) {
       const thumbnail = thumbnailsRef.current.children[newIndex] as HTMLElement;
       if (thumbnail) {
-        thumbnailsRef.current.scrollTo({
-          left:
-            thumbnail.offsetLeft -
-            thumbnailsRef.current.clientWidth / 2 +
-            thumbnail.clientWidth / 2,
-          behavior: "smooth",
-        });
+        try {
+          thumbnailsRef.current.scrollTo({
+            left:
+              thumbnail.offsetLeft -
+              thumbnailsRef.current.clientWidth / 2 +
+              thumbnail.clientWidth / 2,
+            behavior: "smooth",
+          });
+        } catch (error) {
+          // Fallback for older browsers
+          thumbnailsRef.current.scrollLeft = thumbnail.offsetLeft;
+        }
       }
     }
   };
@@ -848,41 +861,66 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const setActiveImage = (index: number) => {
     setActiveImageIndex(index);
     if (carouselRef.current) {
-      carouselRef.current.scrollTo({
-        left: index * carouselRef.current.clientWidth,
-        behavior: "smooth",
-      });
+      const scrollTarget = index * carouselRef.current.clientWidth;
+
+      try {
+        carouselRef.current.scrollTo({
+          left: scrollTarget,
+          behavior: "smooth",
+        });
+      } catch (error) {
+        // Fallback for older iOS versions
+        carouselRef.current.scrollLeft = scrollTarget;
+      }
     }
   };
 
   // Handle carousel scroll
-  const handleCarouselScroll = () => {
+  const handleCarouselScroll = useCallback(() => {
     if (carouselRef.current) {
-      const scrollPosition = carouselRef.current.scrollLeft;
-      const itemWidth = carouselRef.current.clientWidth;
-      const index = Math.round(scrollPosition / itemWidth);
+      // Use requestAnimationFrame for better iOS performance
+      requestAnimationFrame(() => {
+        if (carouselRef.current) {
+          const scrollPosition = carouselRef.current.scrollLeft;
+          const itemWidth = carouselRef.current.clientWidth;
 
-      if (index !== activeImageIndex) {
-        setActiveImageIndex(index);
+          // More precise index calculation for iOS Safari
+          const index = Math.round(scrollPosition / itemWidth);
 
-        // Also scroll the thumbnail into view
-        if (thumbnailsRef.current) {
-          const thumbnail = thumbnailsRef.current.children[
-            index
-          ] as HTMLElement;
-          if (thumbnail) {
-            thumbnailsRef.current.scrollTo({
-              left:
-                thumbnail.offsetLeft -
-                thumbnailsRef.current.clientWidth / 2 +
-                thumbnail.clientWidth / 2,
-              behavior: "smooth",
-            });
+          // Ensure index is within bounds
+          const clampedIndex = Math.max(
+            0,
+            Math.min(index, (car?.images?.length || 1) - 1)
+          );
+
+          if (clampedIndex !== activeImageIndex) {
+            setActiveImageIndex(clampedIndex);
+
+            // Also scroll the thumbnail into view
+            if (thumbnailsRef.current) {
+              const thumbnail = thumbnailsRef.current.children[
+                clampedIndex
+              ] as HTMLElement;
+              if (thumbnail) {
+                try {
+                  thumbnailsRef.current.scrollTo({
+                    left:
+                      thumbnail.offsetLeft -
+                      thumbnailsRef.current.clientWidth / 2 +
+                      thumbnail.clientWidth / 2,
+                    behavior: "smooth",
+                  });
+                } catch (error) {
+                  // Fallback for older browsers
+                  thumbnailsRef.current.scrollLeft = thumbnail.offsetLeft;
+                }
+              }
+            }
           }
         }
-      }
+      });
     }
-  };
+  }, [activeImageIndex, car?.images?.length]);
 
   // Handler for likes update
   const handleLikesUpdate = (newLikes: number) => {
@@ -1000,27 +1038,42 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
         {/* Improved Image Carousel - Only render if images exist */}
         {car.images && car.images.length > 0 ? (
-          <div className="relative bg-white">
+          <div className="relative bg-white carousel-container">
             <div id="test-div">
               {/* Main large image carousel */}
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
                 className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-64 sm:h-80 md:h-96 lg:h-[550px]"
-                style={{
-                  scrollBehavior: "smooth",
-                  scrollSnapType: "x mandatory",
-                }}
+                style={
+                  {
+                    scrollBehavior: "smooth",
+                    scrollSnapType: "x mandatory",
+                    WebkitOverflowScrolling: "touch",
+                  } as React.CSSProperties
+                }
               >
                 {car.images.map((img, index) => (
                   <div
                     key={index}
-                    className="flex-shrink-0 h-full snap-center relative"
+                    className="flex-shrink-0 h-full snap-start relative carousel-item"
+                    style={{
+                      // width: "100vw", // Explicit width for iOS Safari
+                      maxWidth: "100%", // Prevent overflow
+                      scrollSnapAlign: "start", // Essential for iOS Safari
+                    }}
                   >
                     <img
                       src={img}
                       alt={`${car.make} ${car.model}`}
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-cover object-center carousel-image"
+                      style={{
+                        display: "block", // Prevent image spacing issues on iOS
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                      draggable={false} // Prevent drag interference on iOS
                     />
                   </div>
                 ))}
@@ -1033,7 +1086,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                 <div
                   ref={thumbnailsRef}
                   className="flex gap-2 overflow-x-auto py-2 pl-1 scrollbar-hide"
-                  style={{ scrollBehavior: "smooth" }}
+                  style={
+                    {
+                      scrollBehavior: "smooth",
+                      WebkitOverflowScrolling: "touch",
+                    } as React.CSSProperties
+                  }
                 >
                   {car.images.map((img, index) => (
                     <ImageThumbnail
@@ -1420,7 +1478,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         {/* Mobile app banner for non-mobile devices (optional) */}
         <MobileAppBanner />
 
-        {/* Hide scrollbar */}
+        {/* Hide scrollbar and iOS Safari improvements */}
         <style jsx global>{`
           .scrollbar-hide {
             -ms-overflow-style: none; /* IE and Edge */
@@ -1428,6 +1486,50 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           }
           .scrollbar-hide::-webkit-scrollbar {
             display: none; /* Chrome, Safari and Opera */
+          }
+
+          /* iOS Safari specific improvements */
+          @supports (-webkit-overflow-scrolling: touch) {
+            .scrollbar-hide {
+              -webkit-overflow-scrolling: touch;
+              scroll-behavior: smooth;
+            }
+          }
+
+          /* Improve scroll snap on iOS Safari */
+          .snap-x {
+            scroll-snap-type: x mandatory;
+            -webkit-scroll-snap-type: x mandatory;
+            touch-action: pan-x;
+          }
+
+          .snap-start {
+            scroll-snap-align: start;
+            -webkit-scroll-snap-align: start;
+          }
+
+          /* Prevent iOS Safari scrolling issues */
+          .carousel-container {
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
+          }
+
+          /* Fix for iOS Safari image rendering */
+          .carousel-image {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
+            pointer-events: none;
+          }
+
+          /* Prevent iOS Safari momentum scrolling interference */
+          .carousel-item {
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            touch-action: pan-x;
           }
         `}</style>
       </div>
