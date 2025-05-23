@@ -30,11 +30,11 @@ export default function Footer() {
           <div className="md:col-span-1">
             <div className="flex items-center mb-6">
               <img
-                src="/logo.png"
+                src="/logo-dark.png"
                 alt="Fleet Logo"
                 className="h-10 w-auto mr-3"
               />
-              <span className="text-2xl font-bold text-black/80">Fleet</span>
+              {/* <span className="text-2xl font-bold text-black/80">Fleet</span> */}
             </div>
             <p className="text-gray-400 mb-6">
               The ultimate platform connecting car buyers with trusted dealerships.

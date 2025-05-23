@@ -170,7 +170,7 @@ export default function Navbar() {
             </div>
           )}
         </div>
-        <div className="flex lg:hidden">
+        <div className="hidden">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
