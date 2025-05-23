@@ -531,7 +531,7 @@ export default function ProfilePage() {
                 <button
                   onClick={handleSignOut}
                   disabled={isSigningOut}
-                  className="w-full p-4 border border-accent text-red bg-accent/40 hover:bg-accent/60 font-medium rounded-xl transition-colors disabled:opacity-70 flex justify-center items-center"
+                  className="w-full p-4 border border-red-900 text-red bg-accent/80 hover:bg-accent font-medium rounded-xl transition-colors disabled:opacity-70 flex justify-center items-center"
                 >
                   {isSigningOut ? (
                     <>
