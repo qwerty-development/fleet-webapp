@@ -1044,7 +1044,7 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
-                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-64 sm:h-80 md:h-96 lg:h-[550px]"
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-64 sm:h-80 md:h-96 lg:h-[550px] carousel-height"
                 style={
                   {
                     scrollBehavior: "smooth",
@@ -1530,6 +1530,30 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
             touch-action: pan-x;
+          }
+
+          /* iPhone-specific height adjustments */
+          @media only screen and (max-width: 428px) and (-webkit-min-device-pixel-ratio: 2) {
+            .carousel-height {
+              height: 85vh !important;
+              max-height: 500px !important;
+            }
+          }
+
+          /* iPhone Pro Max and larger iPhones */
+          @media only screen and (min-width: 390px) and (max-width: 428px) and (-webkit-min-device-pixel-ratio: 3) {
+            .carousel-height {
+              height: 80vh !important;
+              max-height: 600px !important;
+            }
+          }
+
+          /* iPhone SE and smaller iPhones */
+          @media only screen and (max-width: 389px) and (-webkit-min-device-pixel-ratio: 2) {
+            .carousel-height {
+              height: 75vh !important;
+              max-height: 400px !important;
+            }
           }
         `}</style>
       </div>
