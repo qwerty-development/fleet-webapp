@@ -8,7 +8,7 @@ import { useGuestUser } from "@/utils/GuestUserContext";
 import Hero from "@/components/Landing Page/Hero";
 // Critical sections load immediately
 import BentoGrid from "@/components/Landing Page/BentoGrid";
-import Navbar from "@/components/Landing Page/navbar";
+import Navbar from "@/components/home/Navbar";
 import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
 import DealerDetails from "@/components/Landing Page/DealerDetails";
 
