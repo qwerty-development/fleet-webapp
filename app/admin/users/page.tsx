@@ -21,6 +21,8 @@ import {
   EyeIcon,
   StopCircleIcon,
   ArrowPathIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 import { Dialog, Transition } from "@headlessui/react";
@@ -31,6 +33,7 @@ interface User {
   role: string | undefined;
   id: string;
   email: string;
+  name?: string;
   user_metadata?: {
     name?: string;
     role?: string;
@@ -38,6 +41,7 @@ interface User {
   };
   created_at: string;
   last_sign_in_at?: string;
+  last_active?: string;
   banned_until: string | null;
   locked: boolean;
 }
@@ -107,73 +111,40 @@ export default function AdminUsersPage() {
   const [pendingAction, setPendingAction] = useState<{
     action: string;
     user: ProcessedUser | null;
+    context?: any;
   }>({
     action: "",
     user: null,
   });
 
-  // Process Supabase users to match our component's expected format
-  const processSupabaseUsers = (data: User[]) => {
-    return data.map((user) => {
-      // Extract first and last name from metadata or email
-      let firstName = "";
-      let lastName = "";
-
-      if (user.user_metadata?.name) {
-        const nameParts = user.user_metadata.name.split(" ");
-        firstName = nameParts[0] || "";
-        lastName = nameParts.slice(1).join(" ") || "";
-      } else if (user.user_metadata?.full_name) {
-        const nameParts = user.user_metadata.full_name.split(" ");
-        firstName = nameParts[0] || "";
-        lastName = nameParts.slice(1).join(" ") || "";
-      } else {
-        // Use email as fallback for the name
-        firstName = user.email.split("@")[0] || "";
-        lastName = "";
-      }
-
-      // Check if user is banned based on banned_until field
-      const isBanned =
-        user.banned_until !== null && new Date(user.banned_until) > new Date();
-
-      return {
-        id: user.id,
-        firstName,
-        lastName,
-        email: user.email,
-        user_metadata: {
-          // Get role directly from user_metadata or from provided role field
-          role: user.user_metadata?.role || user.role || "user",
-        },
-        imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          firstName + " " + lastName
-        )}&background=random`,
-        lastSignInAt: user.last_sign_in_at
-          ? Date.parse(user.last_sign_in_at)
-          : 0,
-        createdAt: Date.parse(user.created_at),
-        banned: isBanned,
-        locked: user.locked || false,
-      };
-    });
+  // Helper function to check if user is a guest user
+  const isGuestUser = (user: any): boolean => {
+    return (
+      user.id?.startsWith('guest_') || 
+      user.name === 'Guest User' ||
+      user.email?.includes('guest') ||
+      (user.user_metadata?.name && user.user_metadata.name === 'Guest User')
+    );
   };
 
-  // Fetch users from Supabase
+  // Fetch users from Supabase with enhanced filtering
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Simply fetch users from the users table
+      // Fetch users from the users table
       const { data: usersList, error } = await supabase
         .from('users')
         .select('*');
 
       if (error) throw error;
 
+      // Filter out guest users and process the remaining users
+      const filteredUsersList = usersList.filter(user => !isGuestUser(user));
+
       // Process the users directly from the table
-      const processedUsers = usersList.map(user => ({
+      const processedUsers = filteredUsersList.map(user => ({
         id: user.id,
         firstName: user.name?.split(' ')[0] || '',
         lastName: user.name?.split(' ').slice(1).join(' ') || '',
@@ -198,7 +169,7 @@ export default function AdminUsersPage() {
     }
   }, [filterConfig, sortConfig, search, supabase]);
 
-  // Fetch user's liked cars and viewed cars
+  // Fetch user's liked cars and viewed cars with enhanced error handling
   const fetchUserDetails = async (userId: string) => {
     try {
       // Fetch liked cars
@@ -230,6 +201,7 @@ export default function AdminUsersPage() {
 
       // Check if user is a dealer and get dealership info
       let dealershipInfo = null;
+      let dealershipCars:any = [];
       if (userInfo?.role === 'dealer') {
         const { data: dealership, error: dealershipError } = await supabase
           .from("dealerships")
@@ -237,8 +209,19 @@ export default function AdminUsersPage() {
           .eq("user_id", userId)
           .single();
 
-        if (!dealershipError) {
+        if (!dealershipError && dealership) {
           dealershipInfo = dealership;
+          
+          // Fetch dealership cars
+          const { data: cars, error: carsError } = await supabase
+            .from("cars")
+            .select("id, make, model, year, price, status")
+            .eq("dealership_id", dealership.id)
+            .order("listed_at", { ascending: false });
+
+          if (!carsError) {
+            dealershipCars = cars || [];
+          }
         }
       }
 
@@ -246,7 +229,8 @@ export default function AdminUsersPage() {
         likedCars: likedCars || [],
         viewedCars: viewedCars || [],
         userInfo: userInfo || {},
-        dealershipInfo: dealershipInfo
+        dealershipInfo: dealershipInfo,
+        dealershipCars: dealershipCars
       });
     } catch (err: any) {
       console.error("Error fetching user details:", err);
@@ -255,12 +239,13 @@ export default function AdminUsersPage() {
         likedCars: [],
         viewedCars: [],
         userInfo: {},
-        dealershipInfo: null
+        dealershipInfo: null,
+        dealershipCars: []
       });
     }
   };
 
-  // Apply filters and sorting
+  // Apply filters and sorting with enhanced logic
   const applyFiltersAndSort = useCallback(
     (
       users: ProcessedUser[],
@@ -293,14 +278,15 @@ export default function AdminUsersPage() {
         });
       }
 
-      // Apply search
+      // Apply search with enhanced matching
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         result = result.filter(
           (user) =>
             user.firstName?.toLowerCase().includes(searchLower) ||
             user.lastName?.toLowerCase().includes(searchLower) ||
-            user.email?.toLowerCase().includes(searchLower)
+            user.email?.toLowerCase().includes(searchLower) ||
+            user.id?.toLowerCase().includes(searchLower)
         );
       }
 
@@ -339,16 +325,14 @@ export default function AdminUsersPage() {
     }
   }, [users, filterConfig, sortConfig, search, applyFiltersAndSort]);
 
-  // Determine if a role transition is allowed
+  // Enhanced role transition validation
   const isAllowedRoleTransition = (currentRole: string, newRole: string): boolean => {
-    // Define allowed transitions for each role
     const allowedTransitions: Record<string, string[]> = {
-      'user': ['dealer', 'admin'],     // User can become dealer or admin
-      'admin': ['user'],               // Admin can only become user
-      'dealer': ['user']               // Dealer can only become user
+      'user': ['dealer', 'admin'],
+      'admin': ['user'],
+      'dealer': ['user']
     };
 
-    // Check if the transition is allowed
     return allowedTransitions[currentRole]?.includes(newRole) || false;
   };
 
@@ -365,13 +349,13 @@ export default function AdminUsersPage() {
     setIsDealershipFormOpen(true);
   };
 
-  // Helper function to handle user role change
-  const handleSetRole = (user: ProcessedUser, targetRole: string) => {
+  // Enhanced role change handler with better user feedback
+  const handleSetRole = async (user: ProcessedUser, targetRole: string) => {
     const currentRole = user.user_metadata.role || 'user';
 
     // Check if the role transition is allowed
     if (!isAllowedRoleTransition(currentRole, targetRole)) {
-      alert(`Cannot change role from ${currentRole} to ${targetRole}.`);
+      alert(`Cannot change role from ${currentRole} to ${targetRole}. Invalid role transition.`);
       return;
     }
 
@@ -383,10 +367,51 @@ export default function AdminUsersPage() {
     // Special handling for dealer role
     if (targetRole === 'dealer') {
       initializeDealershipForm(user);
-    } else {
-      // For other roles, use direct role update
-      confirmAction(user, targetRole === 'admin' ? 'make-admin' : 'make-user');
+      return;
     }
+
+    // For dealer to user conversion, check for active listings
+    if (currentRole === 'dealer' && targetRole === 'user') {
+      try {
+        // Check if there are cars associated with this dealership
+        const { data: dealershipData, error: dealershipError } = await supabase
+          .from('dealerships')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!dealershipError && dealershipData) {
+          const dealershipId = dealershipData.id;
+
+          // Check for active cars
+          const { count, error: countError } = await supabase
+            .from('cars')
+            .select('id', { count: 'exact', head: true })
+            .eq('dealership_id', dealershipId)
+            .eq('status', 'available');
+
+          if (!countError && count && count > 0) {
+            // Set context for confirmation dialog
+            setPendingAction({
+              action: 'make-user',
+              user: user,
+              context: { 
+                dealershipId, 
+                activeListings: count,
+                isDealerDemotion: true 
+              }
+            });
+            setConfirmActionOpen(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error checking dealership cars:', err);
+      }
+    }
+
+    // For other roles, use direct role update
+    confirmAction(user, targetRole === 'admin' ? 'make-admin' : 'make-user');
   };
 
   // Check for existing dealership
@@ -400,32 +425,42 @@ export default function AdminUsersPage() {
 
       if (error) throw error;
 
-      return !!data; // Return true if dealership exists, false otherwise
+      return !!data;
     } catch (err) {
       console.error("Error checking existing dealership:", err);
       return false;
     }
   };
 
-  // Validate dealership form
+  // Enhanced form validation
   const validateDealershipForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!dealershipForm.name.trim())
+    
+    if (!dealershipForm.name.trim()) {
       newErrors.name = "Company name is required";
-    if (!dealershipForm.location.trim())
+    } else if (dealershipForm.name.length < 3) {
+      newErrors.name = "Company name must be at least 3 characters";
+    }
+    
+    if (!dealershipForm.location.trim()) {
       newErrors.location = "Location is required";
-    if (!dealershipForm.phone.trim())
+    }
+    
+    if (!dealershipForm.phone.trim()) {
       newErrors.phone = "Phone is required";
-    if (!/^\d{8,}$/.test(dealershipForm.phone))
-      newErrors.phone = "Invalid phone number";
-    if (dealershipForm.subscriptionEndDate < new Date())
-      newErrors.subscriptionEndDate = "Date must be in the future";
+    } else if (!/^\d{8,}$/.test(dealershipForm.phone)) {
+      newErrors.phone = "Phone must be at least 8 digits";
+    }
+    
+    if (dealershipForm.subscriptionEndDate < new Date()) {
+      newErrors.subscriptionEndDate = "Subscription end date must be in the future";
+    }
 
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle dealership form submission
+  // Handle dealership form submission with enhanced error handling
   const handleDealershipSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -452,14 +487,14 @@ export default function AdminUsersPage() {
     );
 
     try {
-      // 1. Check if dealership already exists for this user
+      // Check if dealership already exists for this user
       const dealershipExists = await checkExistingDealership(selectedUser.id);
 
       if (dealershipExists) {
         throw new Error("User already has a dealership associated with their account");
       }
 
-      // 2. Update user role in public.users table
+      // Update user role in public.users table
       const { error: dbUpdateError } = await supabase
         .from("users")
         .update({ role: "dealer" })
@@ -467,7 +502,7 @@ export default function AdminUsersPage() {
 
       if (dbUpdateError) throw dbUpdateError;
 
-      // 3. Create dealership entry
+      // Create dealership entry
       const { error: dealershipError } = await supabase
         .from("dealerships")
         .insert({
@@ -482,7 +517,7 @@ export default function AdminUsersPage() {
 
       if (dealershipError) throw dealershipError;
 
-      alert("User has been promoted to dealer successfully.");
+      alert(`${selectedUser.firstName} ${selectedUser.lastName} has been successfully promoted to dealer with dealership "${dealershipForm.name}".`);
 
       // Refresh data
       await fetchUsers();
@@ -503,11 +538,12 @@ export default function AdminUsersPage() {
         name: "",
         subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
+      setFormErrors({});
     }
   };
 
-  // Update user role
-  const updateUserRole = async (userId: string, newRole: string) => {
+  // Enhanced user role update with better dealer handling
+  const updateUserRole = async (userId: string, newRole: string, context?: any) => {
     setIsActionLoading(true);
 
     try {
@@ -527,48 +563,23 @@ export default function AdminUsersPage() {
         throw new Error(`Cannot change role from ${currentRole} to ${newRole}.`);
       }
 
-      // Special handling for dealer role
-      if (newRole === 'dealer') {
-        // Find the user in our state
-        const user = users.find(u => u.id === userId);
-        if (!user) throw new Error("User not found");
-
-        // Show dealership form to create dealership record
-        initializeDealershipForm(user);
-        return false; // Handled by form submission
-      }
-
-      // Handle demoting a dealer to user
+      // Handle dealer to user conversion with car status updates
       if (currentRole === 'dealer' && newRole === 'user') {
-        // Check if there are cars associated with this dealership
-        const dealershipData = await supabase
-          .from('dealerships')
-          .select('id')
-          .eq('user_id', userId)
-          .single();
-
-        if (!dealershipData.error && dealershipData.data) {
-          const dealershipId = dealershipData.data.id;
-
-          // Check for active cars
-          const { count, error: countError } = await supabase
+        if (context?.isDealerDemotion && context?.dealershipId) {
+          // Update all active cars to pending status
+          const { error: updateCarsError } = await supabase
             .from('cars')
-            .select('id', { count: 'exact', head: true })
-            .eq('dealership_id', dealershipId)
+            .update({ status: 'pending' })
+            .eq('dealership_id', context.dealershipId)
             .eq('status', 'available');
 
-          if (!countError && count && count > 0) {
-            if (!confirm(`This dealer has ${count} active car listings. Changing to user will make these listings unavailable. Continue?`)) {
-              return false;
-            }
-
-            // Update all cars to pending status
-            await supabase
-              .from('cars')
-              .update({ status: 'pending' })
-              .eq('dealership_id', dealershipId)
-              .eq('status', 'available');
+          if (updateCarsError) {
+            console.error('Error updating car status:', updateCarsError);
+            // Continue with role update even if car update fails
           }
+
+          // Optionally, you could also update the dealership status or mark it as inactive
+          // await supabase.from('dealerships').update({ active: false }).eq('id', context.dealershipId);
         }
       }
 
@@ -583,8 +594,16 @@ export default function AdminUsersPage() {
       // Refresh user list
       await fetchUsers();
 
-      // Show success message
-      alert(`User role successfully changed to ${newRole}.`);
+      // Show success message with context
+      const user = users.find(u => u.id === userId);
+      const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
+      
+      if (currentRole === 'dealer' && newRole === 'user' && context?.activeListings > 0) {
+        alert(`${userName} has been changed to a regular user. ${context.activeListings} active car listings have been set to pending status.`);
+      } else {
+        alert(`${userName}'s role has been successfully changed to ${newRole}.`);
+      }
+
       return true;
     } catch (err: any) {
       console.error('Error updating user role:', err);
@@ -595,43 +614,39 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Ban or unban a user
+  // Ban or unban a user (keeping existing functionality)
   const toggleUserBan = async (userId: string, shouldBan: boolean) => {
     setIsActionLoading(true);
 
     try {
-      // Set ban duration
       const bannedUntil = shouldBan
-        ? new Date(2099, 11, 31).toISOString() // Ban until end of century
-        : undefined; // Changed null to undefined
+        ? new Date(2099, 11, 31).toISOString()
+        : undefined;
 
-      // Update user in Supabase Auth
       const { error } = await supabase.auth.admin.updateUserById(userId, {
-        ban_duration: bannedUntil, // Pass bannedUntil directly
+        ban_duration: bannedUntil,
       });
 
       if (error) throw error;
 
-      // Refresh the user list
       await fetchUsers();
       return true;
     } catch (err: any) {
       console.error(`Error ${shouldBan ? "banning" : "unbanning"} user:`, err);
-      alert(
-        `Error ${shouldBan ? "banning" : "unbanning"} user: ` + err.message
-      );
+      alert(`Error ${shouldBan ? "banning" : "unbanning"} user: ` + err.message);
       return false;
     } finally {
       setIsActionLoading(false);
     }
   };
 
-  // Handle various user actions
+  // Enhanced user action handler
   const handleUserAction = async (action: string) => {
     if (!pendingAction.user) return;
 
     setConfirmActionOpen(false);
     const user = pendingAction.user;
+    const context = pendingAction.context;
 
     switch (action) {
       case "make-dealer":
@@ -641,16 +656,14 @@ export default function AdminUsersPage() {
       case "make-admin":
         const adminSuccess = await updateUserRole(user.id, "admin");
         if (adminSuccess) {
-          alert(`${user.firstName} ${user.lastName} is now an admin.`);
+          console.log(`${user.firstName} ${user.lastName} is now an admin.`);
         }
         break;
 
       case "make-user":
-        const userSuccess = await updateUserRole(user.id, "user");
+        const userSuccess = await updateUserRole(user.id, "user", context);
         if (userSuccess) {
-          alert(
-            `${user.firstName} ${user.lastName} has been changed to a regular user.`
-          );
+          console.log(`${user.firstName} ${user.lastName} has been changed to a regular user.`);
         }
         break;
 
@@ -673,10 +686,11 @@ export default function AdminUsersPage() {
     setPendingAction({ action: "", user: null });
   };
 
-  // Format date string
+  // Format date string with enhanced formatting
   const formatDate = (dateString: string | number) => {
     if (!dateString) return "Never";
-    return new Date(dateString).toLocaleString("en-US", {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -719,8 +733,8 @@ export default function AdminUsersPage() {
   };
 
   // Open confirmation dialog for user actions
-  const confirmAction = (user: ProcessedUser, action: string) => {
-    setPendingAction({ user, action });
+  const confirmAction = (user: ProcessedUser, action: string, context?: any) => {
+    setPendingAction({ user, action, context });
     setConfirmActionOpen(true);
   };
 
@@ -731,16 +745,20 @@ export default function AdminUsersPage() {
     setIsUserModalOpen(true);
   };
 
-  // Get confirmation message based on action
+  // Enhanced confirmation message with context
   const getConfirmationMessage = () => {
     if (!pendingAction.user) return "";
 
     const userName = `${pendingAction.user.firstName} ${pendingAction.user.lastName}`;
+    const context = pendingAction.context;
 
     switch (pendingAction.action) {
       case "make-admin":
         return `Are you sure you want to promote ${userName} to an admin? This will give them full access to the admin dashboard.`;
       case "make-user":
+        if (context?.isDealerDemotion && context?.activeListings > 0) {
+          return `Are you sure you want to demote ${userName} from dealer to regular user? This action will:\n\n• Remove their dealer privileges\n• Set ${context.activeListings} active car listing(s) to pending status\n• Maintain their dealership record for historical purposes\n\nThis action cannot be easily undone.`;
+        }
         return `Are you sure you want to demote ${userName} to a regular user? This will remove their current privileges.`;
       case "ban-user":
         return `Are you sure you want to ban ${userName}? They will no longer be able to access the platform.`;
@@ -749,6 +767,17 @@ export default function AdminUsersPage() {
       default:
         return "";
     }
+  };
+
+  // Get action button style based on context
+  const getConfirmButtonStyle = () => {
+    if (pendingAction.action === "ban-user") {
+      return "bg-rose-600 hover:bg-rose-700";
+    }
+    if (pendingAction.action === "make-user" && pendingAction.context?.isDealerDemotion) {
+      return "bg-amber-600 hover:bg-amber-700";
+    }
+    return "bg-indigo-600 hover:bg-indigo-700";
   };
 
   return (
@@ -762,7 +791,7 @@ export default function AdminUsersPage() {
               <h1 className="text-3xl mb-2 font-bold text-white">
                 User Management
               </h1>
-              <p className="text-gray-400">Manage and monitor user accounts</p>
+              <p className="text-gray-400">Manage and monitor user accounts (excluding guest users)</p>
             </div>
 
             <div className="mt-4 md:mt-0 flex items-center gap-2">
@@ -773,10 +802,7 @@ export default function AdminUsersPage() {
 
               <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
                 <span className="font-semibold text-white">
-                  {
-                    users.filter((u) => u.user_metadata.role === "dealer")
-                      .length
-                  }
+                  {users.filter((u) => u.user_metadata.role === "dealer").length}
                 </span>{" "}
                 dealers
               </div>
@@ -800,7 +826,7 @@ export default function AdminUsersPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search users by name or email..."
+                placeholder="Search users by name, email, or ID..."
                 className="block w-full pl-10 pr-10 py-3 bg-gray-800/60 backdrop-blur-sm border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
               />
               {search && (
@@ -1047,7 +1073,7 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-sm mb-4">
                         <div className="flex items-center">
                           {user.user_metadata.role === "admin" ? (
                             <ShieldCheckIcon className="h-4 w-4 text-purple-400 mr-1.5" />
@@ -1066,17 +1092,18 @@ export default function AdminUsersPage() {
                         </div>
                         <div className="flex items-center">
                           <ClockIcon className="h-4 w-4 text-gray-500 mr-1.5" />
-                          <span className="text-gray-400">
+                          <span className="text-gray-400 text-xs">
                             {user.lastSignInAt
                               ? new Date(user.lastSignInAt).toLocaleDateString()
-                              : "Never logged in"}
+                              : "Never"}
                           </span>
                         </div>
                       </div>
 
                       {(user.banned || user.locked) && (
-                        <div className="mt-3 bg-rose-500/10 p-3 rounded-lg">
-                          <p className="text-rose-400 text-sm">
+                        <div className="mb-4 bg-rose-500/10 p-3 rounded-lg">
+                          <p className="text-rose-400 text-sm flex items-center">
+                            <ExclamationTriangleIcon className="h-4 w-4 mr-1.5" />
                             {user.banned
                               ? "Account is banned"
                               : "Account is locked"}
@@ -1084,8 +1111,8 @@ export default function AdminUsersPage() {
                         </div>
                       )}
 
-                      <div className="mt-4 flex flex-col gap-2 w-full">
-                        {/* Conditional button rendering based on allowed role transitions */}
+                      <div className="flex flex-col gap-2 w-full">
+                        {/* Role transition buttons based on current role */}
                         {currentRole === 'user' && (
                           <>
                             <button
@@ -1128,15 +1155,15 @@ export default function AdminUsersPage() {
                               e.stopPropagation();
                               handleSetRole(user, 'user');
                             }}
-                            disabled={true}
-                            className="w-full px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isActionLoading || user.banned || user.locked}
+                            className="w-full px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isActionLoading ? (
                               <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
                             ) : (
                               <UserIcon className="h-3.5 w-3.5 mr-1" />
                             )}
-                            Make User
+                            Demote to User
                           </button>
                         )}
 
@@ -1154,7 +1181,7 @@ export default function AdminUsersPage() {
                             ) : (
                               <UserIcon className="h-3.5 w-3.5 mr-1" />
                             )}
-                            Make User
+                            Demote to User
                           </button>
                         )}
 
@@ -1202,7 +1229,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* User Details Modal */}
+      {/* Enhanced User Details Modal */}
       <Transition appear show={isUserModalOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={() => setIsUserModalOpen(false)}>
           <Transition.Child
@@ -1228,7 +1255,7 @@ export default function AdminUsersPage() {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Panel className="w-full max-w-4xl transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
                   {selectedUser && userDetails && (
                     <>
                       <div className="flex justify-between items-start mb-6">
@@ -1243,14 +1270,17 @@ export default function AdminUsersPage() {
                               {selectedUser.firstName} {selectedUser.lastName}
                             </h3>
                             <p className="text-gray-400">{selectedUser.email}</p>
-                            <div className="flex items-center mt-1">
+                            <div className="flex items-center mt-1 gap-2">
                               <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(selectedUser.user_metadata.role || "user")}`}>
                                 {selectedUser.user_metadata.role || "user"}
                               </span>
-                              <span className="text-xs ml-2 text-gray-400">
-                                Joined {formatDate(selectedUser.createdAt)}
+                              <span className="text-xs text-gray-400">
+                                ID: {selectedUser.id}
                               </span>
                             </div>
+                            <span className="text-xs text-gray-400">
+                              Joined {formatDate(selectedUser.createdAt)}
+                            </span>
                           </div>
                         </div>
                         <button
@@ -1287,6 +1317,29 @@ export default function AdminUsersPage() {
                               </p>
                             </div>
                           </div>
+
+                          {userDetails.dealershipCars?.length > 0 && (
+                            <div className="mt-4">
+                              <p className="text-gray-400 text-sm mb-2">
+                                Car Listings ({userDetails.dealershipCars.length})
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                                {userDetails.dealershipCars.map((car: any) => (
+                                  <div key={car.id} className="p-2 bg-gray-900/50 rounded text-sm">
+                                    <p className="text-white font-medium">
+                                      {car.make} {car.model} ({car.year})
+                                    </p>
+                                    <div className="flex justify-between items-center">
+                                      <p className="text-gray-400">${car.price?.toLocaleString()}</p>
+                                      <span className={`px-1.5 py-0.5 text-xs rounded ${getStatusColor(car.status)}`}>
+                                        {car.status}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1307,7 +1360,7 @@ export default function AdminUsersPage() {
                                           {car.make} {car.model}
                                         </p>
                                         <p className="text-gray-400 text-sm">
-                                          {car.year} • ${car.price.toLocaleString()}
+                                          {car.year} • ${car.price?.toLocaleString()}
                                         </p>
                                       </div>
                                       <span className={`self-start px-2 py-0.5 text-xs rounded-full ${getStatusColor(car.status)}`}>
@@ -1341,7 +1394,7 @@ export default function AdminUsersPage() {
                                           {car.make} {car.model}
                                         </p>
                                         <p className="text-gray-400 text-sm">
-                                          {car.year} • ${car.price.toLocaleString()}
+                                          {car.year} • ${car.price?.toLocaleString()}
                                         </p>
                                       </div>
                                       <span className={`self-start px-2 py-0.5 text-xs rounded-full ${getStatusColor(car.status)}`}>
@@ -1604,7 +1657,7 @@ export default function AdminUsersPage() {
         </Dialog>
       </Transition>
 
-      {/* Confirmation Dialog */}
+      {/* Enhanced Confirmation Dialog */}
       <Transition appear show={confirmActionOpen} as={Fragment}>
         <Dialog
           as="div"
@@ -1637,12 +1690,19 @@ export default function AdminUsersPage() {
                 <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
                   <Dialog.Title
                     as="h3"
-                    className="text-lg font-medium leading-6 text-white text-center mb-4"
+                    className="text-lg font-medium leading-6 text-white text-center mb-4 flex items-center justify-center"
                   >
+                    {pendingAction.context?.isDealerDemotion ? (
+                      <ExclamationTriangleIcon className="h-6 w-6 text-amber-400 mr-2" />
+                    ) : pendingAction.action === "ban-user" ? (
+                      <ExclamationTriangleIcon className="h-6 w-6 text-rose-400 mr-2" />
+                    ) : (
+                      <InformationCircleIcon className="h-6 w-6 text-blue-400 mr-2" />
+                    )}
                     Confirm Action
                   </Dialog.Title>
                   <div className="mt-2">
-                    <p className="text-gray-300 text-center">{getConfirmationMessage()}</p>
+                    <p className="text-gray-300 text-center whitespace-pre-line">{getConfirmationMessage()}</p>
                   </div>
 
                   <div className="mt-6 flex justify-center space-x-4">
@@ -1656,11 +1716,7 @@ export default function AdminUsersPage() {
                     </button>
                     <button
                       type="button"
-                      className={`px-4 py-2 ${
-                        pendingAction.action === "ban-user"
-                          ? "bg-rose-600 hover:bg-rose-700"
-                          : "bg-indigo-600 hover:bg-indigo-700"
-                      } text-white rounded-lg transition-colors flex items-center`}
+                      className={`px-4 py-2 ${getConfirmButtonStyle()} text-white rounded-lg transition-colors flex items-center`}
                       onClick={() => handleUserAction(pendingAction.action)}
                       disabled={isActionLoading}
                     >
@@ -1686,7 +1742,7 @@ export default function AdminUsersPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-gray-800 p-5 rounded-lg shadow-lg flex items-center">
             <ArrowPathIcon className="h-6 w-6 text-indigo-500 mr-3 animate-spin" />
-            <p className="text-white">Processing...</p>
+            <p className="text-white">Processing user action...</p>
           </div>
         </div>
       )}
