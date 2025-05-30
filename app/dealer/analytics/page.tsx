@@ -21,7 +21,17 @@ import {
   BanknotesIcon,
   ShoppingCartIcon,
   TruckIcon,
+  UserGroupIcon,
+  VideoCameraIcon,
+  DocumentArrowDownIcon,
+  LightBulbIcon,
+  FunnelIcon,
+  FireIcon,
+  ChartPieIcon,
+  SparklesIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { TrendingUpIcon } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -38,654 +48,1037 @@ import {
   Cell,
   AreaChart,
   Area,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Treemap,
+  ComposedChart,
+  Scatter,
+  ScatterChart,
+  ZAxis,
 } from "recharts";
 
-// Constant for subscription warning threshold
+// Types
+interface DealershipData {
+  id: number;
+  name: string;
+  subscription_end_date: string;
+  user_id: string;
+  [key: string]: any;
+}
+
+interface AnalyticsData {
+  overviewMetrics: {
+    totalViews: number;
+    totalLikes: number;
+    totalSales: number;
+    totalRevenue: number;
+    totalProfit: number;
+    avgDealTime: number;
+    conversionRate: number;
+    customerSatisfaction: number;
+    viewsChange: number;
+    likesChange: number;
+    salesChange: number;
+    revenueChange: number;
+  };
+  inventoryMetrics: {
+    totalCars: number;
+    availableCars: number;
+    pendingCars: number;
+    soldCars: number;
+    newCars: number;
+    usedCars: number;
+    avgPrice: number;
+    totalValue: number;
+    avgAge: number;
+    turnoverRate: number;
+    hotInventory: number;
+    staleInventory: number;
+  };
+  performanceMetrics: {
+    avgTimeToSell: number;
+    avgProfitMargin: number;
+    avgDiscountGiven: number;
+    leadConversionRate: number;
+    repeatCustomerRate: number;
+    avgViewsPerSale: number;
+    bestSellingMake: string;
+    bestSellingCategory: string;
+    peakSellingDay: string;
+    peakSellingHour: number;
+  };
+  customerMetrics: {
+    totalUniqueViewers: number;
+    avgViewsPerCustomer: number;
+    engagementRate: number;
+    mostViewedMake: string;
+    mostLikedCategory: string;
+    avgCustomerAge: number;
+    topLocation: string;
+    mobileVsDesktop: { mobile: number; desktop: number };
+  };
+  autoClipsMetrics: {
+    totalClips: number;
+    totalClipViews: number;
+    totalClipLikes: number;
+    avgViewsPerClip: number;
+    conversionFromClips: number;
+    topPerformingClip: any;
+    clipEngagementRate: number;
+  };
+  financialMetrics: {
+    totalCost: number;
+    totalRevenue: number;
+    grossProfit: number;
+    netProfit: number;
+    roi: number;
+    avgDealSize: number;
+    profitPerCar: number;
+    revenuePerDay: number;
+  };
+}
+
+interface TimeSeriesData {
+  date: string;
+  views: number;
+  likes: number;
+  sales: number;
+  revenue: number;
+  profit: number;
+  leads: number;
+  conversions: number;
+}
+
+interface InsightData {
+  type: 'success' | 'warning' | 'info' | 'danger';
+  title: string;
+  description: string;
+  metric?: string;
+  action?: string;
+  priority: number;
+}
+
+// Constants
 const SUBSCRIPTION_WARNING_DAYS = 7;
+const STALE_INVENTORY_DAYS = 60;
+const HOT_INVENTORY_THRESHOLD = 50; // views
+
+// Chart color schemes
+const CHART_COLORS = {
+  primary: "#6366F1",
+  secondary: "#10B981",
+  accent: "#F59E0B",
+  danger: "#EF4444",
+  info: "#3B82F6",
+  success: "#10B981",
+  warning: "#F59E0B",
+  purple: "#8B5CF6",
+  pink: "#EC4899",
+  gray: "#6B7280",
+};
+
+const GRADIENT_COLORS = [
+  { start: "#6366F1", end: "#4F46E5" },
+  { start: "#10B981", end: "#059669" },
+  { start: "#F59E0B", end: "#D97706" },
+  { start: "#EF4444", end: "#DC2626" },
+  { start: "#8B5CF6", end: "#7C3AED" },
+];
 
 export default function DealerAnalyticsPage() {
   const router = useRouter();
   const supabase = createClient();
   const { user } = useAuth();
+  
+  // State Management
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dealership, setDealership] = useState<any>(null);
-  const [dealershipId, setDealershipId] = useState<number | null>(null);
-  const [period, setPeriod] = useState<"week" | "month" | "year">("month");
+  const [dealership, setDealership] = useState<DealershipData | null>(null);
+  const [period, setPeriod] = useState<"week" | "month" | "quarter" | "year">("year");
+  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "customers" | "financial" | "autoclips">("overview");
+  
+  // Analytics Data States
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
+  const [insights, setInsights] = useState<InsightData[]>([]);
+  const [inventoryAging, setInventoryAging] = useState<any[]>([]);
+  const [priceDistribution, setPriceDistribution] = useState<any[]>([]);
+  const [customerBehavior, setCustomerBehavior] = useState<any[]>([]);
+  const [salesFunnel, setSalesFunnel] = useState<any[]>([]);
+  const [makePerformance, setMakePerformance] = useState<any[]>([]);
+  const [categoryTrends, setCategoryTrends] = useState<any[]>([]);
+  const [hourlyActivity, setHourlyActivity] = useState<any[]>([]);
+  const [geographicData, setGeographicData] = useState<any[]>([]);
+  const [autoClipsPerformance, setAutoClipsPerformance] = useState<any[]>([]);
+  const [profitMargins, setProfitMargins] = useState<any[]>([]);
 
-  // Analytics data states
-  const [overviewStats, setOverviewStats] = useState({
-    totalViews: 0,
-    totalLikes: 0,
-    totalSales: 0,
-    revenue: 0,
-    viewsChange: 0,
-    likesChange: 0,
-    salesChange: 0,
-    revenueChange: 0,
-  });
+  // Fetch comprehensive analytics data
+  const fetchAnalyticsData = useCallback(async (isRefresh = false) => {
+    if (!user) return;
 
-  const [viewsData, setViewsData] = useState<any[]>([]);
-  const [likesData, setLikesData] = useState<any[]>([]);
-  const [salesData, setSalesData] = useState<any[]>([]);
-  const [inventoryData, setInventoryData] = useState<any[]>([]);
-  const [popularCars, setPopularCars] = useState<any[]>([]);
-  const [totalCars, setTotalCars] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [sortField, setSortField] = useState<string>("views");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [inventoryMetrics, setInventoryMetrics] = useState({
-    totalCars: 0,
-    newCars: 0,
-    usedCars: 0,
-    avgPrice: 0,
-    totalValue: 0,
-  });
-  const [performanceMetrics, setPerformanceMetrics] = useState({
-    avgTimeToSell: 0,
-    conversionRate: 0,
-    avgSalePrice: 0,
-    priceDifference: 0,
-  });
-  const [categoryDistribution, setCategoryDistribution] = useState<any[]>([]);
-
-  // Fetch analytics data
-  const fetchAnalyticsData = useCallback(
-    async (isRefresh = false) => {
-      if (!user) return;
-
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
-
-      setError(null);
-
-      try {
-        // 1. Get the dealership for this dealer
-        const { data: dealershipData, error: dealershipError } = await supabase
-          .from("dealerships")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-
-        if (dealershipError) throw dealershipError;
-        setDealership(dealershipData);
-        setDealershipId(dealershipData.id);
-
-        // 2. Try to fetch analytics data from a server function if it exists
-        let analyticsData;
-        try {
-          // Try to use RPC function if available (like in the mobile app)
-          const { data: rpcData, error: rpcError } = await supabase.rpc(
-            "get_dealer_analytics",
-            {
-              p_dealership_id: dealershipData.id,
-              p_time_range: period,
-            }
-          );
-
-          if (!rpcError && rpcData) {
-            analyticsData = rpcData;
-
-            // If we have RPC data but need to fetch car details for the listings
-            if (rpcData.top_viewed_cars) {
-              // Count total cars for pagination
-              const { count, error: countError } = await supabase
-                .from("cars")
-                .select("*", { count: "exact", head: true })
-                .eq("dealership_id", dealershipData.id);
-
-              if (!countError) {
-                setTotalCars(count || 0);
-              }
-
-              // Fetch detailed car information for our popular cars
-              // This is needed because the RPC only returns basic info
-              try {
-                // Create a comma-separated list of makes and models to search for
-                const makeModelPatterns = rpcData.top_viewed_cars
-                  .map((car: any) => `${car.make}.*${car.model}`)
-                  .join("|");
-
-                // Get cars matching our top viewed makes and models
-                const { data: carDetails, error: carDetailsError } =
-                  await supabase
-                    .from("cars")
-                    .select("*")
-                    .eq("dealership_id", dealershipData.id)
-                    .or(
-                      `make.ilike.${
-                        rpcData.top_viewed_cars[0]?.make || "%"
-                      }, model.ilike.${
-                        rpcData.top_viewed_cars[0]?.model || "%"
-                      }`
-                    )
-                    .order(sortField, { ascending: sortDirection === "asc" })
-                    .range((currentPage - 1) * 10, currentPage * 10 - 1);
-
-                if (!carDetailsError && carDetails) {
-                  // Map top_viewed_cars to the detailed data if available
-                  const enhancedCars = rpcData.top_viewed_cars.map(
-                    (topCar: any) => {
-                      const match = carDetails.find(
-                        (detailCar: any) =>
-                          detailCar.make === topCar.make &&
-                          detailCar.model === topCar.model &&
-                          detailCar.year === topCar.year
-                      );
-
-                      return match || topCar;
-                    }
-                  );
-
-                  // Set as popular cars with filled details
-                  setPopularCars(enhancedCars);
-                } else {
-                  // Fallback to just using the basic data
-                  setPopularCars(rpcData.top_viewed_cars);
-                }
-              } catch (searchError) {
-                console.error("Error fetching car details:", searchError);
-                // Still use the basic data if detailed search fails
-                setPopularCars(rpcData.top_viewed_cars);
-              }
-            }
-          }
-        } catch (rpcFallbackError) {
-          console.log(
-            "RPC function not available, falling back to direct query"
-          );
-        }
-
-        // 3. If no analytics data from RPC, fetch cars directly
-        if (!analyticsData) {
-          // Count total cars for pagination
-          const { count, error: countError } = await supabase
-            .from("cars")
-            .select("*", { count: "exact", head: true })
-            .eq("dealership_id", dealershipData.id)
-            .ilike("make", searchQuery ? `%${searchQuery}%` : "%")
-            .or(`model.ilike.%${searchQuery}%`);
-
-          if (!countError) {
-            setTotalCars(count || 0);
-          }
-
-          // Fetch paginated cars
-          const query = supabase
-            .from("cars")
-            .select("*")
-            .eq("dealership_id", dealershipData.id);
-
-          // Apply search if provided
-          if (searchQuery) {
-            query.or(
-              `make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%,year.ilike.%${searchQuery}%`
-            );
-          }
-
-          // Apply sorting
-          query.order(sortField, { ascending: sortDirection === "asc" });
-
-          // Apply pagination
-          query.range((currentPage - 1) * 10, currentPage * 10 - 1);
-
-          const { data: cars, error: carsError } = await query;
-
-          if (carsError) throw carsError;
-
-          // Set cars for display
-          setPopularCars(cars || []);
-
-          // Calculate analytics from car data
-          if (cars && cars.length > 0) {
-            analyticsData = processCarData(cars);
-          } else {
-            analyticsData = {
-              total_views: 0,
-              total_likes: 0,
-              total_sales: 0,
-              total_revenue: 0,
-              cars: [],
-            };
-          }
-        }
-
-        // Process analytics data
-        if (analyticsData) {
-          processAnalyticsData(analyticsData);
-        }
-      } catch (err: any) {
-        console.error("Error fetching analytics data:", err);
-        setError(err.message || "Failed to load analytics data");
-      } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
-      }
-    },
-    [user, supabase, period, currentPage, sortField, sortDirection, searchQuery]
-  );
-
-  // Process car data into analytics (fallback method if RPC not available)
-  const processCarData = (cars: any[]) => {
-    // Mock previous period data for demonstration
-    const mockPreviousPeriodMultiplier = Math.random() * 0.4 + 0.7; // 0.7 to 1.1
-
-    const totalViews = cars.reduce((sum, car) => sum + (car.views || 0), 0);
-    const totalLikes = cars.reduce((sum, car) => sum + (car.likes || 0), 0);
-    const soldCars = cars.filter((car) => car.status === "sold");
-    const totalSales = soldCars.length;
-    const revenue = soldCars.reduce(
-      (sum, car) => sum + (car.sold_price || car.price || 0),
-      0
-    );
-
-    // Get "previous period" data (mock for this example)
-    const previousViews = Math.floor(totalViews * mockPreviousPeriodMultiplier);
-    const previousLikes = Math.floor(totalLikes * mockPreviousPeriodMultiplier);
-    const previousSales = Math.floor(totalSales * mockPreviousPeriodMultiplier);
-    const previousRevenue = Math.floor(revenue * mockPreviousPeriodMultiplier);
-
-    // Generate inventory metrics
-    const newCars = cars.filter((car) => car.condition === "New").length;
-    const usedCars = cars.filter((car) => car.condition === "Used").length;
-    const avgPrice =
-      cars.length > 0
-        ? cars.reduce((sum, car) => sum + (car.price || 0), 0) / cars.length
-        : 0;
-    const totalValue = cars.reduce((sum, car) => sum + (car.price || 0), 0);
-
-    // Generate category distribution
-    const categories: Record<string, number> = {};
-    cars.forEach((car) => {
-      const category = car.category || "Other";
-      categories[category] = (categories[category] || 0) + 1;
-    });
-
-    // Calculate performance metrics
-    let avgTimeToSell = 0;
-    let avgSalePrice = 0;
-    let priceDifference = 0;
-
-    if (soldCars.length > 0) {
-      avgTimeToSell =
-        soldCars.reduce((sum, car) => {
-          const listedDate = new Date(car.listed_at);
-          const soldDate = new Date(car.date_sold);
-          const daysToSell = Math.floor(
-            (soldDate.getTime() - listedDate.getTime()) / (1000 * 60 * 60 * 24)
-          );
-          return sum + daysToSell;
-        }, 0) / soldCars.length;
-
-      avgSalePrice =
-        soldCars.reduce((sum, car) => sum + (car.sold_price || car.price), 0) /
-        soldCars.length;
-
-      priceDifference =
-        soldCars.reduce((sum, car) => {
-          const soldPrice = car.sold_price || 0;
-          const listedPrice = car.price || 0;
-          return sum + (soldPrice - listedPrice);
-        }, 0) / soldCars.length;
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
     }
+    setError(null);
 
-    const conversionRate = totalViews > 0 ? totalSales / totalViews : 0;
+    try {
+      // Get dealership
+      const { data: dealershipData, error: dealershipError } = await supabase
+        .from("dealerships")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
 
-    // Sort cars by views to get popular cars
-    const sortedCars = [...cars].sort(
-      (a, b) => (b.views || 0) - (a.views || 0)
-    );
-    const topViewedCars = sortedCars.slice(0, 5);
+      if (dealershipError) throw dealershipError;
+      setDealership(dealershipData);
 
-    // Generate time series data
-    const timeSeriesData = generateTimeSeriesData({
-      totalViews,
-      totalLikes,
-      totalSales,
-      revenue,
+      // Calculate date ranges
+      const endDate = new Date();
+      let startDate = new Date();
+      let previousStartDate = new Date();
+      let previousEndDate = new Date();
+      startDate.setFullYear(endDate.getFullYear() - 1);
+      previousStartDate.setFullYear(startDate.getFullYear() - 1);
+      previousEndDate.setFullYear(endDate.getFullYear() - 1);
+
+      // Fetch all cars data with detailed information
+      const { data: allCars, error: carsError } = await supabase
+        .from("cars")
+        .select("*")
+        .eq("dealership_id", dealershipData.id)
+        .order("listed_at", { ascending: false });
+
+      if (carsError) throw carsError;
+
+      // Fetch AutoClips data
+      const { data: autoClips, error: clipsError } = await supabase
+        .from("auto_clips")
+        .select("*")
+        .eq("dealership_id", dealershipData.id);
+
+      if (clipsError) throw clipsError;
+
+      // Process analytics data
+      const analytics = processAnalyticsData(
+        allCars || [],
+        autoClips || [],
+        startDate,
+        endDate,
+        previousStartDate,
+        previousEndDate
+      );
+
+      setAnalyticsData(analytics);
+
+      // Generate time series data
+      const timeSeries = generateTimeSeriesData(
+        allCars || [],
+        startDate,
+        endDate,
+        period
+      );
+      setTimeSeriesData(timeSeries);
+
+      // Generate insights
+      const generatedInsights = generateInsights(analytics, allCars || []);
+      setInsights(generatedInsights);
+
+      // Generate specialized visualizations data
+      generateVisualizationData(allCars || [], autoClips || []);
+
+    } catch (err: any) {
+      console.error("Error fetching analytics:", err);
+      setError(err.message || "Failed to load analytics");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [user, supabase, period]);
+
+  // Process raw data into analytics metrics
+  const processAnalyticsData = (
+    cars: any[],
+    clips: any[],
+    startDate: Date,
+    endDate: Date,
+    prevStartDate: Date,
+    prevEndDate: Date
+  ): AnalyticsData => {
+    // Current period cars
+    const currentCars = cars.filter(car => {
+      const listedDate = new Date(car.listed_at);
+      return listedDate >= startDate && listedDate <= endDate;
     });
+
+    // Previous period cars
+    const previousCars = cars.filter(car => {
+      const listedDate = new Date(car.listed_at);
+      return listedDate >= prevStartDate && listedDate <= prevEndDate;
+    });
+
+    // Calculate metrics for current period
+    const currentMetrics = calculatePeriodMetrics(currentCars, cars);
+    const previousMetrics = calculatePeriodMetrics(previousCars, cars);
+
+    // Calculate changes
+    const calculateChange = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    // AutoClips metrics
+    const clipMetrics = calculateAutoClipsMetrics(clips, cars);
+
+    // Customer metrics
+    const customerMetrics = calculateCustomerMetrics(cars);
+
+    // Financial metrics
+    const financialMetrics = calculateFinancialMetrics(cars, currentCars);
 
     return {
-      total_views: totalViews,
-      total_likes: totalLikes,
-      total_sales: totalSales,
-      total_revenue: revenue,
-      views_change:
-        previousViews > 0
-          ? ((totalViews - previousViews) / previousViews) * 100
-          : 0,
-      likes_change:
-        previousLikes > 0
-          ? ((totalLikes - previousLikes) / previousLikes) * 100
-          : 0,
-      sales_change:
-        previousSales > 0
-          ? ((totalSales - previousSales) / previousSales) * 100
-          : 0,
-      revenue_change:
-        previousRevenue > 0
-          ? ((revenue - previousRevenue) / previousRevenue) * 100
-          : 0,
-      top_viewed_cars: topViewedCars,
-      inventory_summary: {
-        total_cars: cars.length,
-        new_cars: newCars,
-        used_cars: usedCars,
-        avg_price: avgPrice,
-        total_value: totalValue,
+      overviewMetrics: {
+        totalViews: currentMetrics.totalViews,
+        totalLikes: currentMetrics.totalLikes,
+        totalSales: currentMetrics.totalSales,
+        totalRevenue: currentMetrics.totalRevenue,
+        totalProfit: currentMetrics.totalProfit,
+        avgDealTime: currentMetrics.avgDealTime,
+        conversionRate: currentMetrics.conversionRate,
+        customerSatisfaction: 4.5, // This would come from reviews/ratings
+        viewsChange: calculateChange(currentMetrics.totalViews, previousMetrics.totalViews),
+        likesChange: calculateChange(currentMetrics.totalLikes, previousMetrics.totalLikes),
+        salesChange: calculateChange(currentMetrics.totalSales, previousMetrics.totalSales),
+        revenueChange: calculateChange(currentMetrics.totalRevenue, previousMetrics.totalRevenue),
       },
-      performance_metrics: {
-        avg_time_to_sell: avgTimeToSell,
-        conversion_rate: conversionRate,
-        avg_sale_price: avgSalePrice,
-        price_difference: priceDifference,
-      },
-      category_distribution: categories,
-      time_series_data: timeSeriesData,
-      inventory_status: [
-        {
-          name: "Available",
-          value: cars.filter((car) => car.status === "available").length,
-        },
-        {
-          name: "Pending",
-          value: cars.filter((car) => car.status === "pending").length,
-        },
-        {
-          name: "Sold",
-          value: cars.filter((car) => car.status === "sold").length,
-        },
-      ],
-      cars: cars,
+      inventoryMetrics: calculateInventoryMetrics(cars),
+      performanceMetrics: calculatePerformanceMetrics(cars, currentCars),
+      customerMetrics,
+      autoClipsMetrics: clipMetrics,
+      financialMetrics,
     };
   };
 
-  // Process analytics data from either RPC or direct query
-  const processAnalyticsData = (data: any) => {
-    if (!data) return;
+  // Calculate period-specific metrics
+  const calculatePeriodMetrics = (periodCars: any[], allCars: any[]) => {
+    const totalViews = periodCars.reduce((sum, car) => sum + (car.views || 0), 0);
+    const totalLikes = periodCars.reduce((sum, car) => sum + (car.likes || 0), 0);
+    const soldCars = periodCars.filter(car => car.status === "sold");
+    const totalSales = soldCars.length;
+    const totalRevenue = soldCars.reduce((sum, car) => sum + (car.sold_price || car.price || 0), 0);
+    const totalCost = soldCars.reduce((sum, car) => sum + (car.bought_price || 0), 0);
+    const totalProfit = totalRevenue - totalCost;
 
-    // Set overview stats
-    setOverviewStats({
-      totalViews: data.total_views || 0,
-      totalLikes: data.total_likes || 0,
-      totalSales: data.total_sales || 0,
-      revenue: data.total_revenue || 0,
-      viewsChange: data.views_change || 0,
-      likesChange: data.likes_change || 0,
-      salesChange: data.sales_change || 0,
-      revenueChange: data.revenue_change || 0,
-    });
+    // Average deal time
+    const dealTimes = soldCars.map(car => {
+      if (car.date_sold && car.listed_at) {
+        const sold = new Date(car.date_sold);
+        const listed = new Date(car.listed_at);
+        return (sold.getTime() - listed.getTime()) / (1000 * 60 * 60 * 24);
+      }
+      return 0;
+    }).filter(days => days > 0);
 
-    // Set inventory metrics
-    if (data.inventory_summary) {
-      setInventoryMetrics({
-        totalCars: data.inventory_summary.total_cars || 0,
-        newCars: data.inventory_summary.new_cars || 0,
-        usedCars: data.inventory_summary.used_cars || 0,
-        avgPrice: data.inventory_summary.avg_price || 0,
-        totalValue: data.inventory_summary.total_value || 0,
-      });
-    }
+    const avgDealTime = dealTimes.length > 0
+      ? dealTimes.reduce((sum, days) => sum + days, 0) / dealTimes.length
+      : 0;
 
-    // Set performance metrics
-    if (data.performance_metrics) {
-      setPerformanceMetrics({
-        avgTimeToSell: data.performance_metrics.avg_time_to_sell || 0,
-        conversionRate: data.performance_metrics.conversion_rate || 0,
-        avgSalePrice: data.performance_metrics.avg_sale_price || 0,
-        priceDifference: data.performance_metrics.price_difference || 0,
-      });
-    }
+    // Conversion rate
+    const uniqueViewers = new Set(
+      allCars.flatMap(car => car.viewed_users || [])
+    ).size;
+    const conversionRate = uniqueViewers > 0 ? (totalSales / uniqueViewers) * 100 : 0;
 
-    // Set category distribution
-    if (data.category_distribution) {
-      const categories = Object.entries(data.category_distribution).map(
-        ([name, value]) => ({
-          name,
-          value,
-          color: getCategoryColor(name),
-        })
-      );
-      setCategoryDistribution(categories);
-    }
-
-    // Set inventory status data
-    if (data.inventory_status) {
-      setInventoryData(data.inventory_status);
-    } else if (data.cars) {
-      const cars = data.cars;
-      const inventoryStatus = [
-        {
-          name: "Available",
-          value: cars.filter((car: any) => car.status === "available").length,
-        },
-        {
-          name: "Pending",
-          value: cars.filter((car: any) => car.status === "pending").length,
-        },
-        {
-          name: "Sold",
-          value: cars.filter((car: any) => car.status === "sold").length,
-        },
-      ];
-      setInventoryData(inventoryStatus);
-    }
-
-    // Set popular cars with proper id handling for both data sources
-    if (data.top_viewed_cars) {
-      // When using the RPC function, we need to fetch additional car details
-      // since top_viewed_cars only has make, model, year, and views
-      const processedCars = data.top_viewed_cars.map(
-        (car: any, index: number) => ({
-          ...car,
-          id: car.id || `top-${index}`, // Ensure we have some unique identifier
-          // We don't have these fields in the RPC result, so we mark them as undefined
-          // The UI will handle displaying appropriate fallbacks
-          price: undefined,
-          status: undefined,
-          likes: car.likes || 0,
-        })
-      );
-
-      setPopularCars(processedCars);
-
-      // Optional: If we have car ids, we could fetch additional details in a secondary query
-      // This would require implementing a batch fetch operation
-    } else if (data.cars) {
-      // When using direct query, we already have all car details
-      const sorted = [...data.cars].sort(
-        (a, b) => (b.views || 0) - (a.views || 0)
-      );
-      setPopularCars(sorted.slice(0, 10)); // Show more cars for better pagination demonstration
-    }
-
-    // Set time series data
-    if (data.time_series_data) {
-      // Process time series data if available
-      const viewsData = data.time_series_data.map((item: any) => ({
-        name: formatDate(item.date),
-        views: item.views,
-      }));
-
-      const likesData = data.time_series_data.map((item: any) => ({
-        name: formatDate(item.date),
-        likes: item.likes,
-      }));
-
-      const salesData = data.time_series_data.map((item: any) => ({
-        name: formatDate(item.date),
-        sales: item.sales || 0,
-        revenue: item.revenue || 0,
-      }));
-
-      setViewsData(viewsData);
-      setLikesData(likesData);
-      setSalesData(salesData);
-    } else {
-      // Generate mock time series data if not available
-      const { viewsData, likesData, salesData } =
-        generateTimeSeriesDataSets(overviewStats);
-      setViewsData(viewsData);
-      setLikesData(likesData);
-      setSalesData(salesData);
-    }
+    return {
+      totalViews,
+      totalLikes,
+      totalSales,
+      totalRevenue,
+      totalProfit,
+      avgDealTime,
+      conversionRate,
+    };
   };
 
-  // Generate time series data based on selected period
-  const generateTimeSeriesData = (stats: any) => {
-    let timeLabels: string[] = [];
+  // Calculate inventory metrics
+  const calculateInventoryMetrics = (cars: any[]) => {
     const now = new Date();
+    const availableCars = cars.filter(car => car.status === "available");
+    const pendingCars = cars.filter(car => car.status === "pending");
+    const soldCars = cars.filter(car => car.status === "sold");
 
-    // Generate appropriate time labels based on period
-    if (period === "week") {
-      // Last 7 days
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        timeLabels.push(date.toISOString().split("T")[0]);
+    // Calculate inventory age
+    const inventoryAges = availableCars.map(car => {
+      const listed = new Date(car.listed_at);
+      return (now.getTime() - listed.getTime()) / (1000 * 60 * 60 * 24);
+    });
+
+    const avgAge = inventoryAges.length > 0
+      ? inventoryAges.reduce((sum, age) => sum + age, 0) / inventoryAges.length
+      : 0;
+
+    // Hot and stale inventory
+    const hotInventory = availableCars.filter(car => car.views >= HOT_INVENTORY_THRESHOLD).length;
+    const staleInventory = availableCars.filter(car => {
+      const listed = new Date(car.listed_at);
+      const daysListed = (now.getTime() - listed.getTime()) / (1000 * 60 * 60 * 24);
+      return daysListed > STALE_INVENTORY_DAYS;
+    }).length;
+
+    // Turnover rate (annualized)
+    const totalDays = 365;
+    const soldInPeriod = soldCars.filter(car => {
+      if (car.date_sold) {
+        const soldDate = new Date(car.date_sold);
+        const daysAgo = (now.getTime() - soldDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysAgo <= totalDays;
       }
-    } else if (period === "month") {
-      // Last 30 days, grouped by week
-      for (let i = 4; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i * 7);
-        timeLabels.push(date.toISOString().split("T")[0]);
+      return false;
+    }).length;
+
+    const avgInventory = cars.length;
+    const turnoverRate = avgInventory > 0 ? (soldInPeriod / avgInventory) : 0;
+
+    return {
+      totalCars: cars.length,
+      availableCars: availableCars.length,
+      pendingCars: pendingCars.length,
+      soldCars: soldCars.length,
+      newCars: cars.filter(car => car.condition === "New").length,
+      usedCars: cars.filter(car => car.condition === "Used").length,
+      avgPrice: availableCars.length > 0
+        ? availableCars.reduce((sum, car) => sum + (car.price || 0), 0) / availableCars.length
+        : 0,
+      totalValue: availableCars.reduce((sum, car) => sum + (car.price || 0), 0),
+      avgAge,
+      turnoverRate,
+      hotInventory,
+      staleInventory,
+    };
+  };
+
+  // Calculate performance metrics
+  const calculatePerformanceMetrics = (allCars: any[], periodCars: any[]) => {
+    const soldCars = allCars.filter(car => car.status === "sold");
+    const periodSoldCars = periodCars.filter(car => car.status === "sold");
+
+    // Average profit margin
+    const profitMargins = soldCars.map(car => {
+      const revenue = car.sold_price || car.price || 0;
+      const cost = car.bought_price || 0;
+      return cost > 0 ? ((revenue - cost) / revenue) * 100 : 0;
+    }).filter(margin => margin > 0);
+
+    const avgProfitMargin = profitMargins.length > 0
+      ? profitMargins.reduce((sum, margin) => sum + margin, 0) / profitMargins.length
+      : 0;
+
+    // Average discount given
+    const discounts = soldCars.map(car => {
+      const listed = car.price || 0;
+      const sold = car.sold_price || listed;
+      return listed > 0 ? ((listed - sold) / listed) * 100 : 0;
+    }).filter(discount => discount >= 0);
+
+    const avgDiscountGiven = discounts.length > 0
+      ? discounts.reduce((sum, discount) => sum + discount, 0) / discounts.length
+      : 0;
+
+    // Lead conversion rate
+    const totalLeads = new Set(
+      allCars.flatMap(car => car.viewed_users || [])
+    ).size;
+    const conversions = soldCars.length;
+    const leadConversionRate = totalLeads > 0 ? (conversions / totalLeads) * 100 : 0;
+
+    // Best selling make
+    const makeSales: Record<string, number> = {};
+    soldCars.forEach(car => {
+      makeSales[car.make] = (makeSales[car.make] || 0) + 1;
+    });
+    const bestSellingMake = Object.entries(makeSales)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
+    // Best selling category
+    const categorySales: Record<string, number> = {};
+    soldCars.forEach(car => {
+      const category = car.category || "Other";
+      categorySales[category] = (categorySales[category] || 0) + 1;
+    });
+    const bestSellingCategory = Object.entries(categorySales)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
+    // Peak selling patterns
+    const salesByDay: Record<string, number> = {};
+    const salesByHour: Record<number, number> = {};
+
+    soldCars.forEach(car => {
+      if (car.date_sold) {
+        const date = new Date(car.date_sold);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const hour = date.getHours();
+        
+        salesByDay[dayName] = (salesByDay[dayName] || 0) + 1;
+        salesByHour[hour] = (salesByHour[hour] || 0) + 1;
       }
-    } else if (period === "year") {
-      // Last 12 months
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(now);
-        date.setMonth(date.getMonth() - i);
-        date.setDate(1);
-        timeLabels.push(date.toISOString().split("T")[0]);
+    });
+
+    const peakSellingDay = Object.entries(salesByDay)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+    const peakSellingHour = parseInt(
+      Object.entries(salesByHour)
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || "12"
+    );
+
+    // Average views per sale
+    const avgViewsPerSale = periodSoldCars.length > 0
+      ? periodSoldCars.reduce((sum, car) => sum + (car.views || 0), 0) / periodSoldCars.length
+      : 0;
+
+    return {
+      avgTimeToSell: calculateAvgTimeToSell(soldCars),
+      avgProfitMargin,
+      avgDiscountGiven,
+      leadConversionRate,
+      repeatCustomerRate: 15, // This would need buyer tracking
+      avgViewsPerSale,
+      bestSellingMake,
+      bestSellingCategory,
+      peakSellingDay,
+      peakSellingHour,
+    };
+  };
+
+  // Calculate average time to sell
+  const calculateAvgTimeToSell = (soldCars: any[]) => {
+    const sellTimes = soldCars.map(car => {
+      if (car.date_sold && car.listed_at) {
+        const sold = new Date(car.date_sold);
+        const listed = new Date(car.listed_at);
+        return (sold.getTime() - listed.getTime()) / (1000 * 60 * 60 * 24);
       }
-    }
+      return 0;
+    }).filter(days => days > 0);
 
-    return timeLabels.map((date, index) => {
-      // Base values are proportional to totals with growth trend
-      const growth = 1 + index / timeLabels.length;
-      const randomFactor = 0.7 + Math.random() * 0.6;
+    return sellTimes.length > 0
+      ? sellTimes.reduce((sum, days) => sum + days, 0) / sellTimes.length
+      : 0;
+  };
 
-      const views = Math.floor(
-        (stats.totalViews / timeLabels.length) * randomFactor * growth
-      );
-      const likes = Math.floor(
-        (stats.totalLikes / timeLabels.length) * randomFactor * growth
-      );
+  // Calculate customer metrics
+  const calculateCustomerMetrics = (cars: any[]) => {
+    // Unique viewers
+    const allViewers = cars.flatMap(car => car.viewed_users || []);
+    const uniqueViewers = new Set(allViewers);
+    const totalUniqueViewers = uniqueViewers.size;
 
-      // Ensure we have at least some sales
-      let salesBase = stats.totalSales / timeLabels.length;
-      if (salesBase < 0.5) salesBase = 0.5;
+    // Average views per customer
+    const viewerCounts: Record<string, number> = {};
+    allViewers.forEach(viewer => {
+      viewerCounts[viewer] = (viewerCounts[viewer] || 0) + 1;
+    });
+    const avgViewsPerCustomer = totalUniqueViewers > 0
+      ? allViewers.length / totalUniqueViewers
+      : 0;
 
-      const sales = Math.floor(salesBase * randomFactor * growth);
-      const avgPrice = stats.revenue / (stats.totalSales || 1);
-      const revenue = Math.floor(
-        sales * avgPrice * (0.9 + Math.random() * 0.2)
-      );
+    // Engagement rate (viewers who also liked)
+    const allLikers = new Set(cars.flatMap(car => car.liked_users || []));
+    const engagementRate = totalUniqueViewers > 0
+      ? (allLikers.size / totalUniqueViewers) * 100
+      : 0;
 
-      return {
-        date,
+    // Most viewed make
+    const makeViews: Record<string, number> = {};
+    cars.forEach(car => {
+      makeViews[car.make] = (makeViews[car.make] || 0) + (car.views || 0);
+    });
+    const mostViewedMake = Object.entries(makeViews)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
+    // Most liked category
+    const categoryLikes: Record<string, number> = {};
+    cars.forEach(car => {
+      const category = car.category || "Other";
+      categoryLikes[category] = (categoryLikes[category] || 0) + (car.likes || 0);
+    });
+    const mostLikedCategory = Object.entries(categoryLikes)
+      .sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
+    return {
+      totalUniqueViewers,
+      avgViewsPerCustomer,
+      engagementRate,
+      mostViewedMake,
+      mostLikedCategory,
+      avgCustomerAge: 35, // Would need user demographics
+      topLocation: "Metro Area", // Would need user location data
+      mobileVsDesktop: { mobile: 65, desktop: 35 }, // Would need device tracking
+    };
+  };
+
+  // Calculate AutoClips metrics
+  const calculateAutoClipsMetrics = (clips: any[], cars: any[]) => {
+    const totalClips = clips.length;
+    const totalClipViews = clips.reduce((sum, clip) => sum + (clip.views || 0), 0);
+    const totalClipLikes = clips.reduce((sum, clip) => sum + (clip.likes || 0), 0);
+    const avgViewsPerClip = totalClips > 0 ? totalClipViews / totalClips : 0;
+
+    // Find cars that were featured in clips and sold
+    const clippedCarIds = clips.map(clip => clip.car_id);
+    const soldClippedCars = cars.filter(car => 
+      clippedCarIds.includes(car.id) && car.status === "sold"
+    );
+    const conversionFromClips = clippedCarIds.length > 0
+      ? (soldClippedCars.length / clippedCarIds.length) * 100
+      : 0;
+
+    // Top performing clip
+    const topPerformingClip = clips.sort((a, b) => 
+      (b.views || 0) + (b.likes || 0) - (a.views || 0) - (a.likes || 0)
+    )[0] || null;
+
+    // Engagement rate
+    const totalEngagements = totalClipLikes;
+    const clipEngagementRate = totalClipViews > 0
+      ? (totalEngagements / totalClipViews) * 100
+      : 0;
+
+    return {
+      totalClips,
+      totalClipViews,
+      totalClipLikes,
+      avgViewsPerClip,
+      conversionFromClips,
+      topPerformingClip,
+      clipEngagementRate,
+    };
+  };
+
+  // Calculate financial metrics
+  const calculateFinancialMetrics = (allCars: any[], periodCars: any[]) => {
+    const soldCars = allCars.filter(car => car.status === "sold");
+    const periodSoldCars = periodCars.filter(car => car.status === "sold");
+
+    const totalCost = soldCars.reduce((sum, car) => sum + (car.bought_price || 0), 0);
+    const totalRevenue = soldCars.reduce((sum, car) => sum + (car.sold_price || car.price || 0), 0);
+    const grossProfit = totalRevenue - totalCost;
+    const operatingExpenses = totalRevenue * 0.15; // Estimated 15% operating expenses
+    const netProfit = grossProfit - operatingExpenses;
+    const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
+
+    const avgDealSize = periodSoldCars.length > 0
+      ? periodSoldCars.reduce((sum, car) => sum + (car.sold_price || car.price || 0), 0) / periodSoldCars.length
+      : 0;
+
+    const profitPerCar = soldCars.length > 0 ? netProfit / soldCars.length : 0;
+
+    // Revenue per day calculation
+    const daysSinceFirstSale = soldCars.length > 0
+      ? (() => {
+          const firstSaleDate = new Date(
+            Math.min(...soldCars
+              .filter(car => car.date_sold)
+              .map(car => new Date(car.date_sold).getTime())
+            )
+          );
+          return (new Date().getTime() - firstSaleDate.getTime()) / (1000 * 60 * 60 * 24);
+        })()
+      : 1;
+
+    const revenuePerDay = daysSinceFirstSale > 0 ? totalRevenue / daysSinceFirstSale : 0;
+
+    return {
+      totalCost,
+      totalRevenue,
+      grossProfit,
+      netProfit,
+      roi,
+      avgDealSize,
+      profitPerCar,
+      revenuePerDay,
+    };
+  };
+
+  // Generate time series data
+  const generateTimeSeriesData = (
+    cars: any[],
+    startDate: Date,
+    endDate: Date,
+    period: string
+  ): TimeSeriesData[] => {
+    const data: TimeSeriesData[] = [];
+    const current = new Date(startDate);
+
+    // Determine interval based on period
+    let intervalDays = 30;
+
+    while (current <= endDate) {
+      const nextDate = new Date(current);
+      nextDate.setDate(nextDate.getDate() + intervalDays);
+
+      // Filter data for this interval
+      const intervalCars = cars.filter(car => {
+        const carDate = new Date(car.listed_at);
+        return carDate >= current && carDate < nextDate;
+      });
+
+      const intervalSoldCars = cars.filter(car => {
+        if (car.date_sold) {
+          const soldDate = new Date(car.date_sold);
+          return soldDate >= current && soldDate < nextDate;
+        }
+        return false;
+      });
+
+      // Calculate metrics for this interval
+      const views = intervalCars.reduce((sum, car) => sum + (car.views || 0), 0);
+      const likes = intervalCars.reduce((sum, car) => sum + (car.likes || 0), 0);
+      const sales = intervalSoldCars.length;
+      const revenue = intervalSoldCars.reduce((sum, car) => sum + (car.sold_price || car.price || 0), 0);
+      const cost = intervalSoldCars.reduce((sum, car) => sum + (car.bought_price || 0), 0);
+      const profit = revenue - cost;
+
+      // Count unique viewers as leads
+      const leads = new Set(
+        intervalCars.flatMap(car => car.viewed_users || [])
+      ).size;
+
+      data.push({
+        date: current.toISOString(),
         views,
         likes,
         sales,
         revenue,
-      };
-    });
+        profit,
+        leads,
+        conversions: sales,
+      });
+
+      current.setDate(current.getDate() + intervalDays);
+    }
+
+    return data;
   };
 
-  // Helper function to generate time series datasets
-  const generateTimeSeriesDataSets = (stats: any) => {
-    let timeLabels: string[] = [];
-    const now = new Date();
+  // Generate insights based on analytics data
+  const generateInsights = (analytics: AnalyticsData, cars: any[]): InsightData[] => {
+    const insights: InsightData[] = [];
 
-    // Generate appropriate time labels based on period
-    if (period === "week") {
-      // Last 7 days
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        timeLabels.push(date.toLocaleDateString("en-US", { weekday: "short" }));
+    // Revenue insights
+    if (analytics.overviewMetrics.revenueChange > 20) {
+      insights.push({
+        type: 'success',
+        title: 'Revenue Growth',
+        description: `Revenue increased by ${analytics.overviewMetrics.revenueChange.toFixed(1)}% compared to last ${period}`,
+        metric: `+${analytics.overviewMetrics.revenueChange.toFixed(1)}%`,
+        priority: 1,
+      });
+    } else if (analytics.overviewMetrics.revenueChange < -10) {
+      insights.push({
+        type: 'danger',
+        title: 'Revenue Decline',
+        description: `Revenue decreased by ${Math.abs(analytics.overviewMetrics.revenueChange).toFixed(1)}% compared to last ${period}`,
+        metric: `${analytics.overviewMetrics.revenueChange.toFixed(1)}%`,
+        action: 'Review pricing strategy and marketing efforts',
+        priority: 1,
+      });
+    }
+
+    // Inventory insights
+    if (analytics.inventoryMetrics.staleInventory > 5) {
+      insights.push({
+        type: 'warning',
+        title: 'Stale Inventory Alert',
+        description: `${analytics.inventoryMetrics.staleInventory} vehicles have been listed for over ${STALE_INVENTORY_DAYS} days`,
+        action: 'Consider price adjustments or promotional campaigns',
+        priority: 2,
+      });
+    }
+
+    // Hot inventory
+    if (analytics.inventoryMetrics.hotInventory > 0) {
+      insights.push({
+        type: 'info',
+        title: 'Hot Inventory',
+        description: `${analytics.inventoryMetrics.hotInventory} vehicles are getting high interest with ${HOT_INVENTORY_THRESHOLD}+ views`,
+        action: 'Follow up with interested customers',
+        priority: 3,
+      });
+    }
+
+    // Conversion rate insights
+    if (analytics.overviewMetrics.conversionRate < 2) {
+      insights.push({
+        type: 'warning',
+        title: 'Low Conversion Rate',
+        description: `Only ${analytics.overviewMetrics.conversionRate.toFixed(1)}% of viewers are converting to sales`,
+        action: 'Improve listing quality and customer engagement',
+        priority: 2,
+      });
+    }
+
+    // AutoClips performance
+    if (analytics.autoClipsMetrics.totalClips > 0 && analytics.autoClipsMetrics.conversionFromClips > 30) {
+      insights.push({
+        type: 'success',
+        title: 'AutoClips Driving Sales',
+        description: `${analytics.autoClipsMetrics.conversionFromClips.toFixed(1)}% of cars with AutoClips have sold`,
+        action: 'Create more AutoClips for popular inventory',
+        priority: 3,
+      });
+    }
+
+    // Profit margin insights
+    if (analytics.performanceMetrics.avgProfitMargin < 10) {
+      insights.push({
+        type: 'warning',
+        title: 'Low Profit Margins',
+        description: `Average profit margin is only ${analytics.performanceMetrics.avgProfitMargin.toFixed(1)}%`,
+        action: 'Review buying prices and negotiate better deals',
+        priority: 2,
+      });
+    }
+
+    // Best performing insights
+    insights.push({
+      type: 'info',
+      title: 'Best Performers',
+      description: `${analytics.performanceMetrics.bestSellingMake} is your top selling make, ${analytics.performanceMetrics.bestSellingCategory} is the most popular category`,
+      action: 'Stock more of these high-demand vehicles',
+      priority: 4,
+    });
+
+    // Customer engagement
+    if (analytics.customerMetrics.engagementRate > 20) {
+      insights.push({
+        type: 'success',
+        title: 'High Customer Engagement',
+        description: `${analytics.customerMetrics.engagementRate.toFixed(1)}% of viewers are liking vehicles`,
+        priority: 4,
+      });
+    }
+
+    // Sort by priority
+    return insights.sort((a, b) => a.priority - b.priority);
+  };
+
+  // Generate visualization data
+  const generateVisualizationData = (cars: any[], clips: any[]) => {
+    // Inventory aging
+    const agingData = [
+      { name: '0-30 days', value: 0, color: CHART_COLORS.success },
+      { name: '31-60 days', value: 0, color: CHART_COLORS.warning },
+      { name: '61-90 days', value: 0, color: CHART_COLORS.purple },
+      { name: '90+ days', value: 0, color: CHART_COLORS.danger },
+    ];
+
+    const now = new Date();
+    cars.filter(car => car.status === "available").forEach(car => {
+      const listed = new Date(car.listed_at);
+      const days = (now.getTime() - listed.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (days <= 30) agingData[0].value++;
+      else if (days <= 60) agingData[1].value++;
+      else if (days <= 90) agingData[2].value++;
+      else agingData[3].value++;
+    });
+
+    setInventoryAging(agingData);
+
+    // Price distribution
+    const priceRanges = [
+      { range: '$0-20k', min: 0, max: 20000, count: 0 },
+      { range: '$20k-40k', min: 20000, max: 40000, count: 0 },
+      { range: '$40k-60k', min: 40000, max: 60000, count: 0 },
+      { range: '$60k-80k', min: 60000, max: 80000, count: 0 },
+      { range: '$80k+', min: 80000, max: Infinity, count: 0 },
+    ];
+
+    cars.forEach(car => {
+      const price = car.price || 0;
+      const range = priceRanges.find(r => price >= r.min && price < r.max);
+      if (range) range.count++;
+    });
+
+    setPriceDistribution(priceRanges.map(r => ({
+      name: r.range,
+      value: r.count,
+    })));
+
+    // Sales funnel
+    const uniqueViewers = new Set(cars.flatMap(car => car.viewed_users || [])).size;
+    const uniqueLikers = new Set(cars.flatMap(car => car.liked_users || [])).size;
+    const testDrives = Math.floor(uniqueLikers * 0.3); // Estimated
+    const negotiations = Math.floor(testDrives * 0.7); // Estimated
+    const sales = cars.filter(car => car.status === "sold").length;
+
+    setSalesFunnel([
+      { stage: 'Views', value: uniqueViewers, fill: CHART_COLORS.primary },
+      { stage: 'Likes', value: uniqueLikers, fill: CHART_COLORS.info },
+
+      { stage: 'Sales', value: sales, fill: CHART_COLORS.success },
+    ]);
+
+    // Make performance
+    const makeData: Record<string, { views: number; sales: number; revenue: number }> = {};
+    
+    cars.forEach(car => {
+      if (!makeData[car.make]) {
+        makeData[car.make] = { views: 0, sales: 0, revenue: 0 };
       }
-    } else if (period === "month") {
-      // Last 30 days, grouped by week
-      for (let i = 4; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i * 7);
-        timeLabels.push(`Week ${5 - i}`);
+      
+      makeData[car.make].views += car.views || 0;
+      
+      if (car.status === "sold") {
+        makeData[car.make].sales++;
+        makeData[car.make].revenue += car.sold_price || car.price || 0;
       }
-    } else if (period === "year") {
-      // Last 12 months
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(now);
-        date.setMonth(date.getMonth() - i);
-        timeLabels.push(date.toLocaleDateString("en-US", { month: "short" }));
+    });
+
+    const makePerf = Object.entries(makeData)
+      .map(([make, data]) => ({
+        make,
+        views: data.views,
+        sales: data.sales,
+        revenue: data.revenue,
+        conversionRate: data.views > 0 ? (data.sales / data.views) * 100 : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    setMakePerformance(makePerf);
+
+    // Category trends over time
+    const categoryData: Record<string, Record<string, number>> = {};
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    cars.forEach(car => {
+      const category = car.category || 'Other';
+      const month = new Date(car.listed_at).getMonth();
+      const monthName = months[month];
+      
+      if (!categoryData[monthName]) {
+        categoryData[monthName] = {};
+      }
+      
+      categoryData[monthName][category] = (categoryData[monthName][category] || 0) + 1;
+    });
+
+    const categoryTrendData = Object.entries(categoryData).map(([month, categories]) => ({
+      month,
+      ...categories,
+    }));
+
+    setCategoryTrends(categoryTrendData);
+
+    // Hourly activity heatmap
+    const hourlyData: number[][] = Array(7).fill(null).map(() => Array(24).fill(0));
+    
+    cars.forEach(car => {
+      (car.viewed_users || []).forEach((userId: string) => {
+        // Simulate view times (in real app, you'd track actual view timestamps)
+        const randomDay = Math.floor(Math.random() * 7);
+        const randomHour = Math.floor(Math.random() * 24);
+        hourlyData[randomDay][randomHour]++;
+      });
+    });
+
+    const heatmapData = [];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 24; hour++) {
+        heatmapData.push({
+          day: days[day],
+          hour,
+          value: hourlyData[day][hour],
+        });
       }
     }
 
-    // Generate mock data
-    const viewsData = timeLabels.map((label, index) => {
-      const baseValue = stats.totalViews / (timeLabels.length * 1.5);
-      const value = Math.floor(
-        baseValue *
-          (0.7 + Math.random() * 0.6) *
-          (1 + index / timeLabels.length)
-      );
-      return { name: label, views: value };
+    setHourlyActivity(heatmapData);
+
+    // AutoClips performance
+    const clipPerf = clips.map(clip => {
+      const car = cars.find(c => c.id === clip.car_id);
+      return {
+        title: clip.title,
+        views: clip.views,
+        likes: clip.likes,
+        engagementRate: clip.views > 0 ? (clip.likes / clip.views) * 100 : 0,
+        carSold: car?.status === "sold",
+      };
+    }).sort((a, b) => b.views - a.views);
+
+    setAutoClipsPerformance(clipPerf);
+
+    // Profit margins by category
+    const profitData: Record<string, { revenue: number; cost: number; count: number }> = {};
+    
+    cars.filter(car => car.status === "sold").forEach(car => {
+      const category = car.category || 'Other';
+      if (!profitData[category]) {
+        profitData[category] = { revenue: 0, cost: 0, count: 0 };
+      }
+      
+      profitData[category].revenue += car.sold_price || car.price || 0;
+      profitData[category].cost += car.bought_price || 0;
+      profitData[category].count++;
     });
 
-    const likesData = timeLabels.map((label, index) => {
-      const baseValue = stats.totalLikes / (timeLabels.length * 1.5);
-      const value = Math.floor(
-        baseValue *
-          (0.7 + Math.random() * 0.6) *
-          (1 + index / timeLabels.length)
-      );
-      return { name: label, likes: value };
-    });
+    const margins = Object.entries(profitData).map(([category, data]) => ({
+      category,
+      margin: data.revenue > 0 ? ((data.revenue - data.cost) / data.revenue) * 100 : 0,
+      avgProfit: data.count > 0 ? (data.revenue - data.cost) / data.count : 0,
+    }));
 
-    const salesData = timeLabels.map((label, index) => {
-      let baseValue = stats.totalSales / (timeLabels.length * 1.5);
-      if (baseValue < 1) baseValue = 1;
-      const sales = Math.floor(
-        baseValue *
-          (0.5 + Math.random() * 1.0) *
-          (1 + index / timeLabels.length)
-      );
-      const avgPrice = stats.revenue / (stats.totalSales || 1);
-      const revenue = Math.floor(
-        sales * avgPrice * (0.9 + Math.random() * 0.2)
-      );
-      return { name: label, sales, revenue };
-    });
-
-    return { viewsData, likesData, salesData };
+    setProfitMargins(margins);
   };
 
-  // Initial data fetch
+  // Export functions
+  const exportToPDF = useCallback(() => {
+    // In a real implementation, you'd use a library like jsPDF or react-pdf
+    console.log("Exporting to PDF...");
+    alert("PDF export functionality would be implemented here");
+  }, []);
+
+  const exportToCSV = useCallback(() => {
+    if (!analyticsData) return;
+
+    // Create CSV content
+    const headers = ['Metric', 'Value', 'Change %'];
+    const rows = [
+      ['Total Views', analyticsData.overviewMetrics.totalViews, analyticsData.overviewMetrics.viewsChange.toFixed(1)],
+      ['Total Likes', analyticsData.overviewMetrics.totalLikes, analyticsData.overviewMetrics.likesChange.toFixed(1)],
+      ['Total Sales', analyticsData.overviewMetrics.totalSales, analyticsData.overviewMetrics.salesChange.toFixed(1)],
+      ['Total Revenue', analyticsData.overviewMetrics.totalRevenue, analyticsData.overviewMetrics.revenueChange.toFixed(1)],
+      ['Conversion Rate', analyticsData.overviewMetrics.conversionRate.toFixed(1) + '%', 'N/A'],
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${period}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }, [analyticsData, period]);
+
+  // Effects
   useEffect(() => {
     fetchAnalyticsData();
   }, [fetchAnalyticsData]);
-
-  // Reset pagination when search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, sortField, sortDirection]);
-
-  // Handle search with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.length >= 2 || searchQuery.length === 0) {
-        fetchAnalyticsData();
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, fetchAnalyticsData]);
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
@@ -702,23 +1095,7 @@ export default function DealerAnalyticsPage() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }, [dealership]);
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-
-    if (period === "week") {
-      return date.toLocaleDateString("en-US", { weekday: "short" });
-    } else if (period === "month") {
-      return date.toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "short",
-      });
-    } else {
-      return date.toLocaleDateString("en-US", { month: "short" });
-    }
-  };
-
-  // Format currency
+  // Format functions
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -728,100 +1105,844 @@ export default function DealerAnalyticsPage() {
     }).format(amount);
   };
 
-  // Format price with decimals
-  const formatPriceWithDecimals = (price: number) => {
-    if (!price) return "0.00";
-    return price.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toLocaleString();
   };
 
-  // Get color for a category
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      Sedan: "#4285F4",
-      SUV: "#34A853",
-      Coupe: "#9C27B0",
-      Hatchback: "#FBBC05",
-      Convertible: "#EA4335",
-      Sports: "#FF9800",
-      Truck: "#795548",
-      Van: "#607D8B",
-      Wagon: "#3F51B5",
-      Other: "#CCCCCC",
-    };
-
-    return colors[category] || "#CCCCCC";
+  const formatPercent = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
-  // Chart colors
-  const COLORS = [
-    "#10B981",
-    "#F59E0B",
-    "#EF4444",
-    "#6366F1",
-    "#8B5CF6",
-    "#EC4899",
-  ];
+  // Custom tooltip components
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+          <p className="text-sm font-medium text-gray-800">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: {entry.name.includes('Revenue') || entry.name.includes('Profit') 
+                ? formatCurrency(entry.value) 
+                : formatNumber(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Render functions for different sections
+  const renderOverviewTab = () => (
+    <>
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-indigo-600 text-sm font-medium">Total Views</p>
+              <p className="text-gray-800 text-2xl font-bold mt-1">
+                {formatNumber(analyticsData?.overviewMetrics.totalViews || 0)}
+              </p>
+              <div className="flex items-center text-xs mt-2">
+                <span className={`flex items-center font-medium ${
+                  (analyticsData?.overviewMetrics.viewsChange || 0) >= 0 
+                    ? "text-emerald-600" 
+                    : "text-rose-600"
+                }`}>
+                  {(analyticsData?.overviewMetrics.viewsChange || 0) >= 0 ? (
+                    <ArrowUpIcon className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownIcon className="h-3 w-3 mr-1" />
+                  )}
+                  {formatPercent(analyticsData?.overviewMetrics.viewsChange || 0)}
+                </span>
+                <span className="ml-2 text-gray-500">vs last {period}</span>
+              </div>
+            </div>
+            <span className="flex items-center justify-center p-2.5 rounded-xl bg-indigo-100 text-indigo-600">
+              <EyeIcon className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-rose-600 text-sm font-medium">Engagement</p>
+              <p className="text-gray-800 text-2xl font-bold mt-1">
+                {formatNumber(analyticsData?.overviewMetrics.totalLikes || 0)}
+              </p>
+              <div className="flex items-center text-xs mt-2">
+                <span className={`flex items-center font-medium ${
+                  (analyticsData?.overviewMetrics.likesChange || 0) >= 0 
+                    ? "text-emerald-600" 
+                    : "text-rose-600"
+                }`}>
+                  {(analyticsData?.overviewMetrics.likesChange || 0) >= 0 ? (
+                    <ArrowUpIcon className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownIcon className="h-3 w-3 mr-1" />
+                  )}
+                  {formatPercent(analyticsData?.overviewMetrics.likesChange || 0)}
+                </span>
+                <span className="ml-2 text-gray-500">vs last {period}</span>
+              </div>
+            </div>
+            <span className="flex items-center justify-center p-2.5 rounded-xl bg-rose-100 text-rose-500">
+              <HeartIcon className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-emerald-600 text-sm font-medium">Sales</p>
+              <p className="text-gray-800 text-2xl font-bold mt-1">
+                {analyticsData?.overviewMetrics.totalSales || 0}
+              </p>
+              <div className="flex items-center text-xs mt-2">
+                <span className={`flex items-center font-medium ${
+                  (analyticsData?.overviewMetrics.salesChange || 0) >= 0 
+                    ? "text-emerald-600" 
+                    : "text-rose-600"
+                }`}>
+                  {(analyticsData?.overviewMetrics.salesChange || 0) >= 0 ? (
+                    <ArrowUpIcon className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownIcon className="h-3 w-3 mr-1" />
+                  )}
+                  {formatPercent(analyticsData?.overviewMetrics.salesChange || 0)}
+                </span>
+                <span className="ml-2 text-gray-500">vs last {period}</span>
+              </div>
+            </div>
+            <span className="flex items-center justify-center p-2.5 rounded-xl bg-emerald-100 text-emerald-600">
+              <TagIcon className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-amber-600 text-sm font-medium">Revenue</p>
+              <p className="text-gray-800 text-2xl font-bold mt-1">
+                {formatCurrency(analyticsData?.overviewMetrics.totalRevenue || 0)}
+              </p>
+              <div className="flex items-center text-xs mt-2">
+                <span className={`flex items-center font-medium ${
+                  (analyticsData?.overviewMetrics.revenueChange || 0) >= 0 
+                    ? "text-emerald-600" 
+                    : "text-rose-600"
+                }`}>
+                  {(analyticsData?.overviewMetrics.revenueChange || 0) >= 0 ? (
+                    <ArrowUpIcon className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownIcon className="h-3 w-3 mr-1" />
+                  )}
+                  {formatPercent(analyticsData?.overviewMetrics.revenueChange || 0)}
+                </span>
+                <span className="ml-2 text-gray-500">vs last {period}</span>
+              </div>
+            </div>
+            <span className="flex items-center justify-center p-2.5 rounded-xl bg-amber-100 text-amber-600">
+              <CurrencyDollarIcon className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-700 text-sm font-medium">Unique Viewers</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {formatNumber(analyticsData?.customerMetrics.totalUniqueViewers || 0)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Avg {analyticsData?.customerMetrics.avgViewsPerCustomer.toFixed(1)} views each
+              </p>
+            </div>
+            <UserGroupIcon className="h-10 w-10 text-blue-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-700 text-sm font-medium">Engagement Rate</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {analyticsData?.customerMetrics.engagementRate.toFixed(1)}%
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Of viewers liked cars</p>
+            </div>
+            <HeartIcon className="h-10 w-10 text-purple-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-700 text-sm font-medium">Top Interest</p>
+              <p className="text-lg font-bold text-gray-800 mt-1">
+                {analyticsData?.customerMetrics.mostViewedMake}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Most viewed make</p>
+            </div>
+            <EyeIcon className="h-10 w-10 text-emerald-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-rose-700 text-sm font-medium">Favorite Category</p>
+              <p className="text-lg font-bold text-gray-800 mt-1">
+                {analyticsData?.customerMetrics.mostLikedCategory}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Most liked type</p>
+            </div>
+            <SparklesIcon className="h-10 w-10 text-rose-500" />
+          </div>
+        </div>
+      </div>
+      {/* Performance Overview Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Revenue & Profit Trend */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue & Profit Trend</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={timeSeriesData}>
+                <defs>
+                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6B7280"
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis 
+                  stroke="#6B7280"
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke={CHART_COLORS.primary}
+                  fillOpacity={1}
+                  fill="url(#revenueGradient)"
+                  name="Revenue"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="profit"
+                  stroke={CHART_COLORS.success}
+                  strokeWidth={3}
+                  dot={{ fill: CHART_COLORS.success, r: 4 }}
+                  name="Profit"
+                />
+                <Bar
+                  dataKey="sales"
+                  fill={CHART_COLORS.accent}
+                  opacity={0.3}
+                  name="Sales"
+                
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Conversion Funnel */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Conversion Funnel</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={salesFunnel} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis type="category" dataKey="stage" stroke="#6B7280" />
+                <YAxis type="number" stroke="#6B7280" />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                  {salesFunnel.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+       
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-sm text-gray-600">Lead Conversion</p>
+              <p className="text-xl font-semibold text-gray-800">
+                {analyticsData?.overviewMetrics.conversionRate.toFixed(1)}%
+              </p>
+            </div>
+      
+          </div>
+       
+      </div>
+
+      {/* Insights Section */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+            <LightBulbIcon className="h-5 w-5 mr-2 text-amber-500" />
+             Insights
+          </h3>
+          <span className="text-sm text-gray-500">{insights.length} insights</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {insights.slice(0, 6).map((insight, index) => (
+            <div
+              key={index}
+              className={`p-4 rounded-lg border ${
+                insight.type === 'success' ? 'bg-emerald-50 border-emerald-200' :
+                insight.type === 'warning' ? 'bg-amber-50 border-amber-200' :
+                insight.type === 'danger' ? 'bg-rose-50 border-rose-200' :
+                'bg-blue-50 border-blue-200'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h4 className={`font-medium ${
+                  insight.type === 'success' ? 'text-emerald-800' :
+                  insight.type === 'warning' ? 'text-amber-800' :
+                  insight.type === 'danger' ? 'text-rose-800' :
+                  'text-blue-800'
+                }`}>
+                  {insight.title}
+                </h4>
+                {insight.metric && (
+                  <span className={`text-sm font-semibold ${
+                    insight.type === 'success' ? 'text-emerald-600' :
+                    insight.type === 'warning' ? 'text-amber-600' :
+                    insight.type === 'danger' ? 'text-rose-600' :
+                    'text-blue-600'
+                  }`}>
+                    {insight.metric}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-700 mb-2">{insight.description}</p>
+              {insight.action && (
+                <p className="text-xs text-gray-600 italic">
+                  <strong>Action:</strong> {insight.action}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
+  const renderInventoryTab = () => (
+    <>
+      {/* Inventory Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+          <p className="text-gray-600 text-sm">Total Inventory</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">
+            {analyticsData?.inventoryMetrics.totalCars || 0}
+          </p>
+        </div>
+        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+          <p className="text-emerald-700 text-sm">Available</p>
+          <p className="text-2xl font-bold text-emerald-800 mt-1">
+            {analyticsData?.inventoryMetrics.availableCars || 0}
+          </p>
+        </div>
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+          <p className="text-amber-700 text-sm">Pending</p>
+          <p className="text-2xl font-bold text-amber-800 mt-1">
+            {analyticsData?.inventoryMetrics.pendingCars || 0}
+          </p>
+        </div>
+        <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+          <p className="text-blue-700 text-sm">Sold</p>
+          <p className="text-2xl font-bold text-blue-800 mt-1">
+            {analyticsData?.inventoryMetrics.soldCars || 0}
+          </p>
+        </div>
+        <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+          <p className="text-purple-700 text-sm">Hot Sale</p>
+          <p className="text-2xl font-bold text-purple-800 mt-1">
+            {analyticsData?.inventoryMetrics.hotInventory || 0}
+          </p>
+        </div>
+        <div className="bg-rose-50 rounded-xl p-4 border border-rose-200">
+          <p className="text-rose-700 text-sm">Stale Stock</p>
+          <p className="text-2xl font-bold text-rose-800 mt-1">
+            {analyticsData?.inventoryMetrics.staleInventory || 0}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Inventory Aging */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Inventory Aging</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={inventoryAging}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {inventoryAging.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {inventoryAging.map((item, index) => (
+              <div key={index} className="flex items-center">
+                <div
+                  className="w-3 h-3 rounded-full mr-2"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-sm text-gray-700">
+                  {item.name}: {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Price Distribution */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Price Distribution</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={priceDistribution}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" stroke="#6B7280" />
+                <YAxis stroke="#6B7280" />
+                <Tooltip />
+                <Bar dataKey="value" fill={CHART_COLORS.primary} radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 bg-gray-50 rounded-lg p-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Average Price</span>
+              <span className="text-lg font-semibold text-gray-800">
+                {formatCurrency(analyticsData?.inventoryMetrics.avgPrice || 0)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-sm text-gray-600">Total Value</span>
+              <span className="text-lg font-semibold text-gray-800">
+                {formatCurrency(analyticsData?.inventoryMetrics.totalValue || 0)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Make Performance Table */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Make Performance Analysis</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Make</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Views</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Sales</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Conv. Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {makePerformance.map((make, index) => (
+                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 text-sm text-gray-800 font-medium">{make.make}</td>
+                  <td className="text-right py-3 px-4 text-sm text-gray-700">{formatNumber(make.views)}</td>
+                  <td className="text-right py-3 px-4 text-sm text-gray-700">{make.sales}</td>
+                  <td className="text-right py-3 px-4 text-sm text-gray-700">{formatCurrency(make.revenue)}</td>
+                  <td className="text-right py-3 px-4">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      make.conversionRate > 5 ? 'bg-emerald-100 text-emerald-800' :
+                      make.conversionRate > 2 ? 'bg-amber-100 text-amber-800' :
+                      'bg-rose-100 text-rose-800'
+                    }`}>
+                      {make.conversionRate.toFixed(1)}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+
+
+
+  const renderFinancialTab = () => (
+    <>
+      {/* Financial Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-700 text-sm font-medium">Gross Profit</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {formatCurrency(analyticsData?.financialMetrics.grossProfit || 0)}
+              </p>
+              <p className="text-xs text-emerald-600 mt-1">
+                +{((analyticsData?.financialMetrics.grossProfit || 0) / (analyticsData?.financialMetrics.totalRevenue || 1) * 100).toFixed(1)}% margin
+              </p>
+            </div>
+            <TrendingUpIcon className="h-10 w-10 text-emerald-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-700 text-sm font-medium">Net Profit</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {formatCurrency(analyticsData?.financialMetrics.netProfit || 0)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">After expenses</p>
+            </div>
+            <BanknotesIcon className="h-10 w-10 text-blue-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-700 text-sm font-medium">ROI</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {analyticsData?.financialMetrics.roi.toFixed(1)}%
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Return on investment</p>
+            </div>
+            <ChartPieIcon className="h-10 w-10 text-purple-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-amber-700 text-sm font-medium">Avg Deal Size</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {formatCurrency(analyticsData?.financialMetrics.avgDealSize || 0)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Per vehicle</p>
+            </div>
+            <ShoppingCartIcon className="h-10 w-10 text-amber-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Profit Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Profit Margins by Category */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Profit Margins by Category</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={profitMargins} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis type="number" stroke="#6B7280" tickFormatter={(value) => `${value}%`} />
+                <YAxis type="category" dataKey="category" stroke="#6B7280" width={80} />
+                <Tooltip formatter={(value: any) => `${value.toFixed(1)}%`} />
+                <Bar dataKey="margin" fill={CHART_COLORS.success} radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Revenue Breakdown */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue vs Cost Analysis</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={timeSeriesData}>
+                <defs>
+                  <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.success} stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor={CHART_COLORS.success} stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#6B7280"
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                />
+                <YAxis 
+                  stroke="#6B7280"
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="profit"
+                  stroke={CHART_COLORS.success}
+                  fillOpacity={1}
+                  fill="url(#profitGradient)"
+                  name="Profit"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Metrics Table */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Detailed Financial Metrics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium text-gray-700 mb-3">Revenue Metrics</h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Total Revenue</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(analyticsData?.financialMetrics.totalRevenue || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Revenue per Day</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(analyticsData?.financialMetrics.revenuePerDay || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Average Deal Size</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(analyticsData?.financialMetrics.avgDealSize || 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-medium text-gray-700 mb-3">Profit Metrics</h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Total Cost</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(analyticsData?.financialMetrics.totalCost || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Profit per Car</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(analyticsData?.financialMetrics.profitPerCar || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600">Average Discount</span>
+                <span className="font-medium text-gray-800">
+                  {analyticsData?.performanceMetrics.avgDiscountGiven.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+  const renderAutoClipsTab = () => (
+    <>
+      {/* AutoClips Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-700 text-sm font-medium">Total Clips</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {analyticsData?.autoClipsMetrics.totalClips || 0}
+              </p>
+            </div>
+            <VideoCameraIcon className="h-10 w-10 text-purple-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-700 text-sm font-medium">Total Views</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {formatNumber(analyticsData?.autoClipsMetrics.totalClipViews || 0)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Avg {analyticsData?.autoClipsMetrics.avgViewsPerClip.toFixed(0)} per clip
+              </p>
+            </div>
+            <EyeIcon className="h-10 w-10 text-blue-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-rose-700 text-sm font-medium">Engagement</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {analyticsData?.autoClipsMetrics.clipEngagementRate.toFixed(1)}%
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Like rate</p>
+            </div>
+            <HeartIcon className="h-10 w-10 text-rose-500" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-700 text-sm font-medium">Conversion Rate</p>
+              <p className="text-2xl font-bold text-gray-800 mt-1">
+                {analyticsData?.autoClipsMetrics.conversionFromClips.toFixed(1)}%
+              </p>
+              <p className="text-xs text-gray-600 mt-1">Cars sold</p>
+            </div>
+            <ShoppingCartIcon className="h-10 w-10 text-emerald-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* AutoClips Performance */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">AutoClips Performance</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Title</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Views</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Likes</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Engagement</th>
+                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {autoClipsPerformance.slice(0, 10).map((clip, index) => (
+                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 text-sm text-gray-800">{clip.title}</td>
+                  <td className="text-right py-3 px-4 text-sm text-gray-700">{formatNumber(clip.views)}</td>
+                  <td className="text-right py-3 px-4 text-sm text-gray-700">{formatNumber(clip.likes)}</td>
+                  <td className="text-right py-3 px-4">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      clip.engagementRate > 10 ? 'bg-emerald-100 text-emerald-800' :
+                      clip.engagementRate > 5 ? 'bg-amber-100 text-amber-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {clip.engagementRate.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="text-center py-3 px-4">
+                    {clip.carSold ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                        Sold
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Active
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Top Performing Clip */}
+      {analyticsData?.autoClipsMetrics.topPerformingClip && (
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-6 text-white shadow-lg mb-8">
+          <h3 className="text-xl font-semibold mb-4 flex items-center">
+            <FireIcon className="h-6 w-6 mr-2" />
+            Top Performing AutoClip
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-purple-100 text-sm">Title</p>
+              <p className="text-lg font-medium">{analyticsData.autoClipsMetrics.topPerformingClip.title}</p>
+            </div>
+            <div>
+              <p className="text-purple-100 text-sm">Total Views</p>
+              <p className="text-lg font-medium">{formatNumber(analyticsData.autoClipsMetrics.topPerformingClip.views)}</p>
+            </div>
+            <div>
+              <p className="text-purple-100 text-sm">Engagement Rate</p>
+              <p className="text-lg font-medium">
+                {((analyticsData.autoClipsMetrics.topPerformingClip.likes / analyticsData.autoClipsMetrics.topPerformingClip.views) * 100).toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+    </>
+  );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <DealerNavbar />
 
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto pb-16">
+          {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Analytics Dashboard
               </h1>
               <p className="text-gray-500">
-                Track performance and insights for your dealership
+                Comprehensive insights for {dealership?.name || 'your dealership'}
               </p>
             </div>
 
-            <div className="flex items-center space-x-2 mt-4 md:mt-0">
-              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mr-2">
-                <button
-                  onClick={() => setPeriod("week")}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    period === "week"
-                      ? "bg-accent text-white"
-                      : "text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Week
-                </button>
-                <button
-                  onClick={() => setPeriod("month")}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    period === "month"
-                      ? "bg-accent text-white"
-                      : "text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Month
-                </button>
-                <button
-                  onClick={() => setPeriod("year")}
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    period === "year"
-                      ? "bg-accent text-white"
-                      : "text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Year
-                </button>
-              </div>
+            <div className="flex items-center space-x-3 mt-4 md:mt-0">
+              {/* Export Buttons */}
+              
+              <button
+                onClick={exportToCSV}
+                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Export to CSV"
+              >
+                <DocumentArrowDownIcon className="h-5 w-5" />
+              </button>
 
+  
+              {/* Refresh Button */}
               <button
                 onClick={handleRefresh}
                 className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
                 disabled={isRefreshing}
               >
                 {isRefreshing ? (
-                  <ArrowPathIcon className="h-5 w-5 animate-spin text-accent" />
+                  <ArrowPathIcon className="h-5 w-5 animate-spin text-indigo-500" />
                 ) : (
                   <ArrowPathIcon className="h-5 w-5" />
                 )}
@@ -832,11 +1953,11 @@ export default function DealerAnalyticsPage() {
           {/* Subscription Warning */}
           {dealership?.subscription_end_date &&
             getDaysUntilExpiration <= SUBSCRIPTION_WARNING_DAYS && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center">
                 <div className="bg-amber-500 rounded-full p-2 mr-3 flex-shrink-0">
                   <ExclamationTriangleIcon className="h-5 w-5 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-amber-700 font-semibold">
                     Subscription expiring soon
                   </h3>
@@ -846,15 +1967,19 @@ export default function DealerAnalyticsPage() {
                       : `${getDaysUntilExpiration} days remaining. Renew now to avoid service interruption.`}
                   </p>
                 </div>
-                <button className="ml-auto bg-amber-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-amber-600 transition-colors">
+                <button className="ml-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-2 rounded-lg text-sm font-medium hover:from-amber-600 hover:to-orange-600 transition-colors shadow-sm">
                   Renew Now
                 </button>
               </div>
             )}
 
+          {/* Loading State */}
           {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+            <div className="flex justify-center items-center h-96">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading analytics data...</p>
+              </div>
             </div>
           ) : error ? (
             <div className="bg-rose-50 border border-rose-200 rounded-xl p-8 text-center">
@@ -867,511 +1992,46 @@ export default function DealerAnalyticsPage() {
               <p className="text-gray-600 mb-6">{error}</p>
               <button
                 onClick={handleRefresh}
-                className="px-4 py-2 bg-accent hover:bg-accent/90 rounded-lg text-white transition-colors"
+                className="px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 rounded-lg text-white transition-colors font-medium"
               >
                 Try Again
               </button>
             </div>
           ) : (
             <>
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {/* Views Card */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Views
-                    </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-accent/10 text-accent">
-                      <EyeIcon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-gray-800 text-2xl font-semibold">
-                      {overviewStats.totalViews.toLocaleString()}
-                    </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-500">
-                      <span
-                        className={`flex items-center ${
-                          overviewStats.viewsChange >= 0
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {overviewStats.viewsChange >= 0 ? (
-                          <ArrowUpIcon className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ArrowDownIcon className="h-3 w-3 mr-1" />
-                        )}
-                        {Math.abs(Math.round(overviewStats.viewsChange))}%
-                      </span>
-                      <span className="ml-2">from last {period}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Likes Card */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Likes
-                    </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-rose-100 text-rose-500">
-                      <HeartIcon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-gray-800 text-2xl font-semibold">
-                      {overviewStats.totalLikes.toLocaleString()}
-                    </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-500">
-                      <span
-                        className={`flex items-center ${
-                          overviewStats.likesChange >= 0
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {overviewStats.likesChange >= 0 ? (
-                          <ArrowUpIcon className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ArrowDownIcon className="h-3 w-3 mr-1" />
-                        )}
-                        {Math.abs(Math.round(overviewStats.likesChange))}%
-                      </span>
-                      <span className="ml-2">from last {period}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sales Card */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Sales
-                    </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-emerald-100 text-emerald-600">
-                      <TagIcon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-gray-800 text-2xl font-semibold">
-                      {overviewStats.totalSales}
-                    </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-500">
-                      <span
-                        className={`flex items-center ${
-                          overviewStats.salesChange >= 0
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {overviewStats.salesChange >= 0 ? (
-                          <ArrowUpIcon className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ArrowDownIcon className="h-3 w-3 mr-1" />
-                        )}
-                        {Math.abs(Math.round(overviewStats.salesChange))}%
-                      </span>
-                      <span className="ml-2">from last {period}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Revenue Card */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Revenue
-                    </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-amber-100 text-amber-600">
-                      <CurrencyDollarIcon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-gray-800 text-2xl font-semibold">
-                      {formatCurrency(overviewStats.revenue)}
-                    </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-500">
-                      <span
-                        className={`flex items-center ${
-                          overviewStats.revenueChange >= 0
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {overviewStats.revenueChange >= 0 ? (
-                          <ArrowUpIcon className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ArrowDownIcon className="h-3 w-3 mr-1" />
-                        )}
-                        {Math.abs(Math.round(overviewStats.revenueChange))}%
-                      </span>
-                      <span className="ml-2">from last {period}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Charts Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Views Chart */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    Views Trend
-                  </h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={viewsData}
-                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="colorViews"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#6366F1"
-                              stopOpacity={0.8}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#6366F1"
-                              stopOpacity={0}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="name" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#FFFFFF",
-                            borderColor: "#E5E7EB",
-                          }}
-                          labelStyle={{ color: "#111827" }}
-                          itemStyle={{ color: "#6366F1" }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="views"
-                          stroke="#6366F1"
-                          fillOpacity={1}
-                          fill="url(#colorViews)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Likes Chart */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    Likes Trend
-                  </h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={likesData}
-                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="colorLikes"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#EF4444"
-                              stopOpacity={0.8}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#EF4444"
-                              stopOpacity={0}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <XAxis dataKey="name" stroke="#6B7280" />
-                        <YAxis stroke="#6B7280" />
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#FFFFFF",
-                            borderColor: "#E5E7EB",
-                          }}
-                          labelStyle={{ color: "#111827" }}
-                          itemStyle={{ color: "#EF4444" }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="likes"
-                          stroke="#EF4444"
-                          fillOpacity={1}
-                          fill="url(#colorLikes)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sales Chart */}
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Sales & Revenue
-                </h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={salesData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              {/* Tabs Navigation */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+                <div className="flex flex-wrap">
+                  {[
+                    { id: 'overview', label: 'Overview', icon: ChartBarIcon },
+                    { id: 'inventory', label: 'Inventory', icon: BuildingStorefrontIcon },
+               
+                    { id: 'financial', label: 'Financial', icon: CurrencyDollarIcon },
+                    { id: 'autoclips', label: 'AutoClips', icon: VideoCameraIcon },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center px-6 py-4 border-b-2 transition-colors font-medium ${
+                        activeTab === tab.id
+                          ? 'border-indigo-500 text-indigo-500 bg-indigo-500/5'
+                          : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                      }`}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="name" stroke="#6B7280" />
-                      <YAxis yAxisId="left" stroke="#10B981" />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        stroke="#F59E0B"
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#FFFFFF",
-                          borderColor: "#E5E7EB",
-                        }}
-                        labelStyle={{ color: "#111827" }}
-                        formatter={(value: any, name: any) => {
-                          if (name === "revenue") return formatCurrency(value);
-                          return value;
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="sales"
-                        stroke="#10B981"
-                        activeDot={{ r: 8 }}
-                      />
-                      <Line
-                        yAxisId="right"
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#F59E0B"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                      <tab.icon className="h-5 w-5 mr-2" />
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Inventory Metrics Section */}
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Inventory Metrics
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center mb-2">
-                      <div className="p-2 rounded-md bg-accent/10 text-accent mr-3">
-                        <BuildingStorefrontIcon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Total Inventory</p>
-                        <p className="text-xl font-semibold text-gray-800">
-                          {inventoryMetrics.totalCars}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-sm mt-3">
-                      <div>
-                        <p className="text-gray-600">New</p>
-                        <p className="text-gray-800">
-                          {inventoryMetrics.newCars}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Used</p>
-                        <p className="text-gray-800">
-                          {inventoryMetrics.usedCars}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Other</p>
-                        <p className="text-gray-800">
-                          {inventoryMetrics.totalCars -
-                            inventoryMetrics.newCars -
-                            inventoryMetrics.usedCars}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center mb-2">
-                      <div className="p-2 rounded-md bg-emerald-100 text-emerald-600 mr-3">
-                        <CurrencyDollarIcon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Average Price</p>
-                        <p className="text-xl font-semibold text-gray-800">
-                          {formatCurrency(inventoryMetrics.avgPrice)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-600">
-                        Total Inventory Value
-                      </p>
-                      <p className="text-lg font-medium text-emerald-600">
-                        {formatCurrency(inventoryMetrics.totalValue)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center mb-2">
-                      <div className="p-2 rounded-md bg-amber-100 text-amber-600 mr-3">
-                        <ShoppingCartIcon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          Sales Conversion
-                        </p>
-                        <p className="text-xl font-semibold text-gray-800">
-                          {(performanceMetrics.conversionRate * 100).toFixed(1)}
-                          %
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-600">Avg. Time to Sell</p>
-                      <p className="text-lg font-medium text-amber-600">
-                        {performanceMetrics.avgTimeToSell.toFixed(1)} days
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Performance Metrics */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                {/* Category Distribution */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    Category Distribution
-                  </h3>
-                  {categoryDistribution.length > 0 ? (
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={categoryDistribution}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            nameKey="name"
-                            label={({ name, percent }) =>
-                              `${name} ${(percent * 100).toFixed(0)}%`
-                            }
-                          >
-                            {categoryDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "#FFFFFF",
-                              borderColor: "#E5E7EB",
-                            }}
-                            labelStyle={{ color: "#111827" }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="flex justify-center items-center h-64 text-gray-500">
-                      No category data available
-                    </div>
-                  )}
-                </div>
-
-                {/* Sales Performance */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                    Sales Performance
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600">Avg. Sale Price</p>
-                        <p className="text-xl font-semibold text-gray-800 mt-1">
-                          {formatCurrency(performanceMetrics.avgSalePrice)}
-                        </p>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-600">
-                          Avg. Price Difference
-                        </p>
-                        <p
-                          className={`text-xl font-semibold mt-1 ${
-                            performanceMetrics.priceDifference >= 0
-                              ? "text-emerald-600"
-                              : "text-rose-600"
-                          }`}
-                        >
-                          {performanceMetrics.priceDifference >= 0 ? "+" : ""}
-                          {formatCurrency(performanceMetrics.priceDifference)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-sm text-gray-600">Sales Timeline</p>
-                      </div>
-
-                      <div className="space-y-3 mt-3">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <span className="w-3 h-3 bg-emerald-500 rounded-full mr-2"></span>
-                            <span className="text-gray-700">
-                              Less than 30 days
-                            </span>
-                          </div>
-                          <span className="text-gray-800 font-medium">40%</span>
-                        </div>
-
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <span className="w-3 h-3 bg-amber-500 rounded-full mr-2"></span>
-                            <span className="text-gray-700">30-60 days</span>
-                          </div>
-                          <span className="text-gray-800 font-medium">35%</span>
-                        </div>
-
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center">
-                            <span className="w-3 h-3 bg-rose-500 rounded-full mr-2"></span>
-                            <span className="text-gray-700">Over 60 days</span>
-                          </div>
-                          <span className="text-gray-800 font-medium">25%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* Tab Content */}
+              <div className="animate-fadeIn">
+                {activeTab === 'overview' && renderOverviewTab()}
+                {activeTab === 'inventory' && renderInventoryTab()}
+                
+                {activeTab === 'financial' && renderFinancialTab()}
+                {activeTab === 'autoclips' && renderAutoClipsTab()}
               </div>
             </>
           )}
