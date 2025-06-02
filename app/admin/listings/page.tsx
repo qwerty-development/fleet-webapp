@@ -549,10 +549,15 @@ export default function AdminBrowseScreen() {
                       </div>
 
                       {/* Description */}
-                      <p className="text-accent mb-4 line-clamp-2 text-m">
-                        By {car.dealership_name}
+                      <p className="text-white mb-4 line-clamp-2 text-m flex items-center">
+                        <img
+                          src={car.dealerships?.logo || "/placeholder-logo.png"}
+                          alt={car.dealerships?.name}
+                          className="w-9 h-9 rounded-full mr-2 object-cover"
+                        />
+                        By {car.dealerships?.name}
                       </p>
-                      <p className="text-gray-300 mb-4 line-clamp-2 text-sm">
+                      <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
                         {car.description || "No description available"}
                       </p>
 
