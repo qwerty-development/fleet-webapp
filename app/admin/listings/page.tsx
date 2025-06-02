@@ -555,7 +555,7 @@ export default function AdminBrowseScreen() {
                           alt={car.dealerships?.name}
                           className="w-9 h-9 rounded-full mr-2 object-cover"
                         />
-                        By {car.dealerships?.name}
+                        {car.dealerships?.name}
                       </p>
                       <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
                         {car.description || "No description available"}
