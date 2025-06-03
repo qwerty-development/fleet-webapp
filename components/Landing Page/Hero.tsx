@@ -3,7 +3,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { AdjustmentsHorizontalIcon, ChevronDownIcon, Cog6ToothIcon, CurrencyDollarIcon, GlobeAltIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  AdjustmentsHorizontalIcon,
+  ChevronDownIcon,
+  Cog6ToothIcon,
+  CurrencyDollarIcon,
+  GlobeAltIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { FilterState } from "@/types";
 
 // Import CategorySelector to use directly in Hero
@@ -254,16 +262,16 @@ export default function Hero() {
   };
 
   const handleTransmissionChange = (value: any) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      transmission: value
+      transmission: value,
     }));
   };
 
   const handleDrivetrainChange = (value: any) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      drivetrain: value
+      drivetrain: value,
     }));
   };
 
@@ -274,8 +282,8 @@ export default function Hero() {
     };
 
     if (openDropdown) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [openDropdown]);
 
@@ -289,7 +297,7 @@ export default function Hero() {
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: "url('/family.png')",
-              backgroundPosition: "center 20%"
+              backgroundPosition: "center 20%",
             }}
           />
           {/* Enhanced gradient overlays */}
@@ -321,15 +329,15 @@ export default function Hero() {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="max-w-5xl mx-auto mb-8 lg:mb-16"
             >
-              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-3 sm:p-4 lg:p-6 shadow-2xl border border-white/30 hover:shadow-3xl transition-shadow duration-300">
+              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/30 hover:shadow-3xl transition-shadow duration-300">
                 <div className="relative flex items-center">
                   <MagnifyingGlassIcon className="absolute left-4 sm:left-6 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
-                  
+
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={handleInputChange}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSearch(e)}
                     placeholder="Search..."
                     className="flex-1 py-4 sm:py-5 lg:py-6 pl-12 sm:pl-16 pr-20 sm:pr-32 bg-transparent border-none text-gray-800 placeholder-gray-500 focus:outline-none text-base sm:text-lg lg:text-xl font-medium"
                   />
@@ -363,16 +371,20 @@ export default function Hero() {
               className="max-w-6xl mx-auto relative z-40"
             >
               {/* Refined Filter Card with Overflow Visible */}
-              <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl border border-white/50 hover:shadow-3xl transition-all duration-300 overflow-visible">
-                
+              <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-white/50 hover:shadow-3xl transition-all duration-300 overflow-visible">
                 {/* Responsive Filter Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                   {/* Quick Filter */}
                   <div className="space-y-2">
-                    <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">Quick Filter</label>
+                    {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
+                      Quick Filter
+                    </label> */}
                     <CustomSelect
                       id="quickFilter"
-                      options={QUICK_FILTERS.map(filter => ({ value: filter.filter.specialFilter, label: filter.label }))}
+                      options={QUICK_FILTERS.map((filter) => ({
+                        value: filter.filter.specialFilter,
+                        label: filter.label,
+                      }))}
                       value={filters.specialFilter}
                       onChange={handleQuickFilterClick}
                       placeholder="All Categories"
@@ -383,16 +395,26 @@ export default function Hero() {
 
                   {/* Price Range */}
                   <div className="space-y-2">
-                    <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">Price Range</label>
+                    {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
+                      Price Range
+                    </label> */}
                     <CustomSelect
                       id="priceRange"
-                      options={PRICE_RANGES.map(range => ({ 
-                        value: `${range.value[0]}-${range.value[1]}`, 
+                      options={PRICE_RANGES.map((range) => ({
+                        value: `${range.value[0]}-${range.value[1]}`,
                         label: range.label,
-                        priceRange: range.value 
+                        priceRange: range.value,
                       }))}
                       value={`${filters.priceRange[0]}-${filters.priceRange[1]}`}
-                      onChange={(value: any, option: { priceRange: number[]; }) => selectPriceRange(option.priceRange[0], option.priceRange[1])}
+                      onChange={(
+                        value: any,
+                        option: { priceRange: number[] }
+                      ) =>
+                        selectPriceRange(
+                          option.priceRange[0],
+                          option.priceRange[1]
+                        )
+                      }
                       placeholder="Any Price"
                       openDropdown={openDropdown}
                       setOpenDropdown={setOpenDropdown}
@@ -401,7 +423,9 @@ export default function Hero() {
 
                   {/* Transmission */}
                   <div className="space-y-2">
-                    <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">Transmission</label>
+                        {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
+                          Transmission
+                        </label> */}
                     <CustomSelect
                       id="transmission"
                       options={TRANSMISSION_OPTIONS}
@@ -415,7 +439,9 @@ export default function Hero() {
 
                   {/* Drivetrain */}
                   <div className="space-y-2">
-                    <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">Drivetrain</label>
+                    {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
+                      Drivetrain
+                    </label> */}
                     <CustomSelect
                       id="drivetrain"
                       options={DRIVETRAIN_OPTIONS}
@@ -468,17 +494,19 @@ interface EnhancedCustomSelectProps {
   setOpenDropdown: (id: string | null) => void;
 }
 
-const CustomSelect = ({ 
-  id, 
-  options, 
-  value, 
-  onChange, 
-  placeholder, 
-  openDropdown, 
-  setOpenDropdown 
+const CustomSelect = ({
+  id,
+  options,
+  value,
+  onChange,
+  placeholder,
+  openDropdown,
+  setOpenDropdown,
 }: EnhancedCustomSelectProps) => {
   const isOpen = openDropdown === id;
-  const selectedOption = options.find((option: { value: any; }) => option.value === value);
+  const selectedOption = options.find(
+    (option: { value: any }) => option.value === value
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -501,14 +529,20 @@ const CustomSelect = ({
         onClick={handleToggle}
         className="w-full px-4 py-3 sm:py-4 bg-gray-50/80 hover:bg-white text-gray-900 border border-gray-200/60 hover:border-[#D55004] rounded-xl sm:rounded-2xl transition-all duration-200 flex items-center justify-between focus:outline-none focus:border-[#D55004] focus:ring-2 focus:ring-[#D55004]/20 backdrop-blur-sm shadow-sm hover:shadow-md text-sm sm:text-base"
       >
-        <span className={`${selectedOption ? 'text-gray-900 font-medium' : 'text-gray-500'} text-left truncate pr-2`}>
+        <span
+          className={`${
+            selectedOption ? "text-gray-900 font-medium" : "text-gray-500"
+          } text-left truncate pr-2`}
+        >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDownIcon 
-          className={`h-4 w-4 sm:h-5 sm:w-5 text-gray-400 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} 
+        <ChevronDownIcon
+          className={`h-4 w-4 sm:h-5 sm:w-5 text-gray-400 transition-transform duration-200 flex-shrink-0 ${
+            isOpen ? "rotate-180" : ""
+          }`}
         />
       </button>
-      
+
       {isOpen && (
         <motion.div
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -516,28 +550,47 @@ const CustomSelect = ({
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
           className="absolute z-[9999] w-full mt-2 bg-white/95 backdrop-blur-xl border border-gray-200/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-60 overflow-y-auto"
           style={{
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+            boxShadow:
+              "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)",
           }}
         >
-          {options.map((option: { 
-            value: any; 
-            label: string | number | bigint | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<React.AwaitedReactNode> | null | undefined; 
-          }, index: any) => (
-            <button
-              key={option.value || index}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSelect(option.value, option);
-              }}
-              className={`w-full px-4 py-3 sm:py-4 text-left hover:bg-gray-50/80 transition-all duration-150 border-b border-gray-100/60 last:border-b-0 text-sm sm:text-base ${
-                value === option.value 
-                  ? 'bg-gradient-to-r from-[#D55004]/10 to-[#FF6B1A]/10 text-[#D55004] font-semibold' 
-                  : 'text-gray-700 hover:text-gray-900'
-              }`}
-            >
-              <span className="truncate block">{option.label}</span>
-            </button>
-          ))}
+          {options.map(
+            (
+              option: {
+                value: any;
+                label:
+                  | string
+                  | number
+                  | bigint
+                  | boolean
+                  | React.ReactElement<
+                      any,
+                      string | React.JSXElementConstructor<any>
+                    >
+                  | Iterable<React.ReactNode>
+                  | React.ReactPortal
+                  | Promise<React.AwaitedReactNode>
+                  | null
+                  | undefined;
+              },
+              index: any
+            ) => (
+              <button
+                key={option.value || index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelect(option.value, option);
+                }}
+                className={`w-full px-4 py-3 sm:py-4 text-left hover:bg-gray-50/80 transition-all duration-150 border-b border-gray-100/60 last:border-b-0 text-sm sm:text-base ${
+                  value === option.value
+                    ? "bg-gradient-to-r from-[#D55004]/10 to-[#FF6B1A]/10 text-[#D55004] font-semibold"
+                    : "text-gray-700 hover:text-gray-900"
+                }`}
+              >
+                <span className="truncate block">{option.label}</span>
+              </button>
+            )
+          )}
         </motion.div>
       )}
     </div>
