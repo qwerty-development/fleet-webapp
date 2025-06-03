@@ -224,7 +224,12 @@ export default function Hero() {
   };
 
   // Handle quick filter selection
-  const handleQuickFilterClick = (quickFilter: (typeof QUICK_FILTERS)[0]) => {
+  const handleQuickFilterClick = (value: string) => {
+    const quickFilter = QUICK_FILTERS.find(
+      (qf) => qf.filter.specialFilter === value
+    );
+    if (!quickFilter) return;
+
     if (filters.specialFilter === quickFilter.filter.specialFilter) {
       // Deselect if already selected
       setFilters({
@@ -261,17 +266,17 @@ export default function Hero() {
     setSearchQuery("");
   };
 
-  const handleTransmissionChange = (value: any) => {
+  const handleTransmissionChange = (value: string) => {
     setFilters((prev) => ({
       ...prev,
-      transmission: value,
+      transmission: Array.isArray(value) ? value : [value],
     }));
   };
 
-  const handleDrivetrainChange = (value: any) => {
+  const handleDrivetrainChange = (value: string) => {
     setFilters((prev) => ({
       ...prev,
-      drivetrain: value,
+      drivetrain: Array.isArray(value) ? value : [value],
     }));
   };
 
@@ -288,47 +293,49 @@ export default function Hero() {
   }, [openDropdown]);
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
-      {/* Hero Section */}
-      <div className="relative">
-        {/* Background with overlay */}
-        <div className="relative h-screen overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: "url('/hero-fleet.jpg')",
-              backgroundPosition: "center 20%",
-            }}
-          />
-          {/* Enhanced gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black/70" />
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/15" />
-        </div>
+    <div className="relative">
+      {/* Top Section - 60% viewport height with background image */}
+      <div className="relative h-[60vh] lg:h-[60vh] overflow-visible">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('/hero-fleet.jpg')",
+            backgroundPosition: "center 20%",
+          }}
+        />
+        {/* Enhanced gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/15" />
 
-        {/* Hero Content */}
-        <div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-white max-w-7xl mx-auto w-full">
+        {/* Hero Text Content - Left Aligned */}
+        <div className="absolute inset-0 flex items-center px-8 sm:px-12 lg:px-16 xl:px-20">
+          <div className="text-white max-w-4xl">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="mb-8 lg:mb-12"
             >
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-4 lg:mb-6 bg-gradient-to-r text-white bg-clip-text text-transparent leading-tight">
-                Find Your Perfect Car
+                Find Your <br className="hidden md:block" /> Perfect Car
               </h1>
-              <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl mb-8 lg:mb-12 text-blue-100 font-light max-w-4xl mx-auto leading-relaxed">
-                Discover thousands of quality vehicles from trusted dealers
+              <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-blue-100 font-light leading-relaxed">
+                Discover thousands of quality vehicles <br className="hidden md:block" /> from trusted dealers
               </p>
             </motion.div>
+          </div>
+        </div>
 
-            {/* Enhanced Search Bar */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="max-w-5xl mx-auto mb-8 lg:mb-16"
-            >
+        {/* Floating Search Bar - positioned at bottom of top section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="absolute bottom-0 left-0 right-0 z-30" // motion.div is positioned at the bottom of the parent
+        >
+          {/* Inner div to handle the static translateY */}
+          <div className="transform translate-y-1/2"> {/* This div applies the desired offset */}
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/30 hover:shadow-3xl transition-shadow duration-300">
                 <div className="relative flex items-center">
                   <MagnifyingGlassIcon className="absolute left-4 sm:left-6 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
@@ -361,122 +368,114 @@ export default function Hero() {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
 
-            {/* Enhanced Filter Section with Proper Stacking Context */}
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="max-w-6xl mx-auto relative z-40"
-            >
-              {/* Refined Filter Card with Overflow Visible */}
-              <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-2 shadow-2xl border border-white/50 hover:shadow-3xl transition-all duration-300 overflow-visible">
-                {/* Responsive Filter Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-                  {/* Quick Filter */}
-                  <div className="space-y-2">
-                    {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
-                      Quick Filter
-                    </label> */}
-                    <CustomSelect
-                      id="quickFilter"
-                      options={QUICK_FILTERS.map((filter) => ({
-                        value: filter.filter.specialFilter,
-                        label: filter.label,
-                      }))}
-                      value={filters.specialFilter}
-                      onChange={handleQuickFilterClick}
-                      placeholder="All Categories"
-                      openDropdown={openDropdown}
-                      setOpenDropdown={setOpenDropdown}
-                    />
-                  </div>
+      {/* Bottom Section - fit content with top padding instead of fixed height */}
+      <div className="relative pt-24  bg-gradient-to-br from-[#D55004] via-[#B8450A] to-[#8B3508] overflow-visible">
+        {/* Filter Section */}
+        <div className="flex items-center justify-center pb-8 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="max-w-6xl mx-auto w-full relative z-20"
+          >
+            {/* Filter Card */}
+            <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/50 hover:shadow-3xl transition-all duration-300 overflow-visible">
+              {/* Responsive Filter Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+                {/* Quick Filter */}
+                <div className="space-y-2">
+                  <CustomSelect
+                    id="quickFilter"
+                    options={QUICK_FILTERS.map((filter) => ({
+                      value: filter.filter.specialFilter || "",
+                      label: filter.label,
+                    }))}
+                    value={filters.specialFilter || ""}
+                    onChange={handleQuickFilterClick}
+                    placeholder="All Categories"
+                    openDropdown={openDropdown}
+                    setOpenDropdown={setOpenDropdown}
+                  />
+                </div>
 
-                  {/* Price Range */}
-                  <div className="space-y-2">
-                    {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
-                      Price Range
-                    </label> */}
-                    <CustomSelect
-                      id="priceRange"
-                      options={PRICE_RANGES.map((range) => ({
-                        value: `${range.value[0]}-${range.value[1]}`,
-                        label: range.label,
-                        priceRange: range.value,
-                      }))}
-                      value={`${filters.priceRange[0]}-${filters.priceRange[1]}`}
-                      onChange={(
-                        value: any,
-                        option: { priceRange: number[] }
-                      ) =>
+                {/* Price Range */}
+                <div className="space-y-2">
+                  <CustomSelect
+                    id="priceRange"
+                    options={PRICE_RANGES.map((range) => ({
+                      value: `${range.value[0]}-${range.value[1]}`,
+                      label: range.label,
+                      priceRange: range.value,
+                    }))}
+                    value={`${filters.priceRange[0]}-${filters.priceRange[1]}`}
+                    onChange={(value: string, option?: SelectOption) => {
+                      if (option?.priceRange) {
                         selectPriceRange(
                           option.priceRange[0],
                           option.priceRange[1]
-                        )
+                        );
                       }
-                      placeholder="Any Price"
-                      openDropdown={openDropdown}
-                      setOpenDropdown={setOpenDropdown}
-                    />
-                  </div>
+                    }}
+                    placeholder="Any Price"
+                    openDropdown={openDropdown}
+                    setOpenDropdown={setOpenDropdown}
+                  />
+                </div>
 
-                  {/* Transmission */}
-                  <div className="space-y-2">
-                        {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
-                          Transmission
-                        </label> */}
-                    <CustomSelect
-                      id="transmission"
-                      options={TRANSMISSION_OPTIONS}
-                      value={filters.transmission}
-                      onChange={handleTransmissionChange}
-                      placeholder="Any Type"
-                      openDropdown={openDropdown}
-                      setOpenDropdown={setOpenDropdown}
-                    />
-                  </div>
+                {/* Transmission */}
+                <div className="space-y-2">
+                  <CustomSelect
+                    id="transmission"
+                    options={TRANSMISSION_OPTIONS}
+                    value={filters.transmission[0] || ""}
+                    onChange={handleTransmissionChange}
+                    placeholder="Any Type"
+                    openDropdown={openDropdown}
+                    setOpenDropdown={setOpenDropdown}
+                  />
+                </div>
 
-                  {/* Drivetrain */}
-                  <div className="space-y-2">
-                    {/* <label className="block text-sm sm:text-base font-semibold text-gray-700 tracking-wide">
-                      Drivetrain
-                    </label> */}
-                    <CustomSelect
-                      id="drivetrain"
-                      options={DRIVETRAIN_OPTIONS}
-                      value={filters.drivetrain}
-                      onChange={handleDrivetrainChange}
-                      placeholder="Any Drive"
-                      openDropdown={openDropdown}
-                      setOpenDropdown={setOpenDropdown}
-                    />
-                  </div>
+                {/* Drivetrain */}
+                <div className="space-y-2">
+                  <CustomSelect
+                    id="drivetrain"
+                    options={DRIVETRAIN_OPTIONS}
+                    value={filters.drivetrain[0] || ""}
+                    onChange={handleDrivetrainChange}
+                    placeholder="Any Drive"
+                    openDropdown={openDropdown}
+                    setOpenDropdown={setOpenDropdown}
+                  />
                 </div>
               </div>
-            </motion.div>
 
-            {/* Enhanced Action Buttons with Lower Z-Index */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.4 }}
-              className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8 lg:mt-12 px-4 relative z-10"
-            >
-              <button
-                onClick={handleResetFilters}
-                className="px-6 sm:px-8 lg:px-10 py-3 sm:py-4 bg-white/90 hover:bg-white text-gray-700 font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl border border-gray-200 hover:border-gray-300 backdrop-blur-sm text-sm sm:text-base"
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.4 }}
+                className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8"
               >
-                Reset Filters
-              </button>
-              <button
-                onClick={handleSearch}
-                className="px-8 sm:px-10 lg:px-12 py-3 sm:py-4 bg-gradient-to-r from-[#D55004] to-[#FF6B1A] hover:from-[#B8450A] hover:to-[#D55004] text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
-              >
-                View Results
-              </button>
-            </motion.div>
-          </div>
+                <button
+                  onClick={handleResetFilters}
+                  className="px-6 sm:px-8 lg:px-10 py-3 sm:py-4 bg-white/90 hover:bg-white text-gray-700 font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl border border-gray-200 hover:border-gray-300 backdrop-blur-sm text-sm sm:text-base"
+                >
+                  Reset Filters
+                </button>
+                <button
+                  onClick={handleSearch}
+                  className="px-8 sm:px-10 lg:px-12 py-3 sm:py-4 bg-gradient-to-r from-[#D55004] to-[#FF6B1A] hover:from-[#B8450A] hover:to-[#D55004] text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+                >
+                  View Results
+                </button>
+              </motion.div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
@@ -487,8 +486,8 @@ export default function Hero() {
 interface EnhancedCustomSelectProps {
   id: string;
   options: SelectOption[];
-  value: string | string[];
-  onChange: (value: string | string[], option?: SelectOption) => void;
+  value: string;
+  onChange: (value: string, option?: SelectOption) => void;
   placeholder: string;
   openDropdown: string | null;
   setOpenDropdown: (id: string | null) => void;
@@ -515,11 +514,7 @@ const CustomSelect = ({
   };
 
   const handleSelect = (selectedValue: any, selectedOption: any) => {
-    if (selectedOption && selectedOption.priceRange) {
-      onChange(selectedValue, selectedOption);
-    } else {
-      onChange(selectedValue);
-    }
+    onChange(selectedValue, selectedOption);
     setOpenDropdown(null);
   };
 
