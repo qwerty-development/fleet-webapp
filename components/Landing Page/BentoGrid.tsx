@@ -113,8 +113,6 @@ export default function HeroSection() {
     <div ref={heroRef} className="relative w-full py-16  overflow-hidden">
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0  z-10"></div>
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-repeat z-0 opacity-20"></div>
-        <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-gradient-to-r from-accent to-accent-light opacity-20 blur-3xl" />
         <div className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 opacity-20 blur-3xl" />
       </div>
 

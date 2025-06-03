@@ -272,10 +272,10 @@ export default function Hero() {
   }, [openDropdown]);
 
   return (
-    <div className="relative">
+    <div className="relative bg-gray-100">
       {/* Top Section - 60% viewport height with background image */}
-      <div className="relative h-[60vh] lg:h-[60vh] overflow-visible">
-        {/* Background Image */}
+      <div className="relative h-[60vh] lg:h-[70vh] overflow-visible">
+        {/* Background Image */}    
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -297,7 +297,7 @@ export default function Hero() {
             >
               <h1 className=" text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-4 lg:mb-6 bg-gradient-to-r text-white bg-clip-text text-transparent leading-tight">
                 Find Your <br className="hidden md:block" />{" "}
-                <span className="text-accent [text-shadow:_-1px_-1px_0_theme(colors.white),_1px_-1px_0_theme(colors.white),_-1px_1px_0_theme(colors.white),_1px_1px_0_theme(colors.white)]">
+                <span className="text-accent">
                   Perfect Car
                 </span>
               </h1>
@@ -359,7 +359,7 @@ export default function Hero() {
       </div>
 
       {/* Bottom Section - fit content with top padding instead of fixed height */}
-      <div className="relative pt-24 min-h-[40vh]  bg-gradient-to-br from-[#D55004] via-[#B8450A] to-[#8B3508] overflow-visible">
+      <div className="relative pt-24 min-h-[40vh]  bg-gradient-to-b bg-gray-200 shadow-xl rounded-b-[60px] md:rounded-b-[200px] overflow-visible">
         {/* Filter Section */}
         <div className="flex items-center justify-center pb-8 px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -369,14 +369,11 @@ export default function Hero() {
             className="max-w-6xl mx-auto w-full relative z-20"
           >
             {/* Filter Card */}
-            <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/50 hover:shadow-3xl transition-all duration-300 overflow-visible">
+            <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white hover:shadow-3xl transition-all duration-300 overflow-visible">
               {/* Responsive Filter Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 {/* Make */}
                 <div className="space-y-2">
-                  <label className="block text-white/90 text-sm font-medium">
-                    Make
-                  </label>
                   <CustomSelect
                     id="make"
                     options={makes.map((make) => ({
@@ -394,9 +391,6 @@ export default function Hero() {
 
                 {/* Model */}
                 <div className="space-y-2">
-                  <label className="block text-white/90 text-sm font-medium">
-                    Model
-                  </label>
                   <CustomSelect
                     id="model"
                     options={models.map((model) => ({
@@ -415,9 +409,6 @@ export default function Hero() {
 
                 {/* Model Year */}
                 <div className="space-y-2">
-                  <label className="block text-white/90 text-sm font-medium">
-                    Model Year
-                  </label>
                   <CustomSelect
                     id="modelYear"
                     options={MODEL_YEARS}
@@ -436,9 +427,6 @@ export default function Hero() {
 
                 {/* Price Range */}
                 <div className="space-y-2">
-                  <label className="block text-white/90 text-sm font-medium">
-                    Price Range
-                  </label>
                   <CustomSelect
                     id="priceRange"
                     options={PRICE_RANGES.map((range) => ({
