@@ -295,8 +295,11 @@ export default function Hero() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-4 lg:mb-6 bg-gradient-to-r text-white bg-clip-text text-transparent leading-tight">
-                Find Your <br className="hidden md:block" /> Perfect Car
+              <h1 className=" text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-4 lg:mb-6 bg-gradient-to-r text-white bg-clip-text text-transparent leading-tight">
+                Find Your <br className="hidden md:block" />{" "}
+                <span className="text-accent [text-shadow:_-1px_-1px_0_theme(colors.white),_1px_-1px_0_theme(colors.white),_-1px_1px_0_theme(colors.white),_1px_1px_0_theme(colors.white)]">
+                  Perfect Car
+                </span>
               </h1>
               <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-blue-100 font-light leading-relaxed">
                 Discover thousands of quality vehicles{" "}
@@ -356,7 +359,7 @@ export default function Hero() {
       </div>
 
       {/* Bottom Section - fit content with top padding instead of fixed height */}
-      <div className="relative pt-24  bg-gradient-to-br from-[#D55004] via-[#B8450A] to-[#8B3508] overflow-visible">
+      <div className="relative pt-24 min-h-[40vh]  bg-gradient-to-br from-[#D55004] via-[#B8450A] to-[#8B3508] overflow-visible">
         {/* Filter Section */}
         <div className="flex items-center justify-center pb-8 px-4 sm:px-6 lg:px-8">
           <motion.div
