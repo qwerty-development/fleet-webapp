@@ -74,110 +74,64 @@ export default function HomePage() {
   const ITEMS_PER_PAGE = 9;
   const supabase = createClient();
 
-  // Process URL parameters and set initial filters
+  // Process URL parameters on component mount
   useEffect(() => {
-    if (!searchParams || urlParamsProcessed) return;
-
-    try {
-      const newFilters = { ...DEFAULT_FILTERS };
-      let hasSearchParams = false;
-
-      // Extract search query
-      const query = searchParams.get("query");
-      if (query) {
-        newFilters.searchQuery = query;
-        setSearchQuery(query);
-        hasSearchParams = true;
-      }
-
-      // Extract categories
-      const categories = searchParams.get("categories");
-      if (categories) {
-        newFilters.categories = categories.split(",");
-        hasSearchParams = true;
-      }
-
-      // Extract price range
-      const minPrice = searchParams.get("minPrice");
-      const maxPrice = searchParams.get("maxPrice");
-      if (minPrice || maxPrice) {
-        newFilters.priceRange = [
-          minPrice ? parseInt(minPrice) : 0,
-          maxPrice ? parseInt(maxPrice) : 1000000,
-        ];
-        hasSearchParams = true;
-      }
-
-      // Extract year range
-      const minYear = searchParams.get("minYear");
-      const maxYear = searchParams.get("maxYear");
-      if (minYear || maxYear) {
-        newFilters.yearRange = [
-          minYear ? parseInt(minYear) : 1900,
-          maxYear ? parseInt(maxYear) : new Date().getFullYear(),
-        ];
-        hasSearchParams = true;
-      }
-
-      // Extract transmission
-      const transmission = searchParams.get("transmission");
-      if (transmission) {
-        newFilters.transmission = transmission.split(",");
-        hasSearchParams = true;
-      }
-
-      // Extract drivetrain
-      const drivetrain = searchParams.get("drivetrain");
-      if (drivetrain) {
-        newFilters.drivetrain = drivetrain.split(",");
-        hasSearchParams = true;
-      }
-
-      // Extract engine types if available in your data model
-      const engineTypes = searchParams.get("engineTypes");
-      if (engineTypes) {
-        // Depending on your data model, map these to the appropriate filter
-        // This might be categories, or a custom field
-        hasSearchParams = true;
-      }
-
-      // Extract fuel types if available in your data model
-      const fuelTypes = searchParams.get("fuelTypes");
-      if (fuelTypes) {
-        // Depending on your data model, map these to the appropriate filter
-        hasSearchParams = true;
-      }
-
-      // Extract make (brand)
-      const make = searchParams.get("make");
-      if (make) {
-        newFilters.make = make.split(",");
-        hasSearchParams = true;
-      }
-
-      // Extract special filter
-      const specialFilter = searchParams.get("specialFilter");
-      if (specialFilter) {
-        newFilters.specialFilter = specialFilter;
-        hasSearchParams = true;
-      }
-
-      // Extract sort option
-      const sortBy = searchParams.get("sortBy");
-      if (sortBy) {
-        newFilters.sortBy = sortBy;
-        hasSearchParams = true;
-      }
-
-      if (hasSearchParams) {
-        console.log("URL params found, setting filters:", newFilters);
-        setFilters(newFilters);
-      }
-
+    if (!searchParams) {
       setUrlParamsProcessed(true);
-    } catch (error) {
-      console.error("Error processing URL parameters:", error);
+      return;
     }
+
+    const urlSearchQuery = searchParams.get("query") || "";
+    const urlMake = searchParams.get("make") || "";
+    const urlModel = searchParams.get("model") || "";
+    const urlCategories = searchParams.get("categories") || "";
+    const urlTransmission = searchParams.get("transmission") || "";
+    const urlDrivetrain = searchParams.get("drivetrain") || "";
+    const urlMinPrice = searchParams.get("minPrice");
+    const urlMaxPrice = searchParams.get("maxPrice");
+    const urlMinYear = searchParams.get("minYear");
+    const urlMaxYear = searchParams.get("maxYear");
+    const urlSpecialFilter = searchParams.get("specialFilter");
+    const urlSortBy = searchParams.get("sortBy");
+
+    console.log("Processing URL params:", {
+      query: urlSearchQuery,
+      make: urlMake,
+      model: urlModel,
+      categories: urlCategories,
+      transmission: urlTransmission,
+      drivetrain: urlDrivetrain,
+      minPrice: urlMinPrice,
+      maxPrice: urlMaxPrice,
+      minYear: urlMinYear,
+      maxYear: urlMaxYear,
+      specialFilter: urlSpecialFilter,
+      sortBy: urlSortBy,
+    });
+
+    const newFilters: FilterState = {
+      ...DEFAULT_FILTERS,
+      searchQuery: urlSearchQuery,
+      categories: urlCategories ? urlCategories.split(",") : [],
+      transmission: urlTransmission ? urlTransmission.split(",") : [],
+      drivetrain: urlDrivetrain ? urlDrivetrain.split(",") : [],
+      make: urlMake ? urlMake.split(",") : [],
+      model: urlModel ? urlModel.split(",") : [],
+      priceRange: [
+        urlMinPrice ? parseInt(urlMinPrice) : 0,
+        urlMaxPrice ? parseInt(urlMaxPrice) : 1000000,
+      ],
+      yearRange: [
+        urlMinYear ? parseInt(urlMinYear) : 1900,
+        urlMaxYear ? parseInt(urlMaxYear) : new Date().getFullYear(),
+      ],
+      specialFilter: urlSpecialFilter,
+      sortBy: urlSortBy,
+    };
+
+    setSearchQuery(urlSearchQuery);
+    setFilters(newFilters);
+    setUrlParamsProcessed(true);
   }, [searchParams]);
 
   // Sync user to Supabase (for both signed-in and guest users)
@@ -351,24 +305,23 @@ export default function HomePage() {
             currentFilters.dealership
           );
         }
+
+        // Make filter
         if (
           Array.isArray(currentFilters.make) &&
           currentFilters.make.length > 0
         ) {
           queryBuilder = queryBuilder.in("make", currentFilters.make);
         }
+
+        // Model filter
         if (
           Array.isArray(currentFilters.model) &&
           currentFilters.model.length > 0
         ) {
           queryBuilder = queryBuilder.in("model", currentFilters.model);
         }
-        if (
-          Array.isArray(currentFilters.color) &&
-          currentFilters.color.length > 0
-        ) {
-          queryBuilder = queryBuilder.in("color", currentFilters.color);
-        }
+
         if (
           Array.isArray(currentFilters.transmission) &&
           currentFilters.transmission.length > 0
@@ -378,6 +331,7 @@ export default function HomePage() {
             currentFilters.transmission
           );
         }
+
         if (
           Array.isArray(currentFilters.drivetrain) &&
           currentFilters.drivetrain.length > 0
@@ -388,25 +342,46 @@ export default function HomePage() {
           );
         }
 
-        // Year Range
-        if (currentFilters.yearRange) {
-          queryBuilder = queryBuilder
-            .gte("year", currentFilters.yearRange[0])
-            .lte("year", currentFilters.yearRange[1]);
+        if (
+          Array.isArray(currentFilters.color) &&
+          currentFilters.color.length > 0
+        ) {
+          queryBuilder = queryBuilder.in("color", currentFilters.color);
         }
 
-        // Price Range
-        if (currentFilters.priceRange) {
-          queryBuilder = queryBuilder
-            .gte("price", currentFilters.priceRange[0])
-            .lte("price", currentFilters.priceRange[1]);
+        // Range filters
+        if (currentFilters.priceRange[0] > 0) {
+          queryBuilder = queryBuilder.gte(
+            "price",
+            currentFilters.priceRange[0]
+          );
+        }
+        if (currentFilters.priceRange[1] < 1000000) {
+          queryBuilder = queryBuilder.lte(
+            "price",
+            currentFilters.priceRange[1]
+          );
         }
 
-        // Mileage Range
-        if (currentFilters.mileageRange) {
-          queryBuilder = queryBuilder
-            .gte("mileage", currentFilters.mileageRange[0])
-            .lte("mileage", currentFilters.mileageRange[1]);
+        if (currentFilters.mileageRange[0] > 0) {
+          queryBuilder = queryBuilder.gte(
+            "mileage",
+            currentFilters.mileageRange[0]
+          );
+        }
+        if (currentFilters.mileageRange[1] < 500000) {
+          queryBuilder = queryBuilder.lte(
+            "mileage",
+            currentFilters.mileageRange[1]
+          );
+        }
+
+        // Year range filter (important for model year filtering)
+        if (currentFilters.yearRange[0] > 1900) {
+          queryBuilder = queryBuilder.gte("year", currentFilters.yearRange[0]);
+        }
+        if (currentFilters.yearRange[1] < new Date().getFullYear()) {
+          queryBuilder = queryBuilder.lte("year", currentFilters.yearRange[1]);
         }
 
         // Search query (from filters or searchQuery state)

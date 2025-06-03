@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import Navbar from "@/components/home/Navbar";
 import HomePage from "./HomeClient";
+import { FilterState } from "@/types";
 
 // Define constants and default filters here if needed by FilterPanel or globally
 export const SORT_OPTIONS = {
@@ -69,5 +70,3 @@ function HomePageLoadingSkeleton() {
     </div>
   );
 }
-
-import { FilterState } from "@/types";

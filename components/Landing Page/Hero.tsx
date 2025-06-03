@@ -13,9 +13,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { FilterState } from "@/types";
-
-// Import CategorySelector to use directly in Hero
-import CategorySelector from "@/components/home/CategorySelectorHero";
+import { createClient } from "@/utils/supabase/client";
 
 // Define constants for filter options
 export const SORT_OPTIONS = {
@@ -64,30 +62,6 @@ const DEFAULT_FILTERS: FilterState = {
   sortBy: null,
 };
 
-// Quick Filters Configuration
-const QUICK_FILTERS = [
-  {
-    id: "most-popular",
-    label: "Most Popular",
-    filter: { specialFilter: "mostPopular", sortBy: "views_desc" },
-  },
-  {
-    id: "budget-friendly",
-    label: "Budget Friendly",
-    filter: { priceRange: [0, 20000] as number[] },
-  },
-  {
-    id: "luxury",
-    label: "Luxury",
-    filter: { priceRange: [50000, 1000000] as number[] },
-  },
-  {
-    id: "new-arrivals",
-    label: "New Arrivals",
-    filter: { specialFilter: "newArrivals" },
-  },
-];
-
 // Available price range options
 const PRICE_RANGES = [
   { label: "Under $15k", value: [0, 15000] as [number, number] },
@@ -96,26 +70,87 @@ const PRICE_RANGES = [
   { label: "$50k+", value: [50000, 1000000] as [number, number] },
 ];
 
-// Transmission Options
-const TRANSMISSION_OPTIONS = [
-  { label: "Automatic", value: "Automatic" },
-  { label: "Manual", value: "Manual" },
-];
+// Generate model year options (current year back to 1980)
+const generateModelYears = () => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let year = currentYear; year >= 1980; year--) {
+    years.push({ label: year.toString(), value: year.toString() });
+  }
+  return years;
+};
 
-// Drivetrain Options
-const DRIVETRAIN_OPTIONS = [
-  { label: "FWD", value: "FWD" },
-  { label: "RWD", value: "RWD" },
-  { label: "AWD", value: "AWD" },
-  { label: "4WD", value: "4WD" },
-  { label: "4x4", value: "4x4" },
-];
+const MODEL_YEARS = generateModelYears();
 
 export default function Hero() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [makes, setMakes] = useState<string[]>([]);
+  const [models, setModels] = useState<string[]>([]);
+  const [isLoadingMakes, setIsLoadingMakes] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const router = useRouter();
+  const supabase = createClient();
+
+  // Fetch available makes from database
+  useEffect(() => {
+    const fetchMakes = async () => {
+      setIsLoadingMakes(true);
+      try {
+        const { data, error } = await supabase
+          .from("cars")
+          .select("make")
+          .eq("status", "available")
+          .order("make");
+
+        if (error) throw error;
+
+        const uniqueMakes = Array.from(new Set(data.map((item) => item.make)));
+        setMakes(uniqueMakes);
+      } catch (error) {
+        console.error("Error fetching makes:", error);
+      } finally {
+        setIsLoadingMakes(false);
+      }
+    };
+
+    fetchMakes();
+  }, []);
+
+  // Fetch models when make is selected
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!filters.make || filters.make.length === 0) {
+        setModels([]);
+        return;
+      }
+
+      setIsLoadingModels(true);
+      try {
+        const { data, error } = await supabase
+          .from("cars")
+          .select("model")
+          .eq("status", "available")
+          .in("make", filters.make)
+          .order("model");
+
+        if (error) throw error;
+
+        const uniqueModels = Array.from(
+          new Set(data.map((item) => item.model))
+        );
+        setModels(uniqueModels);
+      } catch (error) {
+        console.error("Error fetching models:", error);
+        setModels([]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    };
+
+    fetchModels();
+  }, [filters.make]);
 
   // Handle search query change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,9 +169,22 @@ export default function Hero() {
       params.set("query", searchQuery.trim());
     }
 
-    // Add selected categories if any
-    if (filters.categories.length > 0) {
-      params.set("categories", filters.categories.join(","));
+    // Add selected makes if any
+    if (filters.make.length > 0) {
+      params.set("make", filters.make.join(","));
+    }
+
+    // Add selected models if any
+    if (filters.model.length > 0) {
+      params.set("model", filters.model.join(","));
+    }
+
+    // Add year range if different from default
+    if (filters.yearRange[0] > 1900) {
+      params.set("minYear", filters.yearRange[0].toString());
+    }
+    if (filters.yearRange[1] < new Date().getFullYear()) {
+      params.set("maxYear", filters.yearRange[1].toString());
     }
 
     // Add price range if different from default
@@ -145,26 +193,6 @@ export default function Hero() {
     }
     if (filters.priceRange[1] < 1000000) {
       params.set("maxPrice", filters.priceRange[1].toString());
-    }
-
-    // Add transmission if selected
-    if (filters.transmission.length > 0) {
-      params.set("transmission", filters.transmission.join(","));
-    }
-
-    // Add drivetrain if selected
-    if (filters.drivetrain.length > 0) {
-      params.set("drivetrain", filters.drivetrain.join(","));
-    }
-
-    // Add special filter if selected
-    if (filters.specialFilter) {
-      params.set("specialFilter", filters.specialFilter);
-    }
-
-    // Add sort option if selected
-    if (filters.sortBy) {
-      params.set("sortBy", filters.sortBy);
     }
 
     // Redirect to home page with all parameters
@@ -176,15 +204,45 @@ export default function Hero() {
     setSearchQuery("");
   };
 
-  // Handle category press through CategorySelector
-  const handleCategoryPress = (category: string) => {
+  // Handle make selection
+  const handleMakeChange = (value: string) => {
     setFilters((prev) => {
-      const updatedCategories = prev.categories.includes(category)
-        ? prev.categories.filter((c) => c !== category)
-        : [...prev.categories, category];
+      const newMakes = prev.make.includes(value)
+        ? prev.make.filter((m) => m !== value)
+        : [...prev.make, value];
 
-      return { ...prev, categories: updatedCategories };
+      // Clear models when make changes
+      return {
+        ...prev,
+        make: newMakes,
+        model: [], // Reset models when make changes
+      };
     });
+  };
+
+  // Handle model selection
+  const handleModelChange = (value: string) => {
+    setFilters((prev) => {
+      const newModels = prev.model.includes(value)
+        ? prev.model.filter((m) => m !== value)
+        : [...prev.model, value];
+
+      return {
+        ...prev,
+        model: newModels,
+      };
+    });
+  };
+
+  // Handle model year selection
+  const handleModelYearChange = (value: string) => {
+    const year = parseInt(value);
+    if (isNaN(year)) return;
+
+    setFilters((prev) => ({
+      ...prev,
+      yearRange: [year, year], // Set both min and max to the same year for single year selection
+    }));
   };
 
   // Handle price range selection
@@ -195,89 +253,10 @@ export default function Hero() {
     });
   };
 
-  // Handle transmission selection
-  const toggleTransmission = (transmission: string) => {
-    setFilters((prev) => {
-      const newTransmission = prev.transmission.includes(transmission)
-        ? prev.transmission.filter((t) => t !== transmission)
-        : [...prev.transmission, transmission];
-
-      return {
-        ...prev,
-        transmission: newTransmission,
-      };
-    });
-  };
-
-  // Handle drivetrain selection
-  const toggleDrivetrain = (drivetrain: string) => {
-    setFilters((prev) => {
-      const newDrivetrain = prev.drivetrain.includes(drivetrain)
-        ? prev.drivetrain.filter((d) => d !== drivetrain)
-        : [...prev.drivetrain, drivetrain];
-
-      return {
-        ...prev,
-        drivetrain: newDrivetrain,
-      };
-    });
-  };
-
-  // Handle quick filter selection
-  const handleQuickFilterClick = (value: string) => {
-    const quickFilter = QUICK_FILTERS.find(
-      (qf) => qf.filter.specialFilter === value
-    );
-    if (!quickFilter) return;
-
-    if (filters.specialFilter === quickFilter.filter.specialFilter) {
-      // Deselect if already selected
-      setFilters({
-        ...filters,
-        specialFilter: null,
-        ...(quickFilter.filter.sortBy ? { sortBy: null } : {}),
-      });
-    } else {
-      // Apply new quick filter
-      const newFilters = { ...filters };
-
-      // Handle price range if present
-      if ("priceRange" in quickFilter.filter) {
-        newFilters.priceRange = quickFilter.filter.priceRange as number[];
-      }
-
-      // Handle special filter if present
-      if ("specialFilter" in quickFilter.filter) {
-        newFilters.specialFilter = quickFilter.filter.specialFilter as string;
-      }
-
-      // Handle sort option if present
-      if ("sortBy" in quickFilter.filter) {
-        newFilters.sortBy = quickFilter.filter.sortBy as string;
-      }
-
-      setFilters(newFilters);
-    }
-  };
-
   // Reset all filters
   const handleResetFilters = () => {
     setFilters(DEFAULT_FILTERS);
     setSearchQuery("");
-  };
-
-  const handleTransmissionChange = (value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      transmission: Array.isArray(value) ? value : [value],
-    }));
-  };
-
-  const handleDrivetrainChange = (value: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      drivetrain: Array.isArray(value) ? value : [value],
-    }));
   };
 
   // Close dropdown when clicking outside
@@ -320,7 +299,8 @@ export default function Hero() {
                 Find Your <br className="hidden md:block" /> Perfect Car
               </h1>
               <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-blue-100 font-light leading-relaxed">
-                Discover thousands of quality vehicles <br className="hidden md:block" /> from trusted dealers
+                Discover thousands of quality vehicles{" "}
+                <br className="hidden md:block" /> from trusted dealers
               </p>
             </motion.div>
           </div>
@@ -334,7 +314,9 @@ export default function Hero() {
           className="absolute bottom-0 left-0 right-0 z-30" // motion.div is positioned at the bottom of the parent
         >
           {/* Inner div to handle the static translateY */}
-          <div className="transform translate-y-1/2"> {/* This div applies the desired offset */}
+          <div className="transform translate-y-1/2">
+            {" "}
+            {/* This div applies the desired offset */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/30 hover:shadow-3xl transition-shadow duration-300">
                 <div className="relative flex items-center">
@@ -345,7 +327,7 @@ export default function Hero() {
                     value={searchQuery}
                     onChange={handleInputChange}
                     onKeyPress={(e) => e.key === "Enter" && handleSearch(e)}
-                    placeholder="Search..."
+                    placeholder="Search by make, model, or keyword..."
                     className="flex-1 py-4 sm:py-5 lg:py-6 pl-12 sm:pl-16 pr-20 sm:pr-32 bg-transparent border-none text-gray-800 placeholder-gray-500 focus:outline-none text-base sm:text-lg lg:text-xl font-medium"
                   />
 
@@ -387,17 +369,63 @@ export default function Hero() {
             <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/50 hover:shadow-3xl transition-all duration-300 overflow-visible">
               {/* Responsive Filter Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-                {/* Quick Filter */}
+                {/* Make */}
                 <div className="space-y-2">
+                  <label className="block text-white/90 text-sm font-medium">
+                    Make
+                  </label>
                   <CustomSelect
-                    id="quickFilter"
-                    options={QUICK_FILTERS.map((filter) => ({
-                      value: filter.filter.specialFilter || "",
-                      label: filter.label,
+                    id="make"
+                    options={makes.map((make) => ({
+                      value: make,
+                      label: make,
                     }))}
-                    value={filters.specialFilter || ""}
-                    onChange={handleQuickFilterClick}
-                    placeholder="All Categories"
+                    value={filters.make[0] || ""}
+                    onChange={handleMakeChange}
+                    placeholder="Any Make"
+                    openDropdown={openDropdown}
+                    setOpenDropdown={setOpenDropdown}
+                    isLoading={isLoadingMakes}
+                  />
+                </div>
+
+                {/* Model */}
+                <div className="space-y-2">
+                  <label className="block text-white/90 text-sm font-medium">
+                    Model
+                  </label>
+                  <CustomSelect
+                    id="model"
+                    options={models.map((model) => ({
+                      value: model,
+                      label: model,
+                    }))}
+                    value={filters.model[0] || ""}
+                    onChange={handleModelChange}
+                    placeholder="Any Model"
+                    openDropdown={openDropdown}
+                    setOpenDropdown={setOpenDropdown}
+                    isLoading={isLoadingModels}
+                    disabled={filters.make.length === 0}
+                  />
+                </div>
+
+                {/* Model Year */}
+                <div className="space-y-2">
+                  <label className="block text-white/90 text-sm font-medium">
+                    Model Year
+                  </label>
+                  <CustomSelect
+                    id="modelYear"
+                    options={MODEL_YEARS}
+                    value={
+                      filters.yearRange[0] === filters.yearRange[1] &&
+                      filters.yearRange[0] !== 1900
+                        ? filters.yearRange[0].toString()
+                        : ""
+                    }
+                    onChange={handleModelYearChange}
+                    placeholder="Any Year"
                     openDropdown={openDropdown}
                     setOpenDropdown={setOpenDropdown}
                   />
@@ -405,6 +433,9 @@ export default function Hero() {
 
                 {/* Price Range */}
                 <div className="space-y-2">
+                  <label className="block text-white/90 text-sm font-medium">
+                    Price Range
+                  </label>
                   <CustomSelect
                     id="priceRange"
                     options={PRICE_RANGES.map((range) => ({
@@ -422,32 +453,6 @@ export default function Hero() {
                       }
                     }}
                     placeholder="Any Price"
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                  />
-                </div>
-
-                {/* Transmission */}
-                <div className="space-y-2">
-                  <CustomSelect
-                    id="transmission"
-                    options={TRANSMISSION_OPTIONS}
-                    value={filters.transmission[0] || ""}
-                    onChange={handleTransmissionChange}
-                    placeholder="Any Type"
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                  />
-                </div>
-
-                {/* Drivetrain */}
-                <div className="space-y-2">
-                  <CustomSelect
-                    id="drivetrain"
-                    options={DRIVETRAIN_OPTIONS}
-                    value={filters.drivetrain[0] || ""}
-                    onChange={handleDrivetrainChange}
-                    placeholder="Any Drive"
                     openDropdown={openDropdown}
                     setOpenDropdown={setOpenDropdown}
                   />
@@ -491,6 +496,8 @@ interface EnhancedCustomSelectProps {
   placeholder: string;
   openDropdown: string | null;
   setOpenDropdown: (id: string | null) => void;
+  isLoading?: boolean;
+  disabled?: boolean;
 }
 
 const CustomSelect = ({
@@ -501,6 +508,8 @@ const CustomSelect = ({
   placeholder,
   openDropdown,
   setOpenDropdown,
+  isLoading = false,
+  disabled = false,
 }: EnhancedCustomSelectProps) => {
   const isOpen = openDropdown === id;
   const selectedOption = options.find(
@@ -510,6 +519,7 @@ const CustomSelect = ({
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (disabled) return;
     setOpenDropdown(isOpen ? null : id);
   };
 
@@ -522,14 +532,23 @@ const CustomSelect = ({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={handleToggle}
-        className="w-full px-4 py-3 sm:py-4 bg-gray-50/80 hover:bg-white text-gray-900 border border-gray-200/60 hover:border-[#D55004] rounded-xl sm:rounded-2xl transition-all duration-200 flex items-center justify-between focus:outline-none focus:border-[#D55004] focus:ring-2 focus:ring-[#D55004]/20 backdrop-blur-sm shadow-sm hover:shadow-md text-sm sm:text-base"
+        disabled={disabled || isLoading}
+        className={`w-full px-4 py-3 sm:py-4 bg-gray-50/80 hover:bg-white text-gray-900 border border-gray-200/60 hover:border-[#D55004] rounded-xl sm:rounded-2xl transition-all duration-200 flex items-center justify-between focus:outline-none focus:border-[#D55004] focus:ring-2 focus:ring-[#D55004]/20 backdrop-blur-sm shadow-sm hover:shadow-md text-sm sm:text-base ${
+          disabled || isLoading
+            ? "opacity-50 cursor-not-allowed"
+            : "cursor-pointer"
+        }`}
       >
         <span
           className={`${
             selectedOption ? "text-gray-900 font-medium" : "text-gray-500"
           } text-left truncate pr-2`}
         >
-          {selectedOption ? selectedOption.label : placeholder}
+          {isLoading
+            ? "Loading..."
+            : selectedOption
+            ? selectedOption.label
+            : placeholder}
         </span>
         <ChevronDownIcon
           className={`h-4 w-4 sm:h-5 sm:w-5 text-gray-400 transition-transform duration-200 flex-shrink-0 ${
@@ -538,7 +557,7 @@ const CustomSelect = ({
         />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && !isLoading && (
         <motion.div
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
