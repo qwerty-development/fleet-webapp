@@ -23,6 +23,8 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  TrashIcon,
+  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 import { Dialog, Transition } from "@headlessui/react";
@@ -201,7 +203,7 @@ export default function AdminUsersPage() {
 
       // Check if user is a dealer and get dealership info
       let dealershipInfo = null;
-      let dealershipCars:any = [];
+      let dealershipCars: any = [];
       if (userInfo?.role === 'dealer') {
         const { data: dealership, error: dealershipError } = await supabase
           .from("dealerships")
@@ -370,43 +372,49 @@ export default function AdminUsersPage() {
       return;
     }
 
-    // For dealer to user conversion, check for active listings
+    // For dealer to user conversion, check for dealership and prepare for deletion
     if (currentRole === 'dealer' && targetRole === 'user') {
       try {
-        // Check if there are cars associated with this dealership
+        // Check if there are dealership associated with this user
         const { data: dealershipData, error: dealershipError } = await supabase
           .from('dealerships')
-          .select('id')
+          .select('id, name')
           .eq('user_id', user.id)
           .single();
 
         if (!dealershipError && dealershipData) {
           const dealershipId = dealershipData.id;
+          const dealershipName = dealershipData.name;
 
-          // Check for active cars
-          const { count, error: countError } = await supabase
+          // Check for active cars (for information purposes)
+          const { count: totalCars, error: countError } = await supabase
             .from('cars')
             .select('id', { count: 'exact', head: true })
-            .eq('dealership_id', dealershipId)
-            .eq('status', 'available');
+            .eq('dealership_id', dealershipId);
 
-          if (!countError && count && count > 0) {
-            // Set context for confirmation dialog
-            setPendingAction({
-              action: 'make-user',
-              user: user,
-              context: { 
-                dealershipId, 
-                activeListings: count,
-                isDealerDemotion: true 
-              }
-            });
-            setConfirmActionOpen(true);
-            return;
-          }
+          const carCount = totalCars || 0;
+
+          // Set context for confirmation dialog
+          setPendingAction({
+            action: 'delete-dealership-and-demote',
+            user: user,
+            context: { 
+              dealershipId, 
+              dealershipName,
+              totalCars: carCount,
+              isDealershipDeletion: true 
+            }
+          });
+          setConfirmActionOpen(true);
+          return;
+        } else {
+          // No dealership found, just change role
+          confirmAction(user, 'make-user');
         }
       } catch (err) {
-        console.error('Error checking dealership cars:', err);
+        console.error('Error checking dealership:', err);
+        // Fallback to direct role update
+        confirmAction(user, 'make-user');
       }
     }
 
@@ -542,7 +550,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Enhanced user role update with better dealer handling
+  // Enhanced user role update with dealership deletion capability
   const updateUserRole = async (userId: string, newRole: string, context?: any) => {
     setIsActionLoading(true);
 
@@ -563,23 +571,23 @@ export default function AdminUsersPage() {
         throw new Error(`Cannot change role from ${currentRole} to ${newRole}.`);
       }
 
-      // Handle dealer to user conversion with car status updates
+      // Handle dealer to user conversion with complete dealership deletion
       if (currentRole === 'dealer' && newRole === 'user') {
-        if (context?.isDealerDemotion && context?.dealershipId) {
-          // Update all active cars to pending status
-          const { error: updateCarsError } = await supabase
-            .from('cars')
-            .update({ status: 'pending' })
-            .eq('dealership_id', context.dealershipId)
-            .eq('status', 'available');
+        if (context?.isDealershipDeletion && context?.dealershipId) {
+          console.log(`Deleting dealership ${context.dealershipId} and all associated records...`);
+          
+          // Delete the dealership (cascade will handle cars and autoclips)
+          const { error: deleteDealershipError } = await supabase
+            .from('dealerships')
+            .delete()
+            .eq('id', context.dealershipId);
 
-          if (updateCarsError) {
-            console.error('Error updating car status:', updateCarsError);
-            // Continue with role update even if car update fails
+          if (deleteDealershipError) {
+            console.error('Error deleting dealership:', deleteDealershipError);
+            throw new Error(`Failed to delete dealership: ${deleteDealershipError.message}`);
           }
 
-          // Optionally, you could also update the dealership status or mark it as inactive
-          // await supabase.from('dealerships').update({ active: false }).eq('id', context.dealershipId);
+          console.log(`Successfully deleted dealership ${context.dealershipName} and all associated records.`);
         }
       }
 
@@ -598,8 +606,8 @@ export default function AdminUsersPage() {
       const user = users.find(u => u.id === userId);
       const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
       
-      if (currentRole === 'dealer' && newRole === 'user' && context?.activeListings > 0) {
-        alert(`${userName} has been changed to a regular user. ${context.activeListings} active car listings have been set to pending status.`);
+      if (currentRole === 'dealer' && newRole === 'user' && context?.isDealershipDeletion) {
+        alert(`✅ Success!\n\n${userName} has been changed to a regular user.\n\nDealership "${context.dealershipName}" has been completely removed from the system.\n\n${context.totalCars || 0} associated cars and all related records have been automatically deleted.`);
       } else {
         alert(`${userName}'s role has been successfully changed to ${newRole}.`);
       }
@@ -607,7 +615,7 @@ export default function AdminUsersPage() {
       return true;
     } catch (err: any) {
       console.error('Error updating user role:', err);
-      alert(err.message || 'Error updating user role');
+      alert(`❌ Error updating user role: ${err.message}`);
       return false;
     } finally {
       setIsActionLoading(false);
@@ -664,6 +672,13 @@ export default function AdminUsersPage() {
         const userSuccess = await updateUserRole(user.id, "user", context);
         if (userSuccess) {
           console.log(`${user.firstName} ${user.lastName} has been changed to a regular user.`);
+        }
+        break;
+
+      case "delete-dealership-and-demote":
+        const demoteSuccess = await updateUserRole(user.id, "user", context);
+        if (demoteSuccess) {
+          console.log(`${user.firstName} ${user.lastName} has been demoted and dealership deleted.`);
         }
         break;
 
@@ -755,15 +770,19 @@ export default function AdminUsersPage() {
     switch (pendingAction.action) {
       case "make-admin":
         return `Are you sure you want to promote ${userName} to an admin? This will give them full access to the admin dashboard.`;
+      
       case "make-user":
-        if (context?.isDealerDemotion && context?.activeListings > 0) {
-          return `Are you sure you want to demote ${userName} from dealer to regular user? This action will:\n\n• Remove their dealer privileges\n• Set ${context.activeListings} active car listing(s) to pending status\n• Maintain their dealership record for historical purposes\n\nThis action cannot be easily undone.`;
-        }
         return `Are you sure you want to demote ${userName} to a regular user? This will remove their current privileges.`;
+      
+      case "delete-dealership-and-demote":
+        return `⚠️ CRITICAL ACTION: Complete Dealership Deletion\n\nYou are about to:\n\n🔹 Demote ${userName} from dealer to regular user\n🔹 PERMANENTLY DELETE dealership "${context.dealershipName}"\n\n\n❌ THIS ACTION CANNOT BE UNDONE!\n\nAll dealership data will be permanently lost. Are you absolutely certain you want to proceed?`;
+      
       case "ban-user":
         return `Are you sure you want to ban ${userName}? They will no longer be able to access the platform.`;
+      
       case "unban-user":
         return `Are you sure you want to unban ${userName}? This will restore their access to the platform.`;
+      
       default:
         return "";
     }
@@ -773,6 +792,9 @@ export default function AdminUsersPage() {
   const getConfirmButtonStyle = () => {
     if (pendingAction.action === "ban-user") {
       return "bg-rose-600 hover:bg-rose-700";
+    }
+    if (pendingAction.action === "delete-dealership-and-demote") {
+      return "bg-red-600 hover:bg-red-700";
     }
     if (pendingAction.action === "make-user" && pendingAction.context?.isDealerDemotion) {
       return "bg-amber-600 hover:bg-amber-700";
@@ -1156,14 +1178,14 @@ export default function AdminUsersPage() {
                               handleSetRole(user, 'user');
                             }}
                             disabled={isActionLoading || user.banned || user.locked}
-                            className="w-full px-3 py-1.5 bg-amber-600/80 hover:bg-amber-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isActionLoading ? (
                               <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
                             ) : (
-                              <UserIcon className="h-3.5 w-3.5 mr-1" />
+                              <TrashIcon className="h-3.5 w-3.5 mr-1" />
                             )}
-                            Demote to User
+                            Delete Dealership
                           </button>
                         )}
 
@@ -1692,7 +1714,9 @@ export default function AdminUsersPage() {
                     as="h3"
                     className="text-lg font-medium leading-6 text-white text-center mb-4 flex items-center justify-center"
                   >
-                    {pendingAction.context?.isDealerDemotion ? (
+                    {pendingAction.action === "delete-dealership-and-demote" ? (
+                      <ExclamationCircleIcon className="h-6 w-6 text-red-400 mr-2" />
+                    ) : pendingAction.context?.isDealershipDeletion ? (
                       <ExclamationTriangleIcon className="h-6 w-6 text-amber-400 mr-2" />
                     ) : pendingAction.action === "ban-user" ? (
                       <ExclamationTriangleIcon className="h-6 w-6 text-rose-400 mr-2" />
@@ -1724,6 +1748,11 @@ export default function AdminUsersPage() {
                         <>
                           <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
                           Processing...
+                        </>
+                      ) : pendingAction.action === "delete-dealership-and-demote" ? (
+                        <>
+                          <TrashIcon className="h-4 w-4 mr-2" />
+                          Delete & Demote
                         </>
                       ) : (
                         <>Confirm</>
