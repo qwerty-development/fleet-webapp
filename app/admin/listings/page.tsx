@@ -48,8 +48,7 @@ export default function AdminBrowseScreen() {
     useState<boolean>(false);
   const [selectedListing, setSelectedListing] = useState<Car | null>(null);
   const [dealerships, setDealerships] = useState<Dealership[]>([]);
-  const [selectedDealership, setSelectedDealership] =
-    useState<Dealership | null>(null);
+  const [selectedDealershipId, setSelectedDealershipId] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -72,7 +71,7 @@ export default function AdminBrowseScreen() {
     sortBy,
     sortOrder,
     filterStatus,
-    selectedDealership,
+    selectedDealershipId,
     currentPage,
     searchQuery,
   ]);
@@ -101,9 +100,14 @@ export default function AdminBrowseScreen() {
         .select("*, dealerships(id, name, logo, location)", { count: "exact" })
         .order(sortBy, { ascending: sortOrder === "asc" });
 
-      // Apply dealership filter if selected
-      if (selectedDealership) {
-        query = query.eq("dealership_id", selectedDealership.id);
+      // Apply dealership filter if selected - FIXED: Convert string to number
+      if (selectedDealershipId !== "all") {
+        const dealershipIdNumber = parseInt(selectedDealershipId, 10);
+        if (!isNaN(dealershipIdNumber)) {
+          query = query.eq("dealership_id", dealershipIdNumber);
+        } else {
+          console.error("Invalid dealership ID:", selectedDealershipId);
+        }
       }
 
       // Apply status filter if not "all"
@@ -216,19 +220,14 @@ export default function AdminBrowseScreen() {
     []
   );
 
-  // Handle dealership filter change
+  // Handle dealership filter change - FIXED: Store ID as string, convert when querying
   const handleDealershipChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const dealershipId = e.target.value;
-      if (dealershipId === "all") {
-        setSelectedDealership(null);
-      } else {
-        const dealership = dealerships.find((d) => d.id === dealershipId);
-        setSelectedDealership(dealership || null);
-      }
+      setSelectedDealershipId(dealershipId);
       setCurrentPage(1);
     },
-    [dealerships]
+    []
   );
 
   // Handle search input
@@ -299,16 +298,16 @@ export default function AdminBrowseScreen() {
               </button>
             </form>
 
-            {/* Dealership Dropdown */}
+            {/* Dealership Dropdown - FIXED: Use selectedDealershipId state */}
             <div className="w-full">
               <select
                 className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
-                value={selectedDealership?.id || "all"}
+                value={selectedDealershipId}
                 onChange={handleDealershipChange}
               >
                 <option value="all">All Dealerships</option>
                 {dealerships.map((dealership) => (
-                  <option key={dealership.id} value={dealership.id}>
+                  <option key={dealership.id} value={dealership.id.toString()}>
                     {dealership.name}
                   </option>
                 ))}
@@ -668,7 +667,7 @@ export default function AdminBrowseScreen() {
               <button
                 onClick={() => {
                   setFilterStatus("all");
-                  setSelectedDealership(null);
+                  setSelectedDealershipId("all");
                   setSearchQuery("");
                   setCurrentPage(1);
                 }}
