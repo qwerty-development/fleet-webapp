@@ -97,6 +97,42 @@ export default function AdminDealershipsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isBulkDrawerOpen, setIsBulkDrawerOpen] = useState(false);
 
+  const updateDealershipSubscriptionStatus = async (
+    dealershipId: number, 
+    isExtending: boolean
+  ): Promise<void> => {
+    try {
+      // Determine the new statuses based on action
+      const newCarStatus = isExtending ? 'available' : 'pending';
+      const currentCarStatus = isExtending ? 'pending' : 'available';
+      const newClipStatus = isExtending ? 'published' : 'archived';
+      const currentClipStatus = isExtending ? 'archived' : 'published';
+      
+      // Update car statuses
+      const { error: carsError } = await supabase
+        .from('cars')
+        .update({ status: newCarStatus })
+        .eq('dealership_id', dealershipId)
+        .eq('status', currentCarStatus);
+      
+      if (carsError) throw carsError;
+      
+      // Update autoclip statuses
+      const { error: clipsError } = await supabase
+        .from('auto_clips')
+        .update({ status: newClipStatus })
+        .eq('dealership_id', dealershipId)
+        .eq('status', currentClipStatus);
+      
+      if (clipsError) throw clipsError;
+      
+      console.log(`Successfully updated dealership #${dealershipId} statuses. Action: ${isExtending ? 'Extend' : 'Expire'}`);
+    } catch (err: any) {
+      console.error(`Error updating dealership ${dealershipId} statuses:`, err);
+      throw err;
+    }
+  };
+
   // Fetch all dealerships for stats and overview
   const fetchAllDealerships = useCallback(async () => {
     try {
@@ -256,36 +292,106 @@ export default function AdminDealershipsPage() {
     setIsDealershipModalOpen(true);
   }, []);
 
-  // Handle dealership update form submission
+  const executeBulkAction = async () => {
+    if (!bulkAction || selectedDealerships.length === 0) return;
+  
+    setIsActionLoading(true);
+    setShowBulkActionConfirm(false);
+  
+    try {
+      const currentDate = new Date();
+      const updatePromises = selectedDealerships.map(async id => {
+        const dealership = allDealerships.find(d => d.id === id);
+        if (!dealership) return;
+  
+        let updateData: any = {};
+        const isExtending = bulkAction === 'extend';
+  
+        if (isExtending) {
+          const subscriptionEndDate = new Date(dealership.subscription_end_date);
+          const newEndDate = new Date(
+            Math.max(currentDate.getTime(), subscriptionEndDate.getTime())
+          );
+          newEndDate.setMonth(newEndDate.getMonth() + extendMonths);
+          updateData.subscription_end_date = newEndDate.toISOString().split('T')[0];
+        } else if (bulkAction === 'end') {
+          updateData.subscription_end_date = currentDate.toISOString().split('T')[0];
+        }
+  
+        // Update dealership
+        const { error: dealershipError } = await supabase
+          .from('dealerships')
+          .update(updateData)
+          .eq('id', id);
+  
+        if (dealershipError) throw dealershipError;
+  
+        // Update car and autoclip statuses
+        await updateDealershipSubscriptionStatus(id, isExtending);
+      });
+  
+      await Promise.all(updatePromises);
+  
+      // Refresh data
+      await fetchDealerships();
+      await fetchAllDealerships();
+  
+      // Reset selections
+      setSelectedDealerships([]);
+      setBulkAction(null);
+      setIsBulkDrawerOpen(false);
+  
+      // Show success message
+      alert(`Subscription ${bulkAction === 'extend' ? 'extended' : 'ended'} for selected dealerships and relevant items updated!`);
+    } catch (err: any) {
+      console.error('Error performing bulk action:', err);
+      alert(`Failed to perform bulk action: ${err.message}`);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+  
+  /**
+   * Individual dealership update handler 
+   * Includes logic to detect subscription status changes
+   */
   const handleUpdateDealership = async (e: React.FormEvent) => {
     e.preventDefault();
-
+  
     if (!selectedDealership) return;
-
+  
     setIsActionLoading(true);
-
+  
     try {
       // If there's a new logo file, upload it first
       let logoUrl = dealershipFormData.logo;
-
+  
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `${selectedDealership.id}/${fileName}`;
-
+  
         const { error: uploadError } = await supabase.storage
           .from('logos')
           .upload(filePath, file);
-
+  
         if (uploadError) throw uploadError;
-
+  
         const { data: publicUrlData } = supabase.storage
           .from('logos')
           .getPublicUrl(filePath);
-
+  
         logoUrl = publicUrlData.publicUrl;
       }
-
+  
+      // Determine if this is a subscription extension or expiration
+      const oldEndDate = new Date(selectedDealership.subscription_end_date);
+      const newEndDate = new Date(dealershipFormData.subscription_end_date);
+      const currentDate = new Date();
+      const wasExpired = oldEndDate < currentDate;
+      const isExtending = wasExpired && newEndDate > currentDate;
+      const isExpiring = !wasExpired && newEndDate < currentDate;
+  
       // Update dealership record
       const { error: updateError } = await supabase
         .from('dealerships')
@@ -299,91 +405,30 @@ export default function AdminDealershipsPage() {
           logo: logoUrl
         })
         .eq('id', selectedDealership.id);
-
+  
       if (updateError) throw updateError;
-
+  
+      // If the subscription status is changing, update car and autoclip statuses
+      if (isExtending) {
+        await updateDealershipSubscriptionStatus(selectedDealership.id, true);
+      } else if (isExpiring) {
+        await updateDealershipSubscriptionStatus(selectedDealership.id, false);
+      }
+  
       // Refresh data
       await fetchDealerships();
       await fetchAllDealerships();
-
+  
       // Reset form and close modal
       setIsDealershipModalOpen(false);
       setSelectedDealership(null);
       setFile(null);
-
+  
       // Show success message
       alert('Dealership updated successfully!');
     } catch (err: any) {
       console.error('Error updating dealership:', err);
       alert(`Failed to update dealership: ${err.message}`);
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Handle bulk action execution
-  const executeBulkAction = async () => {
-    if (!bulkAction || selectedDealerships.length === 0) return;
-
-    setIsActionLoading(true);
-    setShowBulkActionConfirm(false);
-
-    try {
-      const currentDate = new Date();
-      const updatePromises = selectedDealerships.map(async id => {
-        const dealership = allDealerships.find(d => d.id === id);
-        if (!dealership) return;
-
-        let updateData: any = {};
-        let newCarStatus: 'available' | 'pending' = 'available';
-
-        if (bulkAction === 'extend') {
-          const subscriptionEndDate = new Date(dealership.subscription_end_date);
-          const newEndDate = new Date(
-            Math.max(currentDate.getTime(), subscriptionEndDate.getTime())
-          );
-          newEndDate.setMonth(newEndDate.getMonth() + extendMonths);
-          updateData.subscription_end_date = newEndDate.toISOString().split('T')[0];
-          newCarStatus = 'available';
-        } else if (bulkAction === 'end') {
-          updateData.subscription_end_date = currentDate.toISOString().split('T')[0];
-          newCarStatus = 'pending';
-        }
-
-        // Update dealership
-        const { error: dealershipError } = await supabase
-          .from('dealerships')
-          .update(updateData)
-          .eq('id', id);
-
-        if (dealershipError) throw dealershipError;
-
-        // Update car statuses
-        const { error: carsError } = await supabase
-          .from('cars')
-          .update({ status: newCarStatus })
-          .eq('dealership_id', id)
-          .eq('status', bulkAction === 'extend' ? 'pending' : 'available');
-
-        if (carsError) throw carsError;
-      });
-
-      await Promise.all(updatePromises);
-
-      // Refresh data
-      await fetchDealerships();
-      await fetchAllDealerships();
-
-      // Reset selections
-      setSelectedDealerships([]);
-      setBulkAction(null);
-      setIsBulkDrawerOpen(false);
-
-      // Show success message
-      alert(`Subscription ${bulkAction === 'extend' ? 'extended' : 'ended'} for selected dealerships and car statuses updated!`);
-    } catch (err: any) {
-      console.error('Error performing bulk action:', err);
-      alert(`Failed to perform bulk action: ${err.message}`);
     } finally {
       setIsActionLoading(false);
     }
@@ -1429,18 +1474,12 @@ export function DealershipCard({
     </div>
   );
 }
-
-/**
- * Subscription Manager Component - This could be extracted for reuse
- *
- * This component handles subscription extension/termination functionality
- */
 export function SubscriptionManager({
   dealership,
   onUpdate
 }: {
   dealership: Dealership;
-  onUpdate: (dealership: Dealership, newEndDate: string) => Promise<void>;
+  onUpdate: (dealership: Dealership, newEndDate: string, isExtending: boolean) => Promise<void>;
 }) {
   const [months, setMonths] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -1452,6 +1491,7 @@ export function SubscriptionManager({
     try {
       const currentEndDate = new Date(dealership.subscription_end_date);
       const now = new Date();
+      const wasExpired = currentEndDate < now;
 
       // If subscription has expired, start from today, otherwise extend from current end date
       const startDate = currentEndDate < now ? now : currentEndDate;
@@ -1460,7 +1500,7 @@ export function SubscriptionManager({
       const newEndDate = new Date(startDate);
       newEndDate.setMonth(newEndDate.getMonth() + months);
 
-      await onUpdate(dealership, newEndDate.toISOString().split('T')[0]);
+      await onUpdate(dealership, newEndDate.toISOString().split('T')[0], wasExpired);
 
       // Reset after success
       setMonths(1);
@@ -1472,12 +1512,12 @@ export function SubscriptionManager({
   };
 
   const endSubscription = async () => {
-    if (!confirm("Are you sure you want to end this subscription immediately?")) return;
+    if (!confirm("Are you sure you want to end this subscription immediately? This will set all available cars to pending and all published autoclips to archived.")) return;
 
     setIsProcessing(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      await onUpdate(dealership, today);
+      await onUpdate(dealership, today, false);
     } catch (error) {
       console.error("Error ending subscription:", error);
     } finally {
@@ -1557,23 +1597,6 @@ export function SubscriptionManager({
             "End Subscription"
           )}
         </button>
-      </div>
-    </div>
-  );
-}
-
-// A component for displaying statistics
-export function DealershipStats({ title, value, icon, colorClass }: { title: string; value: string | number; icon: React.ReactNode; colorClass: string }) {
-  return (
-    <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-gray-400 text-sm">{title}</p>
-          <p className={`text-xl font-semibold ${colorClass}`}>{value}</p>
-        </div>
-        <div className={`p-2 ${colorClass.replace('text-', 'bg-')}/20 rounded-lg`}>
-          {icon}
-        </div>
       </div>
     </div>
   );
