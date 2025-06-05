@@ -341,7 +341,7 @@ export default function AdminUsersPage() {
   // Initialize dealership form with user data
   const initializeDealershipForm = (user: ProcessedUser) => {
     setDealershipForm({
-      name: `${user.firstName} ${user.lastName}'s Dealership`,
+      name: `${user.firstName} ${user.lastName}`,
       location: "",
       phone: "",
       subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
