@@ -186,7 +186,8 @@ export default function HeroSection() {
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-0">
                       <a
-                        href="#"
+                        href="https://apps.apple.com/lb/app/fleet-your-auto-marketplace/id6742141291?uo=2"
+                        target="_blank"
                         className="flex items-center bg-black/80 hover:bg-black border border-white/20 rounded-xl px-5 py-2.5 w-48 transition-colors"
                       >
                         <div className="flex items-center">
@@ -209,7 +210,8 @@ export default function HeroSection() {
                       </a>
 
                       <a
-                        href="#"
+                        href="https://apps.apple.com/lb/app/fleet-your-auto-marketplace/id6742141291?uo=2"
+                        target="_blank"
                         className="flex items-center bg-black/80 hover:bg-black border border-white/20 rounded-xl px-5 py-2.5 w-48 transition-colors"
                       >
                         <div className="flex items-center">
