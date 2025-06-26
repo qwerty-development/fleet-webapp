@@ -12,7 +12,8 @@ import {
   PlusIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  TagIcon
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 
@@ -40,17 +41,102 @@ const getLogoUrl = (make: string, isLightMode: boolean = true) => {
 // Items per page for pagination
 const ITEMS_PER_PAGE = 20;
 
-interface CarMakeModel {
+interface CarMakeModelTrim {
   id: string;
   make: string;
   model: string;
+  trim: string[] | null;
 }
+
+// Trim Badge Component
+const TrimBadge: React.FC<{ trim: string; onRemove?: () => void; isEditable?: boolean }> = ({ 
+  trim, 
+  onRemove, 
+  isEditable = false 
+}) => (
+  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+    {trim}
+    {isEditable && onRemove && (
+      <button
+        onClick={onRemove}
+        className="ml-1 hover:text-indigo-100 transition-colors"
+        type="button"
+      >
+        <XMarkIcon className="h-3 w-3" />
+      </button>
+    )}
+  </span>
+);
+
+// Trim Manager Component
+const TrimManager: React.FC<{
+  trims: string[];
+  onChange: (trims: string[]) => void;
+  placeholder?: string;
+}> = ({ trims, onChange, placeholder = "Add trim..." }) => {
+  const [newTrim, setNewTrim] = useState("");
+
+  const handleAddTrim = () => {
+    const trimmedValue = newTrim.trim();
+    if (trimmedValue && !trims.includes(trimmedValue)) {
+      onChange([...trims, trimmedValue]);
+      setNewTrim("");
+    }
+  };
+
+  const handleRemoveTrim = (indexToRemove: number) => {
+    onChange(trims.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTrim();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newTrim}
+          onChange={(e) => setNewTrim(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white text-sm"
+        />
+        <button
+          type="button"
+          onClick={handleAddTrim}
+          disabled={!newTrim.trim() || trims.includes(newTrim.trim())}
+          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+        >
+          <PlusIcon className="h-4 w-4" />
+        </button>
+      </div>
+      
+      {trims.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {trims.map((trim, index) => (
+            <TrimBadge
+              key={index}
+              trim={trim}
+              onRemove={() => handleRemoveTrim(index)}
+              isEditable
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function CarMakesModelsAdmin() {
   const supabase = createClient();
   
   // State variables
-  const [carMakesModels, setCarMakesModels] = useState<CarMakeModel[]>([]);
+  const [carMakesModels, setCarMakesModels] = useState<CarMakeModelTrim[]>([]);
   const [uniqueMakes, setUniqueMakes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -61,9 +147,10 @@ export default function CarMakesModelsAdmin() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
-  const [selectedItem, setSelectedItem] = useState<CarMakeModel | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CarMakeModelTrim | null>(null);
   const [newMake, setNewMake] = useState<string>("");
   const [newModel, setNewModel] = useState<string>("");
+  const [newTrims, setNewTrims] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   
   // Fetch car makes and models with filters
@@ -166,7 +253,7 @@ export default function CarMakesModelsAdmin() {
     setCurrentPage(prev => Math.min(totalPages, prev + 1));
   }, [totalPages]);
   
-  // Add new make/model
+  // Add new make/model/trims
   const handleAddItem = useCallback(async () => {
     if (!newMake || !newModel) {
       alert("Please enter both make and model");
@@ -174,9 +261,15 @@ export default function CarMakesModelsAdmin() {
     }
     
     try {
+      const insertData = {
+        make: newMake.trim(),
+        model: newModel.trim(),
+        trim: newTrims.length > 0 ? newTrims : null
+      };
+
       const { data, error } = await supabase
         .from('allcars')
-        .insert([{ make: newMake.trim(), model: newModel.trim() }])
+        .insert([insertData])
         .select();
       
       if (error) throw error;
@@ -188,16 +281,17 @@ export default function CarMakesModelsAdmin() {
       // Reset form
       setNewMake("");
       setNewModel("");
+      setNewTrims([]);
       setIsAddModalOpen(false);
       
-      alert("Make and model added successfully!");
+      alert("Make, model, and trims added successfully!");
     } catch (error: any) {
       console.error("Error adding item:", error);
       alert(`Failed to add item: ${error.message}`);
     }
-  }, [newMake, newModel, fetchCarMakesModels, fetchUniqueMakes, supabase]);
+  }, [newMake, newModel, newTrims, fetchCarMakesModels, fetchUniqueMakes, supabase]);
   
-  // Edit make/model
+  // Edit make/model/trims
   const handleUpdateItem = useCallback(async () => {
     if (!selectedItem || !newMake || !newModel) {
       alert("Please enter both make and model");
@@ -205,9 +299,15 @@ export default function CarMakesModelsAdmin() {
     }
     
     try {
+      const updateData = {
+        make: newMake.trim(),
+        model: newModel.trim(),
+        trim: newTrims.length > 0 ? newTrims : null
+      };
+
       const { error } = await supabase
         .from('allcars')
-        .update({ make: newMake.trim(), model: newModel.trim() })
+        .update(updateData)
         .eq('id', selectedItem.id);
       
       if (error) throw error;
@@ -219,15 +319,16 @@ export default function CarMakesModelsAdmin() {
       // Reset form
       setNewMake("");
       setNewModel("");
+      setNewTrims([]);
       setSelectedItem(null);
       setIsEditModalOpen(false);
       
-      alert("Make and model updated successfully!");
+      alert("Make, model, and trims updated successfully!");
     } catch (error: any) {
       console.error("Error updating item:", error);
       alert(`Failed to update item: ${error.message}`);
     }
-  }, [selectedItem, newMake, newModel, fetchCarMakesModels, fetchUniqueMakes, supabase]);
+  }, [selectedItem, newMake, newModel, newTrims, fetchCarMakesModels, fetchUniqueMakes, supabase]);
   
   // Delete make/model
   const handleDeleteItem = useCallback(async (id: string) => {
@@ -253,10 +354,11 @@ export default function CarMakesModelsAdmin() {
   }, [fetchCarMakesModels, fetchUniqueMakes, supabase]);
   
   // Open edit modal
-  const openEditModal = useCallback((item: CarMakeModel) => {
+  const openEditModal = useCallback((item: CarMakeModelTrim) => {
     setSelectedItem(item);
     setNewMake(item.make);
     setNewModel(item.model);
+    setNewTrims(item.trim || []);
     setIsEditModalOpen(true);
   }, []);
   
@@ -285,11 +387,16 @@ export default function CarMakesModelsAdmin() {
       if (error) throw error;
       
       // Convert to CSV
-      const headers = ['id', 'make', 'model'];
+      const headers = ['id', 'make', 'model', 'trims'];
       
       const csvData = data.map((item: any) => 
         headers.map(header => {
           let value = item[header];
+          
+          // Handle trim array
+          if (header === 'trims') {
+            value = item.trim ? item.trim.join('; ') : '';
+          }
           
           // Wrap in quotes if necessary
           if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
@@ -307,7 +414,7 @@ export default function CarMakesModelsAdmin() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `car_makes_models_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `car_makes_models_trims_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -326,6 +433,14 @@ export default function CarMakesModelsAdmin() {
     setCurrentPage(1);
   }, []);
 
+  // Reset modal state
+  const resetModalState = useCallback(() => {
+    setNewMake("");
+    setNewModel("");
+    setNewTrims([]);
+    setSelectedItem(null);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900">
       <AdminNavbar />
@@ -335,8 +450,8 @@ export default function CarMakesModelsAdmin() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl mb-2 font-bold text-white">Car Makes & Models</h1>
-              <p className="text-gray-400">Manage the database of car makes and models</p>
+              <h1 className="text-3xl mb-2 font-bold text-white">Car Makes, Models & Trims</h1>
+              <p className="text-gray-400">Manage the database of car makes, models, and trim levels</p>
             </div>
             
             <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-2">
@@ -345,7 +460,7 @@ export default function CarMakesModelsAdmin() {
                 className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
                 <PlusIcon className="h-4 w-4 mr-1.5" />
-                Add Make/Model
+                Add Make/Model/Trims
               </button>
               
               <button
@@ -423,7 +538,7 @@ export default function CarMakesModelsAdmin() {
             </form>
           </div>
           
-          {/* Makes and Models Table */}
+          {/* Makes, Models, and Trims Table */}
           <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl overflow-hidden mb-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-700">
@@ -457,6 +572,12 @@ export default function CarMakesModelsAdmin() {
                         )}
                       </div>
                     </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      <div className="flex items-center">
+                        <TagIcon className="h-4 w-4 mr-1" />
+                        Trims
+                      </div>
+                    </th>
                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Actions
                     </th>
@@ -465,7 +586,7 @@ export default function CarMakesModelsAdmin() {
                 <tbody className="divide-y divide-gray-700">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-12 text-center">
+                      <td colSpan={4} className="px-6 py-12 text-center">
                         <div className="flex justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
                         </div>
@@ -474,7 +595,7 @@ export default function CarMakesModelsAdmin() {
                     </tr>
                   ) : carMakesModels.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-12 text-center">
+                      <td colSpan={4} className="px-6 py-12 text-center">
                         <p className="text-gray-400">No car makes/models found matching your filters.</p>
                         <button
                           onClick={clearFilters}
@@ -492,17 +613,25 @@ export default function CarMakesModelsAdmin() {
                             <div className="h-10 w-10 flex-shrink-0">
                               <div className="h-full w-full rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
                                 {item.make && (
-                                  <><img
-                                                    src={getLogoUrl(item.make)}
-                                                    alt={`${item.make} logo`}
-                                                    className="h-8 w-8 object-contain"
-                                                    onError={(e) => {
-                                                        // If logo fails to load, show first letter of make
-                                                        (e.target as HTMLImageElement).style.display = "none";
-                                                        (e.target as HTMLImageElement).nextSibling!.textContent = item.make?.charAt(0).toUpperCase() || "C";
-                                                    } } /><span className="hidden text-white text-lg font-bold">
-                                                        {item.make?.charAt(0).toUpperCase() || "C"}
-                                                    </span></>
+                                  <>
+                                    <img
+                                      src={getLogoUrl(item.make)}
+                                      alt={`${item.make} logo`}
+                                      className="h-8 w-8 object-contain"
+                                      onError={(e) => {
+                                        // If logo fails to load, show first letter of make
+                                        (e.target as HTMLImageElement).style.display = "none";
+                                        const nextSibling = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                                        if (nextSibling) {
+                                          nextSibling.textContent = item.make?.charAt(0).toUpperCase() || "C";
+                                          nextSibling.classList.remove("hidden");
+                                        }
+                                      }}
+                                    />
+                                    <span className="hidden text-white text-lg font-bold">
+                                      {item.make?.charAt(0).toUpperCase() || "C"}
+                                    </span>
+                                  </>
                                 )}
                               </div>
                             </div>
@@ -513,6 +642,17 @@ export default function CarMakesModelsAdmin() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-white">{item.model}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {item.trim && item.trim.length > 0 ? (
+                              item.trim.map((trim, index) => (
+                                <TrimBadge key={index} trim={trim} />
+                              ))
+                            ) : (
+                              <span className="text-gray-400 text-sm italic">No trims</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex justify-center space-x-2">
@@ -575,14 +715,17 @@ export default function CarMakesModelsAdmin() {
         </div>
       </div>
       
-      {/* Add Make/Model Modal */}
+      {/* Add Make/Model/Trims Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-md overflow-hidden">
+          <div className="bg-gray-800 rounded-xl w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Add New Make/Model</h2>
+              <h2 className="text-xl font-bold text-white">Add New Make/Model/Trims</h2>
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  resetModalState();
+                }}
                 className="p-1 rounded-full hover:bg-gray-700 transition-colors"
                 aria-label="Close"
               >
@@ -590,7 +733,7 @@ export default function CarMakesModelsAdmin() {
               </button>
             </div>
             
-            <div className="p-6">
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
               <div className="space-y-4">
                 <div>
                   <label htmlFor="newMake" className="block text-sm font-medium text-gray-300 mb-1">
@@ -619,11 +762,28 @@ export default function CarMakesModelsAdmin() {
                     placeholder="e.g. Camry"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Trims (Optional)
+                  </label>
+                  <TrimManager
+                    trims={newTrims}
+                    onChange={setNewTrims}
+                    placeholder="e.g. LE, XLE, TRD..."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Add trim levels for this model. Press Enter or click + to add each trim.
+                  </p>
+                </div>
               </div>
               
               <div className="flex justify-end space-x-3 mt-6">
                 <button
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => {
+                    setIsAddModalOpen(false);
+                    resetModalState();
+                  }}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                 >
                   Cancel
@@ -641,18 +801,16 @@ export default function CarMakesModelsAdmin() {
         </div>
       )}
       
-      {/* Edit Make/Model Modal */}
+      {/* Edit Make/Model/Trims Modal */}
       {isEditModalOpen && selectedItem && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl w-full max-w-md overflow-hidden">
+          <div className="bg-gray-800 rounded-xl w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Edit Make/Model</h2>
+              <h2 className="text-xl font-bold text-white">Edit Make/Model/Trims</h2>
               <button
                 onClick={() => {
                   setIsEditModalOpen(false);
-                  setSelectedItem(null);
-                  setNewMake("");
-                  setNewModel("");
+                  resetModalState();
                 }}
                 className="p-1 rounded-full hover:bg-gray-700 transition-colors"
                 aria-label="Close"
@@ -661,7 +819,7 @@ export default function CarMakesModelsAdmin() {
               </button>
             </div>
             
-            <div className="p-6">
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
               <div className="space-y-4">
                 <div>
                   <label htmlFor="editMake" className="block text-sm font-medium text-gray-300 mb-1">
@@ -690,15 +848,27 @@ export default function CarMakesModelsAdmin() {
                     placeholder="e.g. Camry"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Trims (Optional)
+                  </label>
+                  <TrimManager
+                    trims={newTrims}
+                    onChange={setNewTrims}
+                    placeholder="e.g. LE, XLE, TRD..."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Manage trim levels for this model. Press Enter or click + to add each trim.
+                  </p>
+                </div>
               </div>
               
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => {
                     setIsEditModalOpen(false);
-                    setSelectedItem(null);
-                    setNewMake("");
-                    setNewModel("");
+                    resetModalState();
                   }}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                 >
@@ -716,10 +886,6 @@ export default function CarMakesModelsAdmin() {
           </div>
         </div>
       )}
-      
-      {/* Bulk Import Modal (Optional Feature) */}
-      {/* This would be a modal for importing a CSV of makes/models */}
-      
     </div>
   );
-}   
+}
