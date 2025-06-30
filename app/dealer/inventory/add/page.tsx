@@ -74,7 +74,7 @@ const CATEGORIES = [
 const SOURCE_OPTIONS = [
   { value: "Company", label: "Company Source", icon: <BuildingOfficeIcon className="h-5 w-5" /> },
   { value: "GCC", label: "GCC", icon: <MapPinIcon className="h-5 w-5" /> },
-  { value: "USA", label: "US", icon: <FlagIcon className="h-5 w-5" /> },
+  { value: "USA", label: "USA", icon: <FlagIcon className="h-5 w-5" /> },
   { value: "Canada", label: "Canada", icon: <FlagIcon className="h-5 w-5" /> },
   { value: "Europe", label: "Europe", icon: <GlobeAmericasIcon className="h-5 w-5" /> }
 ];
@@ -454,53 +454,91 @@ const EnhancedColorSelector = ({ value, onChange }:any) => {
   );
 };
 
-// Brand selector with search and dynamic data
-const BrandSelector = ({ selectedBrand, onSelectBrand }:any) => {
+// Fixed Brand selector with search and dynamic data
+const BrandSelector = ({ selectedBrand, onSelectBrand }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [carBrands, setCarBrands] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const supabase = createClient();
 
-  // Fetch brands from database or API
-  useEffect(() => {
-// REPLACE the fetchBrands function in BrandSelector with:
-const fetchBrands = async () => {
-  setIsLoading(true);
-  try {
-    // Fetch unique makes from allcars table
-    const { data, error } = await supabase
-      .from('allcars')
-      .select('make')
+  // Enhanced fetch brands function with proper pagination and filtering
+  const fetchBrands = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      let allMakes = [];
+      let hasMore = true;
+      let offset = 0;
+      const limit = 1000;
 
+      // Fetch all makes with pagination to avoid missing any due to default limits
+      while (hasMore) {
+        const { data, error, count } = await supabase
+          .from('allcars')
+          .select('make', { count: 'exact' })
+          .range(offset, offset + limit - 1)
+          .order('make');
 
-    if (error) throw error;
+        if (error) throw error;
 
-    // Extract unique makes using Set
-    const uniqueMakes:any = [...new Set(data.map(item => item.make))];
+        if (data && data.length > 0) {
+          allMakes = [...allMakes, ...data];
+          offset += limit;
+          hasMore = data.length === limit; // Continue if we got a full batch
+        } else {
+          hasMore = false;
+        }
 
-    if (uniqueMakes.length === 0) {
-      throw new Error('No brands available');
+        // Safety check to prevent infinite loops
+        if (offset > 50000) {
+          console.warn('Stopped fetching after 50k records to prevent infinite loop');
+          break;
+        }
+      }
+
+      console.log(`Fetched ${allMakes.length} total make records`);
+
+      // Process and clean the makes data
+      const uniqueMakes = [...new Set(
+        allMakes
+          .map(item => item.make)
+          .filter(make => make && typeof make === 'string' && make.trim().length > 0) // Filter out null, undefined, empty strings
+          .map(make => make.trim()) // Remove leading/trailing spaces
+          .filter(make => make.length > 0) // Double-check for empty strings after trimming
+      )]
+      .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); // Sort alphabetically, case-insensitive
+
+      console.log(`Processed to ${uniqueMakes.length} unique makes:`, uniqueMakes.slice(0, 10), '...');
+
+      if (uniqueMakes.length === 0) {
+        throw new Error('No valid brands found in database');
+      }
+
+      setCarBrands(uniqueMakes);
+    } catch (err) {
+      console.error("Error fetching car brands:", err);
+      setError(err.message || 'Failed to fetch brands');
+      setCarBrands([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setCarBrands(uniqueMakes);
-  } catch (err) {
-    console.error("Error fetching car brands:", err);
-    // Fallback to empty state with error display
-    setCarBrands([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  // Fetch brands on component mount
+  useEffect(() => {
     fetchBrands();
   }, [supabase]);
 
-  // Filter brands based on search term
+  // Filter brands based on search term with improved matching
   const filteredBrands = useMemo(() => {
-    if (!searchTerm) return carBrands;
+    if (!searchTerm.trim()) return carBrands;
+    
+    const searchLower = searchTerm.toLowerCase().trim();
     return carBrands.filter(brand =>
-      brand.toLowerCase().includes(searchTerm.toLowerCase())
+      brand.toLowerCase().includes(searchLower)
     );
   }, [carBrands, searchTerm]);
 
@@ -510,27 +548,37 @@ const fetchBrands = async () => {
     setSearchTerm('');
   };
 
+  const handleRetry = () => {
+    fetchBrands();
+  };
+
   return (
     <div className="relative mb-6">
       <div
-        className="flex items-center justify-between p-3 border border-gray-700 rounded-lg bg-gray-800 cursor-pointer"
+        className="flex items-center justify-between p-3 border border-gray-700 rounded-lg bg-gray-800 cursor-pointer hover:border-gray-600 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center">
           <span className="text-white">
             {selectedBrand || "Select Brand"}
           </span>
+          {selectedBrand && (
+            <span className="ml-2 text-xs text-gray-400">
+              ({carBrands.length} total brands available)
+            </span>
+          )}
         </div>
-        <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+        <ChevronDownIcon className={`h-5 w-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (
         <div className="absolute z-30 mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg overflow-hidden">
           <div className="p-2">
+            {/* Search Input */}
             <div className="mb-2 relative">
               <input
                 type="text"
-                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-white"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:border-indigo-500 focus:outline-none"
                 placeholder="Search brands..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -546,38 +594,79 @@ const fetchBrands = async () => {
               )}
             </div>
 
+            {/* Results area */}
             <div className="max-h-60 overflow-y-auto">
               {isLoading ? (
                 <div className="text-center py-4">
-                  <div className="inline-block animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>
-                  <p className="text-gray-400 mt-2">Loading brands...</p>
+                  <div className="inline-block animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500 mb-2"></div>
+                  <p className="text-gray-400 text-sm">Loading brands...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-4">
+                  <div className="text-red-400 mb-2 flex items-center justify-center">
+                    <ExclamationCircleIcon className="h-5 w-5 mr-1" />
+                    Error loading brands
+                  </div>
+                  <p className="text-gray-400 text-xs mb-3">{error}</p>
+                  <button
+                    onClick={handleRetry}
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : (
-                filteredBrands.length > 0 ? (
-                  filteredBrands.map(brand => (
-                    <div
-                      key={brand}
-                      className={`
-                        p-2 cursor-pointer hover:bg-gray-800 rounded-md
-                        ${selectedBrand === brand ? 'bg-indigo-900' : ''}
-                      `}
-                      onClick={() => handleSelectBrand(brand)}
-                    >
-                      <div className="flex items-center">
-                        <span className={`${selectedBrand === brand ? 'text-white' : 'text-gray-300'}`}>
-                          {brand}
-                        </span>
-                        {selectedBrand === brand && (
-                          <CheckIcon className="h-4 w-4 text-indigo-400 ml-auto" />
-                        )}
-                      </div>
+                <>
+                  {/* Show total count */}
+                  {!searchTerm && carBrands.length > 0 && (
+                    <div className="text-xs text-gray-500 mb-2 px-2">
+                      {carBrands.length} brands available
                     </div>
-                  ))
-                ) : (
-                  <p className="text-center py-4 text-gray-400">
-                    No brands found matching "{searchTerm}"
-                  </p>
-                )
+                  )}
+                  
+                  {filteredBrands.length > 0 ? (
+                    <>
+                      {searchTerm && (
+                        <div className="text-xs text-gray-500 mb-2 px-2">
+                          {filteredBrands.length} of {carBrands.length} brands match "{searchTerm}"
+                        </div>
+                      )}
+                      {filteredBrands.map(brand => (
+                        <div
+                          key={brand}
+                          className={`
+                            p-2 cursor-pointer hover:bg-gray-800 rounded-md transition-colors
+                            ${selectedBrand === brand ? 'bg-indigo-900 border-l-4 border-indigo-500' : ''}
+                          `}
+                          onClick={() => handleSelectBrand(brand)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`${selectedBrand === brand ? 'text-white font-medium' : 'text-gray-300'}`}>
+                              {brand}
+                            </span>
+                            {selectedBrand === brand && (
+                              <CheckIcon className="h-4 w-4 text-indigo-400" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : carBrands.length > 0 ? (
+                    <div className="text-center py-4">
+                      <p className="text-gray-400 mb-2">No brands found matching "{searchTerm}"</p>
+                      <button
+                        onClick={() => handleSelectBrand(searchTerm)}
+                        className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded transition-colors"
+                      >
+                        Use "{searchTerm}" as brand
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-400">
+                      <p>No brands available</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -655,7 +744,7 @@ const ModelDropdown = ({ make, value, onChange }) => {
   const displayModels = useMemo(() => {
     if (searchTerm) return filteredModels;
     // If no search term, only show first 100 models
-    return models.slice(0, 100);
+    return models
   }, [filteredModels, models, searchTerm]);
 
   return (
@@ -752,11 +841,7 @@ const ModelDropdown = ({ make, value, onChange }) => {
                         </div>
                       )}
 
-                      {!searchTerm && models.length > 100 && (
-                        <p className="text-center py-2 text-sm text-gray-400">
-                          Showing 100 of {models.length} models. Type to search for more.
-                        </p>
-                      )}
+
                     </>
                   )}
                 </div>
