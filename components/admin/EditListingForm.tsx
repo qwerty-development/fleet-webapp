@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Car } from "@/types";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { 
+  XMarkIcon, 
+  ChevronUpIcon, 
+  ChevronDownIcon, 
+  TrashIcon,
+  PhotoIcon,
+  ExclamationTriangleIcon
+} from "@heroicons/react/24/outline";
 
 interface EditListingFormProps {
   listing: Car;
@@ -113,6 +120,7 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
     return {};
   };
 
+  // Initialize form data state
   const [formData, setFormData] = useState({
     make: listing.make || "",
     model: listing.model || "",
@@ -129,9 +137,21 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
     category: listing.category || "",
   });
 
+  // Initialize features and images state
   const [selectedFeatures, setSelectedFeatures] = useState(parseFeatures());
+  const [images, setImages] = useState<string[]>(listing.images || []);
+  const [originalImages] = useState<string[]>(listing.images || []);
+  const [imagesModified, setImagesModified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<number | null>(null);
+
+  // Track if images have been modified
+  useEffect(() => {
+    const hasChanged = images.length !== originalImages.length || 
+      images.some((img, index) => img !== originalImages[index]);
+    setImagesModified(hasChanged);
+  }, [images, originalImages]);
 
   // Handle input changes for regular form fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -158,6 +178,49 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
       ...prev,
       [featureId]: !prev[featureId]
     }));
+  };
+
+  // Image Management Functions
+  const moveImageUp = (index: number) => {
+    if (index === 0) return; // Can't move first image up
+    
+    const newImages = [...images];
+    const temp = newImages[index];
+    newImages[index] = newImages[index - 1];
+    newImages[index - 1] = temp;
+    
+    setImages(newImages);
+  };
+
+  const moveImageDown = (index: number) => {
+    if (index === images.length - 1) return; // Can't move last image down
+    
+    const newImages = [...images];
+    const temp = newImages[index];
+    newImages[index] = newImages[index + 1];
+    newImages[index + 1] = temp;
+    
+    setImages(newImages);
+  };
+
+  const deleteImage = (index: number) => {
+    const newImages = images.filter((_, i) => i !== index);
+    setImages(newImages);
+    setShowDeleteConfirmation(null);
+  };
+
+  const confirmDeleteImage = (index: number) => {
+    setShowDeleteConfirmation(index);
+  };
+
+  const cancelDeleteImage = () => {
+    setShowDeleteConfirmation(null);
+  };
+
+  // Reset images to original state
+  const resetImages = () => {
+    setImages([...originalImages]);
+    setShowDeleteConfirmation(null);
   };
 
   // Validate form before submission
@@ -197,7 +260,8 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
       // Create a data object with all the fields we want to update
       const dataToSubmit = {
         ...formData,
-        features: prepareFeatures() // Convert selected features to array format
+        features: prepareFeatures(),
+        images: images // Include the modified images array
       };
       
       onSubmit(dataToSubmit);
@@ -209,7 +273,7 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gray-800 z-10 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white">Edit Listing</h2>
           <button
@@ -222,6 +286,151 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Image Management Section */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-white">Image Management</h3>
+              {imagesModified && (
+                <button
+                  type="button"
+                  onClick={resetImages}
+                  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded-md text-sm transition-colors"
+                >
+                  Reset Images
+                </button>
+              )}
+            </div>
+
+            {images.length === 0 ? (
+              <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+                <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-400">No images available for this listing</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-sm text-gray-300 mb-3">
+                  {images.length} image{images.length !== 1 ? 's' : ''} • First image will be the primary image
+                  {imagesModified && (
+                    <span className="ml-2 px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs">
+                      Modified
+                    </span>
+                  )}
+                </div>
+
+                {images.map((imageUrl, index) => (
+                  <div
+                    key={`${imageUrl}-${index}`}
+                    className={`bg-gray-700/50 border border-gray-600 rounded-lg p-4 transition-all ${
+                      showDeleteConfirmation === index ? 'border-red-500 bg-red-500/10' : ''
+                    }`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      {/* Image Preview */}
+                      <div className="flex-shrink-0">
+                        <img
+                          src={imageUrl}
+                          alt={`Car image ${index + 1}`}
+                          className="w-20 h-20 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder-car.jpg';
+                          }}
+                        />
+                      </div>
+
+                      {/* Image Details */}
+                      <div className="flex-grow min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-white font-medium">
+                            Image {index + 1}
+                          </span>
+                          {index === 0 && (
+                            <span className="px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-300 text-sm truncate">
+                          {imageUrl}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center space-x-2">
+                        {showDeleteConfirmation === index ? (
+                          // Delete Confirmation
+                          <div className="flex items-center space-x-2 bg-red-500/20 border border-red-500/30 rounded-lg px-3 py-2">
+                            <ExclamationTriangleIcon className="h-4 w-4 text-red-400" />
+                            <span className="text-red-400 text-sm">Delete?</span>
+                            <button
+                              type="button"
+                              onClick={() => deleteImage(index)}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition-colors"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelDeleteImage}
+                              className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          // Normal Action Buttons
+                          <>
+                            {/* Move Up Button */}
+                            <button
+                              type="button"
+                              onClick={() => moveImageUp(index)}
+                              disabled={index === 0}
+                              className={`p-2 rounded-md transition-colors ${
+                                index === 0
+                                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-600 hover:bg-gray-500 text-white'
+                              }`}
+                              title="Move up"
+                            >
+                              <ChevronUpIcon className="h-4 w-4" />
+                            </button>
+
+                            {/* Move Down Button */}
+                            <button
+                              type="button"
+                              onClick={() => moveImageDown(index)}
+                              disabled={index === images.length - 1}
+                              className={`p-2 rounded-md transition-colors ${
+                                index === images.length - 1
+                                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                  : 'bg-gray-600 hover:bg-gray-500 text-white'
+                              }`}
+                              title="Move down"
+                            >
+                              <ChevronDownIcon className="h-4 w-4" />
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              type="button"
+                              onClick={() => confirmDeleteImage(index)}
+                              className="p-2 bg-red-600/80 hover:bg-red-600 text-white rounded-md transition-colors"
+                              title="Delete image"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Separator */}
+          <div className="border-t border-gray-700"></div>
+
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
