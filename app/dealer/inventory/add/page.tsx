@@ -472,7 +472,7 @@ const fetchBrands = async () => {
     const { data, error } = await supabase
       .from('allcars')
       .select('make')
-      .order('make');
+
 
     if (error) throw error;
 
