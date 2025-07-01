@@ -50,77 +50,53 @@ interface CarMakeModelTrim {
   trim: string[] | null;
 }
 
-// Searchable Select Component
-const SearchableSelect: React.FC<{
+// Enhanced Searchable Select Component for Makes
+interface SearchableSelectProps {
   options: string[];
   value: string;
   onChange: (value: string) => void;
-  placeholder: string;
-  isLoading?: boolean;
+  placeholder?: string;
   className?: string;
-}> = ({ options, value, onChange, placeholder, isLoading = false, className = "" }) => {
+}
+
+const SearchableSelect: React.FC<SearchableSelectProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder = "Search makes...",
+  className = ""
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [displayValue, setDisplayValue] = useState("");
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  // Update display value when value prop changes
+  useEffect(() => {
+    setDisplayValue(value || "");
+  }, [value]);
 
   // Filter options based on search term
   const filteredOptions = useMemo(() => {
-    if (!searchTerm) return options;
-    return options.filter(option =>
-      option.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const allOptions = ["", ...options]; // Include "All Makes" option
+    if (!searchTerm) return allOptions;
+    
+    return allOptions.filter(option => {
+      if (option === "") return "All Makes".toLowerCase().includes(searchTerm.toLowerCase());
+      return option.toLowerCase().includes(searchTerm.toLowerCase());
+    });
   }, [options, searchTerm]);
 
-  // Handle option selection
-  const handleSelect = useCallback((option: string) => {
-    onChange(option);
-    setSearchTerm("");
-    setIsOpen(false);
+  // Reset highlighted index when filtered options change
+  useEffect(() => {
     setHighlightedIndex(-1);
-  }, [onChange]);
+  }, [filteredOptions]);
 
-  // Handle keyboard navigation
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isOpen) {
-      if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        setIsOpen(true);
-        setHighlightedIndex(0);
-      }
-      return;
-    }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev => 
-          prev < filteredOptions.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev => 
-          prev > 0 ? prev - 1 : filteredOptions.length - 1
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
-          handleSelect(filteredOptions[highlightedIndex]);
-        }
-        break;
-      case 'Escape':
-        setIsOpen(false);
-        setSearchTerm("");
-        setHighlightedIndex(-1);
-        inputRef.current?.blur();
-        break;
-    }
-  }, [isOpen, filteredOptions, highlightedIndex, handleSelect]);
-
-  // Handle clicking outside to close
+  // Handle clicking outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -130,135 +106,180 @@ const SearchableSelect: React.FC<{
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Reset search when options change
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev < filteredOptions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : prev);
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+          handleSelect(filteredOptions[highlightedIndex]);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+        inputRef.current?.blur();
+        break;
+      case "Tab":
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Scroll highlighted option into view
   useEffect(() => {
+    if (highlightedIndex >= 0 && optionsRef.current) {
+      const highlightedElement = optionsRef.current.children[highlightedIndex] as HTMLElement;
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth"
+        });
+      }
+    }
+  }, [highlightedIndex]);
+
+  const handleSelect = (option: string) => {
+    onChange(option);
+    setDisplayValue(option);
+    setIsOpen(false);
     setSearchTerm("");
     setHighlightedIndex(-1);
-  }, [options]);
+  };
 
-  // Get display value
-  const displayValue = value || placeholder;
-  const hasValue = Boolean(value);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setSearchTerm(newValue);
+    setDisplayValue(newValue);
+    
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
+    setSearchTerm(displayValue);
+  };
+
+  const handleClear = () => {
+    onChange("");
+    setDisplayValue("");
+    setSearchTerm("");
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const getDisplayText = (option: string) => {
+    return option === "" ? "All Makes" : option;
+  };
+
+  const getOptionIcon = (option: string) => {
+    if (option === "") {
+      return (
+        <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center">
+          <span className="text-xs text-gray-300">All</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+        <img
+          src={getLogoUrl(option)}
+          alt={`${option} logo`}
+          className="w-5 h-5 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+            const parent = (e.target as HTMLImageElement).parentElement;
+            if (parent) {
+              parent.innerHTML = `<span class="text-xs text-white font-bold">${option.charAt(0).toUpperCase()}</span>`;
+            }
+          }}
+        />
+      </div>
+    );
+  };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div ref={dropdownRef} className={`relative ${className}`} style={{ zIndex: 1000 }}>
       <div className="relative">
         <input
           ref={inputRef}
           type="text"
-          className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white pr-10"
-          placeholder={displayValue}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onFocus={() => setIsOpen(true)}
+          value={isOpen ? searchTerm : (displayValue || "")}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
-          disabled={isLoading}
+          placeholder={value ? getDisplayText(value) : placeholder}
+          className="w-full px-4 py-2.5 pr-10 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-gray-400"
         />
         
-        {/* Clear button */}
-        {hasValue && (
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2 space-x-1">
+          {value && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-1 hover:bg-gray-600 rounded transition-colors"
+              title="Clear selection"
+            >
+              <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-white" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange("");
-              setSearchTerm("");
-              setIsOpen(false);
-            }}
-            className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 hover:bg-gray-600 rounded transition-colors"
           >
-            <XMarkIcon className="h-4 w-4" />
+            <ChevronUpDownIcon className="h-4 w-4 text-gray-400" />
           </button>
-        )}
-
-        {/* Dropdown arrow */}
-        <button
-          type="button"
-          onClick={() => {
-            setIsOpen(!isOpen);
-            if (!isOpen) {
-              inputRef.current?.focus();
-            }
-          }}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-400"></div>
-          ) : (
-            <ChevronUpDownIcon className="h-4 w-4" />
-          )}
-        </button>
+        </div>
       </div>
 
-      {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          {/* All option */}
-          <button
-            type="button"
-            onClick={() => handleSelect("")}
-            className={`w-full px-4 py-2 text-left hover:bg-gray-600 transition-colors flex items-center justify-between ${
-              !value ? 'bg-gray-600 text-white' : 'text-gray-300'
-            }`}
-          >
-            <span>All Makes</span>
-            {!value && <CheckIcon className="h-4 w-4 text-indigo-400" />}
-          </button>
-
-          {/* Filtered options */}
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((option, index) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleSelect(option)}
-                className={`w-full px-4 py-2 text-left transition-colors flex items-center justify-between ${
-                  index === highlightedIndex 
-                    ? 'bg-indigo-600 text-white' 
-                    : value === option 
-                    ? 'bg-gray-600 text-white' 
-                    : 'text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                <div className="flex items-center">
-                  <img
-                    src={getLogoUrl(option)}
-                    alt={`${option} logo`}
-                    className="h-5 w-5 object-contain mr-2"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                  <span>{option}</span>
+        <div className="absolute z-[9999] w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-2xl max-h-60 overflow-auto">
+          <div ref={optionsRef}>
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-3 text-gray-400 text-sm">
+                No makes found matching "{searchTerm}"
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => (
+                <div
+                  key={option || "all"}
+                  onClick={() => handleSelect(option)}
+                  className={`px-4 py-3 cursor-pointer flex items-center space-x-3 transition-colors ${
+                    index === highlightedIndex
+                      ? "bg-indigo-600 text-white"
+                      : "text-gray-200 hover:bg-gray-600"
+                  }`}
+                >
+                  {getOptionIcon(option)}
+                  <span className="flex-1">{getDisplayText(option)}</span>
+                  {value === option && (
+                    <CheckIcon className="h-4 w-4 text-indigo-400" />
+                  )}
                 </div>
-                {value === option && <CheckIcon className="h-4 w-4 text-indigo-400" />}
-              </button>
-            ))
-          ) : (
-            <div className="px-4 py-2 text-gray-400 text-sm">
-              {searchTerm ? `No makes found matching "${searchTerm}"` : "No makes available"}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Selected value indicator */}
-      {hasValue && !isOpen && (
-        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 flex items-center pointer-events-none">
-          <img
-            src={getLogoUrl(value)}
-            alt={`${value} logo`}
-            className="h-5 w-5 object-contain mr-2"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-          <span className="text-white">{value}</span>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -356,7 +377,6 @@ export default function CarMakesModelsAdmin() {
   const [carMakesModels, setCarMakesModels] = useState<CarMakeModelTrim[]>([]);
   const [uniqueMakes, setUniqueMakes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isMakesLoading, setIsMakesLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedMake, setSelectedMake] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("make");
@@ -371,12 +391,50 @@ export default function CarMakesModelsAdmin() {
   const [newTrims, setNewTrims] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   
-  // Enhanced fetch unique makes with pagination
-  const fetchUniqueMakes = useCallback(async () => {
-    setIsMakesLoading(true);
+  // Fetch car makes and models with filters
+  const fetchCarMakesModels = useCallback(async () => {
+    setIsLoading(true);
     
     try {
-      let allMakes:any = [];
+      let query = supabase
+        .from('allcars')
+        .select('*', { count: 'exact' });
+      
+      // Apply make filter
+      if (selectedMake) {
+        query = query.eq('make', selectedMake);
+      }
+      
+      // Apply search filter
+      if (searchQuery) {
+        query = query.or(`make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%`);
+      }
+      
+      // Apply sorting
+      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+      
+      // Apply pagination
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+      
+      const { data, count, error } = await query.range(from, to);
+      
+      if (error) throw error;
+      
+      setCarMakesModels(data || []);
+      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+    } catch (error: any) {
+      console.error("Error fetching car makes/models:", error);
+      alert(`Failed to fetch data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedMake, searchQuery, sortBy, sortOrder, currentPage, supabase]);
+  
+  // Fetch unique makes for the filter dropdown with proper pagination
+  const fetchUniqueMakes = useCallback(async () => {
+    try {
+      let allMakes = [];
       let hasMore = true;
       let offset = 0;
       const limit = 1000;
@@ -422,56 +480,16 @@ export default function CarMakesModelsAdmin() {
 
       if (uniqueMakes.length === 0) {
         console.warn('No valid makes found in database');
+        setUniqueMakes([]);
+        return;
       }
 
       setUniqueMakes(uniqueMakes);
     } catch (error: any) {
       console.error("Error fetching unique makes:", error);
       setUniqueMakes([]);
-    } finally {
-      setIsMakesLoading(false);
     }
   }, [supabase]);
-  
-  // Fetch car makes and models with filters
-  const fetchCarMakesModels = useCallback(async () => {
-    setIsLoading(true);
-    
-    try {
-      let query = supabase
-        .from('allcars')
-        .select('*', { count: 'exact' });
-      
-      // Apply make filter
-      if (selectedMake) {
-        query = query.eq('make', selectedMake);
-      }
-      
-      // Apply search filter
-      if (searchQuery) {
-        query = query.or(`make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%`);
-      }
-      
-      // Apply sorting
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-      
-      // Apply pagination
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      
-      const { data, count, error } = await query.range(from, to);
-      
-      if (error) throw error;
-      
-      setCarMakesModels(data || []);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
-    } catch (error: any) {
-      console.error("Error fetching car makes/models:", error);
-      alert(`Failed to fetch data: ${error.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedMake, searchQuery, sortBy, sortOrder, currentPage, supabase]);
   
   useEffect(() => {
     fetchCarMakesModels();
@@ -734,8 +752,8 @@ export default function CarMakesModelsAdmin() {
           </div>
           
           {/* Search and Filters */}
-          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6">
-            <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6 relative z-20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Input */}
               <div className="relative md:col-span-2">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -759,21 +777,19 @@ export default function CarMakesModelsAdmin() {
                 )}
               </div>
               
-              {/* Enhanced Make Filter with Searchable Select */}
-              <div>
-                <SearchableSelect
-                  options={uniqueMakes}
-                  value={selectedMake}
-                  onChange={handleMakeChange}
-                  placeholder="All Makes"
-                  isLoading={isMakesLoading}
-                />
-              </div>
+              {/* Enhanced Searchable Make Filter */}
+              <SearchableSelect
+                options={uniqueMakes}
+                value={selectedMake}
+                onChange={handleMakeChange}
+                placeholder="Search makes..."
+              />
               
               {/* Action Buttons */}
               <div className="flex gap-2 md:col-span-3">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSearchSubmit}
                   className="flex-1 flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
                 >
                   <MagnifyingGlassIcon className="h-4 w-4 mr-1.5" />
@@ -789,11 +805,55 @@ export default function CarMakesModelsAdmin() {
                   Clear Filters
                 </button>
               </div>
-            </form>
+            </div>
           </div>
           
+          {/* Current Filter Display */}
+          {(selectedMake || searchQuery) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-gray-400 text-sm">Active filters:</span>
+              {selectedMake && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-indigo-600/20 text-indigo-300 rounded-full text-sm border border-indigo-500/30">
+                  <div className="w-4 h-4 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+                    <img
+                      src={getLogoUrl(selectedMake)}
+                      alt={`${selectedMake} logo`}
+                      className="w-3 h-3 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                        const parent = (e.target as HTMLImageElement).parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span class="text-xs text-white font-bold">${selectedMake.charAt(0).toUpperCase()}</span>`;
+                        }
+                      }}
+                    />
+                  </div>
+                  <span>Make: {selectedMake}</span>
+                  <button
+                    onClick={() => setSelectedMake("")}
+                    className="hover:text-indigo-100 transition-colors"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              {searchQuery && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-emerald-600/20 text-emerald-300 rounded-full text-sm border border-emerald-500/30">
+                  <MagnifyingGlassIcon className="h-3 w-3" />
+                  <span>Search: "{searchQuery}"</span>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="hover:text-emerald-100 transition-colors"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Makes, Models, and Trims Table */}
-          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl overflow-hidden mb-6">
+          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl overflow-hidden mb-6 relative z-10">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-700/50">
