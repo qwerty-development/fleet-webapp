@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { 
   ChevronLeftIcon, 
@@ -13,7 +13,9 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
   ArrowDownTrayIcon,
-  TagIcon
+  TagIcon,
+  ChevronUpDownIcon,
+  CheckIcon
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 
@@ -47,6 +49,242 @@ interface CarMakeModelTrim {
   model: string;
   trim: string[] | null;
 }
+
+// Enhanced Searchable Select Component for Makes
+interface SearchableSelectProps {
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+const SearchableSelect: React.FC<SearchableSelectProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder = "Search makes...",
+  className = ""
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [displayValue, setDisplayValue] = useState("");
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  // Update display value when value prop changes
+  useEffect(() => {
+    setDisplayValue(value || "");
+  }, [value]);
+
+  // Filter options based on search term
+  const filteredOptions = useMemo(() => {
+    const allOptions = ["", ...options]; // Include "All Makes" option
+    if (!searchTerm) return allOptions;
+    
+    return allOptions.filter(option => {
+      if (option === "") return "All Makes".toLowerCase().includes(searchTerm.toLowerCase());
+      return option.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  }, [options, searchTerm]);
+
+  // Reset highlighted index when filtered options change
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [filteredOptions]);
+
+  // Handle clicking outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex(prev => 
+          prev < filteredOptions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : prev);
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+          handleSelect(filteredOptions[highlightedIndex]);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+        inputRef.current?.blur();
+        break;
+      case "Tab":
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Scroll highlighted option into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && optionsRef.current) {
+      const highlightedElement = optionsRef.current.children[highlightedIndex] as HTMLElement;
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({
+          block: "nearest",
+          behavior: "smooth"
+        });
+      }
+    }
+  }, [highlightedIndex]);
+
+  const handleSelect = (option: string) => {
+    onChange(option);
+    setDisplayValue(option);
+    setIsOpen(false);
+    setSearchTerm("");
+    setHighlightedIndex(-1);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setSearchTerm(newValue);
+    setDisplayValue(newValue);
+    
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
+    setSearchTerm(displayValue);
+  };
+
+  const handleClear = () => {
+    onChange("");
+    setDisplayValue("");
+    setSearchTerm("");
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const getDisplayText = (option: string) => {
+    return option === "" ? "All Makes" : option;
+  };
+
+  const getOptionIcon = (option: string) => {
+    if (option === "") {
+      return (
+        <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center">
+          <span className="text-xs text-gray-300">All</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+        <img
+          src={getLogoUrl(option)}
+          alt={`${option} logo`}
+          className="w-5 h-5 object-contain"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+            const parent = (e.target as HTMLImageElement).parentElement;
+            if (parent) {
+              parent.innerHTML = `<span class="text-xs text-white font-bold">${option.charAt(0).toUpperCase()}</span>`;
+            }
+          }}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div ref={dropdownRef} className={`relative ${className}`}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={isOpen ? searchTerm : (displayValue || "")}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onKeyDown={handleKeyDown}
+          placeholder={value ? getDisplayText(value) : placeholder}
+          className="w-full px-4 py-2.5 pr-10 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white placeholder-gray-400"
+        />
+        
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2 space-x-1">
+          {value && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-1 hover:bg-gray-600 rounded transition-colors"
+              title="Clear selection"
+            >
+              <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-white" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 hover:bg-gray-600 rounded transition-colors"
+          >
+            <ChevronUpDownIcon className="h-4 w-4 text-gray-400" />
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
+          <div ref={optionsRef}>
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-3 text-gray-400 text-sm">
+                No makes found matching "{searchTerm}"
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => (
+                <div
+                  key={option || "all"}
+                  onClick={() => handleSelect(option)}
+                  className={`px-4 py-3 cursor-pointer flex items-center space-x-3 transition-colors ${
+                    index === highlightedIndex
+                      ? "bg-indigo-600 text-white"
+                      : "text-gray-200 hover:bg-gray-600"
+                  }`}
+                >
+                  {getOptionIcon(option)}
+                  <span className="flex-1">{getDisplayText(option)}</span>
+                  {value === option && (
+                    <CheckIcon className="h-4 w-4 text-indigo-400" />
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Trim Badge Component
 const TrimBadge: React.FC<{ trim: string; onRemove?: () => void; isEditable?: boolean }> = ({ 
@@ -203,10 +441,10 @@ export default function CarMakesModelsAdmin() {
       
       if (error) throw error;
       
-      // Extract unique makes
+      // Extract unique makes and sort them
       const makes = Array.from(
         new Set(data.map((item: { make: string }) => item.make))
-      ).filter(Boolean);
+      ).filter(Boolean).sort();
       
       setUniqueMakes(makes);
     } catch (error: any) {
@@ -232,8 +470,8 @@ export default function CarMakesModelsAdmin() {
   }, [fetchCarMakesModels]);
   
   // Handle make filter change
-  const handleMakeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedMake(e.target.value);
+  const handleMakeChange = useCallback((value: string) => {
+    setSelectedMake(value);
     setCurrentPage(1);
   }, []);
   
@@ -476,7 +714,7 @@ export default function CarMakesModelsAdmin() {
           
           {/* Search and Filters */}
           <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6">
-            <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Input */}
               <div className="relative md:col-span-2">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -500,26 +738,19 @@ export default function CarMakesModelsAdmin() {
                 )}
               </div>
               
-              {/* Make Filter */}
-              <div>
-                <select
-                  value={selectedMake}
-                  onChange={handleMakeChange}
-                  className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white"
-                >
-                  <option value="">All Makes</option>
-                  {uniqueMakes.map((make) => (
-                    <option key={make} value={make}>
-                      {make}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Enhanced Searchable Make Filter */}
+              <SearchableSelect
+                options={uniqueMakes}
+                value={selectedMake}
+                onChange={handleMakeChange}
+                placeholder="Search makes..."
+              />
               
               {/* Action Buttons */}
               <div className="flex gap-2 md:col-span-3">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSearchSubmit}
                   className="flex-1 flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
                 >
                   <MagnifyingGlassIcon className="h-4 w-4 mr-1.5" />
@@ -535,8 +766,52 @@ export default function CarMakesModelsAdmin() {
                   Clear Filters
                 </button>
               </div>
-            </form>
+            </div>
           </div>
+          
+          {/* Current Filter Display */}
+          {(selectedMake || searchQuery) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-gray-400 text-sm">Active filters:</span>
+              {selectedMake && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-indigo-600/20 text-indigo-300 rounded-full text-sm border border-indigo-500/30">
+                  <div className="w-4 h-4 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
+                    <img
+                      src={getLogoUrl(selectedMake)}
+                      alt={`${selectedMake} logo`}
+                      className="w-3 h-3 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                        const parent = (e.target as HTMLImageElement).parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span class="text-xs text-white font-bold">${selectedMake.charAt(0).toUpperCase()}</span>`;
+                        }
+                      }}
+                    />
+                  </div>
+                  <span>Make: {selectedMake}</span>
+                  <button
+                    onClick={() => setSelectedMake("")}
+                    className="hover:text-indigo-100 transition-colors"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              {searchQuery && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-emerald-600/20 text-emerald-300 rounded-full text-sm border border-emerald-500/30">
+                  <MagnifyingGlassIcon className="h-3 w-3" />
+                  <span>Search: "{searchQuery}"</span>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="hover:text-emerald-100 transition-colors"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           
           {/* Makes, Models, and Trims Table */}
           <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl overflow-hidden mb-6">
