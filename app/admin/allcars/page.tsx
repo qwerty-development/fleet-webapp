@@ -219,7 +219,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   };
 
   return (
-    <div ref={dropdownRef} className={`relative ${className}`} style={{ zIndex: 1000 }}>
+    <div ref={dropdownRef} className={`relative ${className}`}>
       <div className="relative">
         <input
           ref={inputRef}
@@ -254,7 +254,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute z-[9999] w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-2xl max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
           <div ref={optionsRef}>
             {filteredOptions.length === 0 ? (
               <div className="px-4 py-3 text-gray-400 text-sm">
@@ -431,63 +431,24 @@ export default function CarMakesModelsAdmin() {
     }
   }, [selectedMake, searchQuery, sortBy, sortOrder, currentPage, supabase]);
   
-  // Fetch unique makes for the filter dropdown with proper pagination
+  // Fetch unique makes for the filter dropdown
   const fetchUniqueMakes = useCallback(async () => {
     try {
-      let allMakes:any = [];
-      let hasMore = true;
-      let offset = 0;
-      const limit = 1000;
-
-      // Fetch all makes with pagination to avoid missing any due to default limits
-      while (hasMore) {
-        const { data, error, count } = await supabase
-          .from('allcars')
-          .select('make', { count: 'exact' })
-          .range(offset, offset + limit - 1)
-          .order('make');
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allMakes = [...allMakes, ...data];
-          offset += limit;
-          hasMore = data.length === limit; // Continue if we got a full batch
-        } else {
-          hasMore = false;
-        }
-
-        // Safety check to prevent infinite loops
-        if (offset > 50000) {
-          console.warn('Stopped fetching after 50k records to prevent infinite loop');
-          break;
-        }
-      }
-
-      console.log(`Fetched ${allMakes.length} total make records`);
-
-
-      const uniqueMakes:any = [Array.from (new Set(
-        allMakes
-          .map((item: { make: any; }) => item.make)
-          .filter((make: any) => make && typeof make === 'string' && make.trim().length > 0) 
-          .map((make: string) => make.trim()) 
-          .filter((make: string | any[]) => make.length > 0)
-      ))]
-      .sort((a:any, b:any) => a.toLowerCase().localeCompare(b.toLowerCase())); // Sort alphabetically, case-insensitive
-
-      console.log(`Processed to ${uniqueMakes.length} unique makes:`, uniqueMakes.slice(0, 10), '...');
-
-      if (uniqueMakes.length === 0) {
-        console.warn('No valid makes found in database');
-        setUniqueMakes([]);
-        return;
-      }
-
-      setUniqueMakes(uniqueMakes);
+      const { data, error } = await supabase
+        .from('allcars')
+        .select('make')
+        .order('make');
+      
+      if (error) throw error;
+      
+      // Extract unique makes and sort them
+      const makes = Array.from(
+        new Set(data.map((item: { make: string }) => item.make))
+      ).filter(Boolean).sort();
+      
+      setUniqueMakes(makes);
     } catch (error: any) {
       console.error("Error fetching unique makes:", error);
-      setUniqueMakes([]);
     }
   }, [supabase]);
   
@@ -752,7 +713,7 @@ export default function CarMakesModelsAdmin() {
           </div>
           
           {/* Search and Filters */}
-          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6 relative z-20">
+          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Input */}
               <div className="relative md:col-span-2">
@@ -853,7 +814,7 @@ export default function CarMakesModelsAdmin() {
           )}
           
           {/* Makes, Models, and Trims Table */}
-          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl overflow-hidden mb-6 relative z-10">
+          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl overflow-hidden mb-6">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-700/50">
