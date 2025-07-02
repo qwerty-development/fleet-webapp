@@ -2,6 +2,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Head from "next/head";
+import { createClient } from "@/utils/supabase/client";
+import { useAuth } from "@/utils/AuthContext";
+import { useGuestUser } from "@/utils/GuestUserContext";
+import { detectPlatform, attemptAndroidAppLaunch, getDeepLink, DEEP_LINK_CONFIG } from "@/utils/androidDeepLinkUtils"
 import {
   CalendarIcon,
   ClockIcon,
@@ -16,13 +21,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
-import { createClient } from "@/utils/supabase/client";
 import DealershipCarsSection from "@/components/dealerships/DealershipCarsSection";
 import FavoriteButton from "@/components/home/FavoriteButton";
-import { useAuth } from "@/utils/AuthContext";
-import { useGuestUser } from "@/utils/GuestUserContext";
 import { FaWhatsapp } from "react-icons/fa";
-// Import Material Design Icons for feature icons
 import {
   MdBluetooth,
   MdMap,
@@ -45,11 +46,10 @@ import {
   MdSettings,
   MdWindow,
   MdInfo,
-  // Additional icons for other categories
   MdLightbulb,
   MdTireRepair,
-  MdFlipToFront, // For mirrors
-  MdSensors, // Instead of MdCameraOutdoor
+  MdFlipToFront,
+  MdSensors,
   MdRoofing,
   MdOpacity,
   MdChair,
@@ -63,7 +63,8 @@ import {
 } from "react-icons/md";
 import Navbar from "@/components/home/Navbar";
 import MobileAppBanner from "@/components/MobileBanner";
-// VEHICLE_FEATURES mapping
+
+// [Previous VEHICLE_FEATURES and other constants remain the same...]
 const VEHICLE_FEATURES = {
   tech: [
     {
@@ -293,12 +294,10 @@ const VEHICLE_FEATURES = {
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-// Helper function to get icon for feature
+// [Previous helper functions remain the same...]
 const getFeatureIcon = (feature: string) => {
-  // Normalize the feature ID by converting to lowercase, removing spaces, and replacing spaces with underscores
   const normalizedFeature = feature.toLowerCase().replace(/\s+/g, "_");
 
-  // Check each category in VEHICLE_FEATURES
   for (const category in VEHICLE_FEATURES) {
     const found = VEHICLE_FEATURES[
       category as keyof typeof VEHICLE_FEATURES
@@ -310,13 +309,11 @@ const getFeatureIcon = (feature: string) => {
     if (found) return found.icon;
   }
 
-  // Default icon if no match found
   return <MdInfo className="w-4 h-4 mr-1" />;
 };
 
-// Updated Car interface to match your global types
 export interface Car {
-  id: string; // String instead of number
+  id: string;
   make: string;
   model: string;
   year: number;
@@ -354,7 +351,6 @@ export interface Car {
   views?: number;
 }
 
-// Helper: Get the logo URL
 export const getLogoUrl = (make: string, isLightMode: boolean) => {
   const formattedMake = make.toLowerCase().replace(/\s+/g, "-");
   switch (formattedMake) {
@@ -375,7 +371,6 @@ export const getLogoUrl = (make: string, isLightMode: boolean) => {
   }
 };
 
-// Helper: Compute relative time from listed_at (simple version)
 const getRelativeTime = (dateString: string) => {
   if (!dateString) return "Recently";
 
@@ -403,7 +398,6 @@ const getRelativeTime = (dateString: string) => {
   }
 };
 
-// A simple SpecItem component for the technical data grid
 interface SpecItemProps {
   icon: React.ReactNode;
   title: string;
@@ -420,14 +414,12 @@ const SpecItem: React.FC<SpecItemProps> = ({ icon, title, value }) => (
   </div>
 );
 
-// Loading state component
 const LoadingState = () => (
   <div className="min-h-screen flex items-center justify-center bg-white">
     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-accent"></div>
   </div>
 );
 
-// Thumbnail component for the image gallery
 const ImageThumbnail: React.FC<{
   src: string;
   isActive: boolean;
@@ -443,7 +435,7 @@ const ImageThumbnail: React.FC<{
   </div>
 );
 
-// App Redirect component for mobile devices
+// Simplified App Redirect Overlay for Android
 const AppRedirectOverlay = ({
   carId,
   onClose,
@@ -458,66 +450,38 @@ const AppRedirectOverlay = ({
   year: number;
 }) => {
   const [countdown, setCountdown] = useState(3);
-  const [redirectAttempted, setRedirectAttempted] = useState(false);
-  const [platform, setPlatform] = useState<"ios" | "android" | "unknown">(
-    "unknown"
-  );
-
-  const deepLink = `fleet://cars/${carId}`;
-  const appStoreLink = "https://apps.apple.com/app/6742141291"; // Replace with your app's App Store ID
-  const playStoreLink =
-    "https://play.google.com/store/apps/details?id=com.qwertyapp.clerkexpoquickstart";
+  const [redirectStatus, setRedirectStatus] = useState<"waiting" | "attempting" | "failed">("waiting");
+  const attemptedRef = useRef(false);
+  const { platform, isMobile } = detectPlatform();
 
   useEffect(() => {
-    if (platform && countdown === 0) {
-      // Create hidden iframe for iOS to prevent history disruption
-      if (platform === "ios") {
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = deepLink;
-        document.body.appendChild(iframe);
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 100);
-      } else {
-        // Direct redirection for Android
-        window.location.href = deepLink;
-      }
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (!attemptedRef.current) {
+      attemptedRef.current = true;
+      handleAppLaunch();
     }
-  }, [countdown, platform, deepLink]);
+  }, [countdown]);
 
-  useEffect(() => {
-    // Detect platform
-    const userAgent =
-      navigator.userAgent || navigator.vendor || (window as any).opera;
-    if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
-      setPlatform("ios");
-    } else if (/android/i.test(userAgent)) {
-      setPlatform("android");
+  const handleAppLaunch = async () => {
+    setRedirectStatus("attempting");
+    const deepLink = getDeepLink('car', carId);
+    
+    if (platform === 'android') {
+      const success = await attemptAndroidAppLaunch(deepLink);
+      setRedirectStatus(success ? "attempting" : "failed");
+    } else if (platform === 'ios') {
+      // iOS handling
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        setRedirectStatus("failed");
+      }, 2000);
     }
-
-    // Start countdown
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          // Attempt to open app when countdown reaches zero
-          window.location.href = deepLink;
-          setRedirectAttempted(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [deepLink]);
-
-  // Get appropriate store link
-  const getStoreLink = () => {
-    if (platform === "ios") return appStoreLink;
-    if (platform === "android") return playStoreLink;
-    return playStoreLink; // Default to Play Store
   };
 
   return (
@@ -525,7 +489,7 @@ const AppRedirectOverlay = ({
       <div className="bg-white rounded-xl max-w-md w-full p-6 text-center relative shadow-lg">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900"
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 text-xl"
         >
           ×
         </button>
@@ -541,31 +505,38 @@ const AppRedirectOverlay = ({
           {year} {make} {model}
         </p>
 
-        {countdown > 0 ? (
-          <div className="mb-6">
-            <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-            <p className="text-gray-500">Redirecting in {countdown}...</p>
-          </div>
-        ) : (
-          <div className="mb-6">
+        <div className="mb-6">
+          {redirectStatus === "waiting" && countdown > 0 && (
+            <>
+              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
+              <p className="text-gray-500">Redirecting in {countdown}...</p>
+            </>
+          )}
+          
+          {redirectStatus === "attempting" && (
+            <>
+              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
+              <p className="text-gray-500">Opening Fleet App...</p>
+            </>
+          )}
+          
+          {redirectStatus === "failed" && (
             <p className="text-gray-500">
-              {redirectAttempted
-                ? "Couldn't open the app automatically."
-                : "Opening app..."}
+              App not installed? Download Fleet to view this car.
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="space-y-3">
           <a
-            href={deepLink}
+            href={getDeepLink('car', carId)}
             className="block w-full py-3 bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
           >
             Open in Fleet App
           </a>
 
           <a
-            href={getStoreLink()}
+            href={platform === 'android' ? DEEP_LINK_CONFIG.playStoreUrl : DEEP_LINK_CONFIG.appStoreUrl}
             className="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium"
           >
             Download Fleet App
@@ -583,7 +554,7 @@ const AppRedirectOverlay = ({
   );
 };
 
-// Main component for the car details page
+// Main component
 export default function CarDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { user, isSignedIn } = useAuth();
@@ -596,45 +567,31 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const viewTracked = useRef<boolean>(false);
   const supabase = createClient();
 
-  // App redirect state
   const [showAppRedirect, setShowAppRedirect] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const redirectChecked = useRef(false);
 
-  // Check if it's a mobile device
+  // Auto-redirect for mobile devices
   useEffect(() => {
-    if (typeof window !== "undefined" && !redirectChecked.current) {
+    if (!redirectChecked.current && typeof window !== "undefined") {
       redirectChecked.current = true;
-
-      // Check if this is a mobile device
-      const userAgent =
-        navigator.userAgent || navigator.vendor || (window as any).opera;
-      const isMobileDevice =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          userAgent
-        );
-      setIsMobile(isMobileDevice);
-
-      // Show redirect for mobile users
-      if (isMobileDevice) {
-        // Check if the user has a cookie indicating they prefer the web version
+      const { isMobile } = detectPlatform();
+      
+      if (isMobile) {
         const preferWeb = document.cookie.includes("preferWeb=true");
         if (!preferWeb) {
-          // Add a slight delay to ensure the page has loaded
           setTimeout(() => setShowAppRedirect(true), 1000);
         }
       }
     }
   }, []);
 
-  // Handle closing the redirect and setting preference
   const handleCloseRedirect = () => {
     setShowAppRedirect(false);
-    // Set a cookie to remember the preference for 24 hours
-    document.cookie = "preferWeb=true; max-age=86400; path=/";
+    // Set cookie to remember preference for 7 days
+    document.cookie = "preferWeb=true; max-age=604800; path=/";
   };
 
-  // Track car view
+  // [Rest of the component remains the same...]
   const trackCarView = useCallback(
     async (carId: string) => {
       if (viewTracked.current) return;
@@ -653,7 +610,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         }
 
         if (data !== null && car) {
-          // Update car state with new view count
           setCar((prevCar) => (prevCar ? { ...prevCar, views: data } : null));
         }
 
@@ -665,7 +621,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     [isGuest, guestId, user, supabase, car]
   );
 
-  // Track call button clicks
   const trackCallClick = useCallback(
     async (carId: string) => {
       try {
@@ -689,7 +644,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     [isGuest, guestId, user, supabase]
   );
 
-  // Track WhatsApp button clicks
   const trackWhatsAppClick = useCallback(
     async (carId: string) => {
       try {
@@ -713,13 +667,11 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     [isGuest, guestId, user, supabase]
   );
 
-  // Fetch car data
   useEffect(() => {
     const fetchCarData = async () => {
       try {
         setIsLoading(true);
 
-        // Fetch car details
         const { data: carData, error: carError } = await supabase
           .from("cars")
           .select(
@@ -740,11 +692,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
         if (!carData) {
           console.error("Car not found");
-          router.push("/not-found"); // Redirect to not found page
+          router.push("/not-found");
           return;
         }
 
-        // Process images
         let images = [];
         try {
           if (typeof carData.images === "string") {
@@ -757,7 +708,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           images = [];
         }
 
-        // Process features
         let features = [];
         try {
           if (typeof carData.features === "string") {
@@ -770,13 +720,11 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           features = [];
         }
 
-        // Format the car data
         const formattedCar: Car = {
           ...carData,
-          id: String(carData.id), // Ensure id is a string
+          id: String(carData.id),
           images: images,
           features: features,
-          // Add dealership info from the joined table
           dealership_id: carData.dealerships?.id,
           dealership_name: carData.dealerships?.name,
           dealership_logo: carData.dealerships?.logo,
@@ -799,14 +747,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     }
   }, [params.id, router, supabase]);
 
-  // Track car view when the page loads and car data is available
   useEffect(() => {
     if (car && !viewTracked.current) {
       trackCarView(car.id);
     }
   }, [car, trackCarView]);
 
-  // Navigation controls for the carousel
   const navigateCarousel = (direction: "prev" | "next") => {
     if (!car || !car.images || car.images.length <= 1) return;
 
@@ -821,23 +767,19 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
     setActiveImageIndex(newIndex);
 
-    // Scroll to the new image with iOS Safari compatibility
     if (carouselRef.current) {
       const scrollTarget = newIndex * carouselRef.current.clientWidth;
 
-      // For iOS Safari, use both methods for better compatibility
       try {
         carouselRef.current.scrollTo({
           left: scrollTarget,
           behavior: "smooth",
         });
       } catch (error) {
-        // Fallback for older iOS versions
         carouselRef.current.scrollLeft = scrollTarget;
       }
     }
 
-    // Ensure the active thumbnail is visible
     if (thumbnailsRef.current) {
       const thumbnail = thumbnailsRef.current.children[newIndex] as HTMLElement;
       if (thumbnail) {
@@ -850,14 +792,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             behavior: "smooth",
           });
         } catch (error) {
-          // Fallback for older browsers
           thumbnailsRef.current.scrollLeft = thumbnail.offsetLeft;
         }
       }
     }
   };
 
-  // Set the active image directly by clicking a thumbnail
   const setActiveImage = (index: number) => {
     setActiveImageIndex(index);
     if (carouselRef.current) {
@@ -869,25 +809,20 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           behavior: "smooth",
         });
       } catch (error) {
-        // Fallback for older iOS versions
         carouselRef.current.scrollLeft = scrollTarget;
       }
     }
   };
 
-  // Handle carousel scroll
   const handleCarouselScroll = useCallback(() => {
     if (carouselRef.current) {
-      // Use requestAnimationFrame for better iOS performance
       requestAnimationFrame(() => {
         if (carouselRef.current) {
           const scrollPosition = carouselRef.current.scrollLeft;
           const itemWidth = carouselRef.current.clientWidth;
 
-          // More precise index calculation for iOS Safari
           const index = Math.round(scrollPosition / itemWidth);
 
-          // Ensure index is within bounds
           const clampedIndex = Math.max(
             0,
             Math.min(index, (car?.images?.length || 1) - 1)
@@ -896,7 +831,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           if (clampedIndex !== activeImageIndex) {
             setActiveImageIndex(clampedIndex);
 
-            // Also scroll the thumbnail into view
             if (thumbnailsRef.current) {
               const thumbnail = thumbnailsRef.current.children[
                 clampedIndex
@@ -911,7 +845,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     behavior: "smooth",
                   });
                 } catch (error) {
-                  // Fallback for older browsers
                   thumbnailsRef.current.scrollLeft = thumbnail.offsetLeft;
                 }
               }
@@ -922,18 +855,15 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     }
   }, [activeImageIndex, car?.images?.length]);
 
-  // Handler for likes update
   const handleLikesUpdate = (newLikes: number) => {
     if (car) {
       setCar((prev) => (prev ? { ...prev, likes: newLikes } : null));
     }
   };
 
-  // Action handlers
   const handleCall = () => {
     if (!car) return;
 
-    // Track the call click
     trackCallClick(car.id);
 
     const phone = car.dealerships?.phone || car.dealership_phone;
@@ -957,8 +887,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         console.error("Share error:", err);
       }
     } else {
-      // Fallback for browsers that don't support navigator.share
-      // Create a temporary input to copy URL
       const input = document.createElement("input");
       input.value = `Check out this ${car.year} ${car.make} ${
         car.model
@@ -974,7 +902,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const handleWhatsApp = () => {
     if (!car) return;
 
-    // Track the WhatsApp click
     trackWhatsAppClick(car.id);
 
     const phone = car.dealerships?.phone || car.dealership_phone;
@@ -989,12 +916,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
-  // Show loading state if data is not yet available
   if (isLoading || !car) {
     return <LoadingState />;
   }
 
-  // Get dealership info, checking both possible structures
   const dealershipName =
     car.dealerships?.name || car.dealership_name || "Unknown Dealership";
   const dealershipLogo =
@@ -1018,10 +943,35 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-white text-gray-900 relative">
-      {/* Fixed Navbar */}
+      <Head>
+        <title>
+          {car.year} {car.make} {car.model} | Fleet
+        </title>
+        <meta
+          name="description"
+          content={`${car.year} ${car.make} ${car.model} for $${car.price.toLocaleString()} at ${dealershipName}`}
+        />
+
+        {/* Android App Links */}
+        <link rel="alternate" href={`android-app://com.qwertyapp.clerkexpoquickstart/fleet/cars/${car.id}`} />
+        
+        {/* Universal Links for iOS */}
+        <meta property="al:ios:url" content={getDeepLink('car', car.id)} />
+        <meta property="al:ios:app_store_id" content="6742141291" />
+        <meta property="al:ios:app_name" content="Fleet" />
+        
+        {/* App Links for Android */}
+        <meta property="al:android:url" content={getDeepLink('car', car.id)} />
+        <meta property="al:android:package" content="com.qwertyapp.clerkexpoquickstart" />
+        <meta property="al:android:app_name" content="Fleet" />
+        
+        <meta property="og:title" content={`${car.year} ${car.make} ${car.model} | Fleet`} />
+        <meta property="og:description" content={`${car.year} ${car.make} ${car.model} for $${car.price.toLocaleString()} at ${dealershipName}`} />
+        <meta property="og:url" content={`https://www.fleetapp.me/cars/${car.id}`} />
+      </Head>
+
       <Navbar />
 
-      {/* App Redirect Modal for Mobile Devices */}
       {showAppRedirect && car && (
         <AppRedirectOverlay
           carId={car.id}
@@ -1032,15 +982,10 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         />
       )}
 
-      {/* Main Content - Add padding-top to position below navbar */}
       <div className="pt-16">
-        {/* Back Button - Adjusted position to account for navbar */}
-
-        {/* Improved Image Carousel - Only render if images exist */}
         {car.images && car.images.length > 0 ? (
           <div className="relative bg-white carousel-container">
             <div id="test-div">
-              {/* Main large image carousel */}
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
@@ -1058,9 +1003,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     key={index}
                     className="flex-shrink-0 h-full snap-start relative carousel-item"
                     style={{
-                      // width: "100vw", // Explicit width for iOS Safari
-                      maxWidth: "100%", // Prevent overflow
-                      scrollSnapAlign: "start", // Essential for iOS Safari
+                      maxWidth: "100%",
+                      scrollSnapAlign: "start",
                     }}
                   >
                     <img
@@ -1068,19 +1012,18 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                       alt={`${car.make} ${car.model}`}
                       className="w-full h-full object-cover object-center carousel-image"
                       style={{
-                        display: "block", // Prevent image spacing issues on iOS
+                        display: "block",
                         width: "100%",
                         height: "100%",
                         objectFit: "cover",
                       }}
-                      draggable={false} // Prevent drag interference on iOS
+                      draggable={false}
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Thumbnail gallery at the bottom */}
             {car.images.length > 1 && (
               <div className="hidden bg-gray-100 md:justify-center">
                 <div
@@ -1105,7 +1048,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               </div>
             )}
 
-            {/* Navigation Arrows */}
             {car.images.length > 1 && (
               <>
                 <button
@@ -1126,7 +1068,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             )}
 
             <div className="absolute top-5 right-5 gap-1 z-10 flex flex-row">
-              {/* Favorite Button - Top Right */}
               <FavoriteButton
                 carId={Number(car.id)}
                 initialLikes={car.likes || 0}
@@ -1141,7 +1082,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           </div>
         )}
 
-        {/* Price Badge - Positioned to overlap the image and content */}
         <div className="relative z-10 flex px-4 transform translate-y-[-50%]">
           <div className="bg-accent px-4 py-2 rounded-full shadow-lg inline-block mx-auto">
             <span className="text-white text-xl font-bold">
@@ -1150,10 +1090,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Car Information Section */}
         <div className="flex justify-center">
           <div className="p-4 3xl:w-9/12 xl:w-11/12 space-y-6">
-            {/* Main Info - Always left-aligned on mobile */}
             <div className="flex items-start space-x-4">
               <div className="h-14 md:w-16 md:h-16 flex-shrink-0">
                 <img
@@ -1197,7 +1135,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            {/* Technical Data Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
               <SpecItem
                 icon={<CalendarIcon className="h-5 w-5 text-accent" />}
@@ -1253,7 +1190,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            {/* Description */}
             {car.description && (
               <div className="p-1">
                 <h2 className="text-xl font-bold">Description</h2>
@@ -1261,21 +1197,17 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               </div>
             )}
 
-            {/* Features */}
             {car.features && car.features.length > 0 && (
               <div className="p-1">
                 <h2 className="text-xl font-bold mb-6">Features</h2>
 
-                {/* Use predefined VEHICLE_FEATURES categories */}
                 <div className="space-y-6 p-2">
                   {Object.entries(VEHICLE_FEATURES).map(
                     ([category, featuresArray]) => {
-                      // Filter car features that match this category
                       const matchingFeatures = car.features?.filter(
                         (feature) => {
                           if (typeof feature !== "string") return false;
 
-                          // Check if this feature matches any of the predefined features in this category
                           return featuresArray.some(
                             (predefinedFeature) =>
                               feature
@@ -1288,7 +1220,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                         }
                       );
 
-                      // Skip categories with no matching features
                       if (!matchingFeatures || matchingFeatures.length === 0)
                         return null;
 
@@ -1301,7 +1232,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                             <div className="absolute bottom-0 left-0 w-8 h-0.5 bg-accent"></div>
                           </div>
 
-                          {/* Single container for both mobile and desktop - let it wrap naturally */}
                           <div className="flex flex-wrap gap-2">
                             {matchingFeatures.map(
                               (feature: string, index: number) => (
@@ -1330,7 +1260,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                     }
                   )}
 
-                  {/* Find features that didn't match any category */}
                   {(() => {
                     const allPredefinedIds = Object.values(VEHICLE_FEATURES)
                       .flat()
@@ -1370,7 +1299,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                           <div className="absolute bottom-0 left-0 w-8 h-0.5 bg-accent"></div>
                         </div>
 
-                        {/* Single container for both mobile and desktop */}
                         <div className="flex flex-wrap gap-2">
                           {uncategorizedFeatures.map(
                             (feature: string, index: number) => (
@@ -1401,10 +1329,8 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               </div>
             )}
             <h2 className="text-xl font-bold p-1 mb-5">Dealership</h2>
-            {/* Dealership Section with Contact Buttons */}
             <div className="bg-gray-100 rounded-xl p-4 border border-gray-200">
               <div className="flex items-center justify-between">
-                {/* Dealership Info */}
                 <div className="flex items-center">
                   <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0">
                     <img
@@ -1421,7 +1347,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                   </div>
                 </div>
 
-                {/* Contact Buttons - Icons only */}
                 {dealershipPhone && (
                   <div className="flex space-x-3">
                     <button
@@ -1449,7 +1374,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
                 )}
               </div>
 
-              {/* Map */}
               {dealershipLatitude && dealershipLongitude && (
                 <div className="mt-10 4">
                   <iframe
@@ -1464,7 +1388,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            {/* More Cars from this Dealership Section */}
             <h2 className="text-xl font-bold mb-5">
               More from {dealershipName}
             </h2>
@@ -1475,20 +1398,17 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Mobile app banner for non-mobile devices (optional) */}
         <MobileAppBanner />
 
-        {/* Hide scrollbar and iOS Safari improvements */}
         <style jsx global>{`
           .scrollbar-hide {
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
           }
           .scrollbar-hide::-webkit-scrollbar {
-            display: none; /* Chrome, Safari and Opera */
+            display: none;
           }
 
-          /* iOS Safari specific improvements */
           @supports (-webkit-overflow-scrolling: touch) {
             .scrollbar-hide {
               -webkit-overflow-scrolling: touch;
@@ -1496,7 +1416,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             }
           }
 
-          /* Improve scroll snap on iOS Safari */
           .snap-x {
             scroll-snap-type: x mandatory;
             -webkit-scroll-snap-type: x mandatory;
@@ -1508,14 +1427,12 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             -webkit-scroll-snap-align: start;
           }
 
-          /* Prevent iOS Safari scrolling issues */
           .carousel-container {
             position: relative;
             overflow: hidden;
             touch-action: manipulation;
           }
 
-          /* Fix for iOS Safari image rendering */
           .carousel-image {
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
@@ -1523,7 +1440,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             pointer-events: none;
           }
 
-          /* Prevent iOS Safari momentum scrolling interference */
           .carousel-item {
             -webkit-transform: translateZ(0);
             transform: translateZ(0);
@@ -1532,7 +1448,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             touch-action: pan-x;
           }
 
-          /* iPhone-specific height adjustments */
           @media only screen and (max-width: 428px) and (-webkit-min-device-pixel-ratio: 2) {
             .carousel-height {
               height: 85vh !important;
@@ -1540,7 +1455,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             }
           }
 
-          /* iPhone Pro Max and larger iPhones */
           @media only screen and (min-width: 390px) and (max-width: 428px) and (-webkit-min-device-pixel-ratio: 3) {
             .carousel-height {
               height: 80vh !important;
@@ -1548,7 +1462,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
             }
           }
 
-          /* iPhone SE and smaller iPhones */
           @media only screen and (max-width: 389px) and (-webkit-min-device-pixel-ratio: 2) {
             .carousel-height {
               height: 75vh !important;

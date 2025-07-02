@@ -7,8 +7,8 @@ import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
+import { detectPlatform, attemptAndroidAppLaunch, getDeepLink, DEEP_LINK_CONFIG } from "@/utils/androidDeepLinkUtils";
 
-// AutoClip interface (unchanged)
 interface AutoClip {
   id: number;
   title: string;
@@ -21,6 +21,7 @@ interface AutoClip {
   views?: number;
   likes?: number;
   liked_users?: string[];
+  viewed_users?: string[];
   car?: {
     id: string;
     year: number;
@@ -36,375 +37,7 @@ interface AutoClip {
   };
 }
 
-// ANDROID FIX 1: Enhanced platform detection with comprehensive user agent parsing
-const detectPlatform = (): { platform: "ios" | "android" | "unknown"; isMobile: boolean } => {
-  if (typeof window === "undefined") {
-    return { platform: "unknown", isMobile: false };
-  }
-
-  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-  
-  // Enhanced iOS detection
-  const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-  
-  // Enhanced Android detection with specific browser patterns
-  const isAndroid = /android/i.test(userAgent) || 
-                   /Android/.test(userAgent) ||
-                   /Mobile/.test(userAgent) && /Android/.test(userAgent);
-  
-  // Comprehensive mobile detection
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(userAgent) ||
-                   /Mobi|Android/i.test(userAgent) ||
-                   window.innerWidth <= 768;
-
-  let platform: "ios" | "android" | "unknown" = "unknown";
-  if (isIOS) platform = "ios";
-  else if (isAndroid) platform = "android";
-
-  console.log("[PlatformDetection]", { platform, isMobile, userAgent: userAgent.substring(0, 100) });
-  
-  return { platform, isMobile };
-};
-
-// ANDROID FIX 2: Enhanced app launch utility with proper Android handling
-const attemptAppLaunch = (deepLink: string, platform: "ios" | "android" | "unknown"): Promise<boolean> => {
-  return new Promise((resolve) => {
-    let resolved = false;
-    const timeout = platform === "android" ? 3000 : 2000; // Longer timeout for Android
-    
-    console.log(`[AppLaunch] Attempting launch for ${platform}: ${deepLink}`);
-    
-    // ANDROID FIX: Platform-specific launch strategies
-    if (platform === "android") {
-      // Android Strategy 1: Direct navigation with immediate detection
-      const startTime = Date.now();
-      
-      // Visibility change detection for Android
-      const handleVisibilityChange = () => {
-        if (document.hidden) {
-          console.log("[AppLaunch] ANDROID: App likely opened (visibility change)");
-          if (!resolved) {
-            resolved = true;
-            resolve(true);
-          }
-          document.removeEventListener("visibilitychange", handleVisibilityChange);
-        }
-      };
-      
-      // Blur detection for Android (secondary method)
-      const handleBlur = () => {
-        console.log("[AppLaunch] ANDROID: App likely opened (window blur)");
-        if (!resolved) {
-          resolved = true;
-          resolve(true);
-        }
-        window.removeEventListener("blur", handleBlur);
-      };
-      
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-      window.addEventListener("blur", handleBlur);
-      
-      // Android: Direct window location change
-      try {
-        window.location.href = deepLink;
-        
-        // Android-specific timeout check
-        setTimeout(() => {
-          document.removeEventListener("visibilitychange", handleVisibilityChange);
-          window.removeEventListener("blur", handleBlur);
-          
-          if (!resolved) {
-            // Check if we're still focused - if yes, app didn't open
-            const timeElapsed = Date.now() - startTime;
-            const appLikelyOpened = document.hidden || timeElapsed > 2500;
-            
-            console.log(`[AppLaunch] ANDROID: Timeout check - elapsed: ${timeElapsed}ms, hidden: ${document.hidden}`);
-            resolved = true;
-            resolve(appLikelyOpened);
-          }
-        }, timeout);
-        
-      } catch (error) {
-        console.error("[AppLaunch] ANDROID: Error during launch:", error);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
-        window.removeEventListener("blur", handleBlur);
-        if (!resolved) {
-          resolved = true;
-          resolve(false);
-        }
-      }
-      
-    } else if (platform === "ios") {
-      // iOS Strategy: Hidden iframe method (unchanged but enhanced)
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.style.position = "absolute";
-      iframe.style.top = "-1000px";
-      iframe.style.left = "-1000px";
-      
-      // iOS blur detection
-      const handleBlur = () => {
-        console.log("[AppLaunch] iOS: App opened (blur detection)");
-        if (!resolved) {
-          resolved = true;
-          resolve(true);
-        }
-        window.removeEventListener("blur", handleBlur);
-      };
-      
-      window.addEventListener("blur", handleBlur);
-      
-      try {
-        iframe.src = deepLink;
-        document.body.appendChild(iframe);
-        
-        setTimeout(() => {
-          try {
-            document.body.removeChild(iframe);
-          } catch (e) {
-            console.warn("[AppLaunch] iOS: Error removing iframe:", e);
-          }
-          window.removeEventListener("blur", handleBlur);
-          
-          if (!resolved) {
-            resolved = true;
-            resolve(false);
-          }
-        }, timeout);
-        
-      } catch (error) {
-        console.error("[AppLaunch] iOS: Error during launch:", error);
-        window.removeEventListener("blur", handleBlur);
-        if (!resolved) {
-          resolved = true;
-          resolve(false);
-        }
-      }
-      
-    } else {
-      // Unknown platform: Try direct navigation
-      try {
-        window.location.href = deepLink;
-        setTimeout(() => {
-          if (!resolved) {
-            resolved = true;
-            resolve(false);
-          }
-        }, timeout);
-      } catch (error) {
-        if (!resolved) {
-          resolved = true;
-          resolve(false);
-        }
-      }
-    }
-  });
-};
-
-// ANDROID FIX 3: Enhanced App Redirect Overlay with improved Android handling
-const AppRedirectOverlay = ({
-  clipId,
-  onClose,
-  clip,
-}: {
-  clipId: string;
-  onClose: () => void;
-  clip: AutoClip | null;
-}) => {
-  const [countdown, setCountdown] = useState(5); // Increased from 3 to 5 for Android
-  const [redirectAttempted, setRedirectAttempted] = useState(false);
-  const [appLaunchStatus, setAppLaunchStatus] = useState<"waiting" | "attempting" | "success" | "failed">("waiting");
-  const { platform, isMobile } = detectPlatform();
-  const attemptedRef = useRef(false);
-
-  const deepLink = `fleet://clips/${clipId}`;
-  const appStoreLink = "https://apps.apple.com/app/6742141291";
-  const playStoreLink = "https://play.google.com/store/apps/details?id=com.qwertyapp.clerkexpoquickstart";
-
-  // ANDROID FIX 4: Enhanced countdown and launch logic
-  useEffect(() => {
-    if (countdown <= 0 && !attemptedRef.current) {
-      attemptedRef.current = true;
-      setAppLaunchStatus("attempting");
-      setRedirectAttempted(true);
-      
-      console.log(`[AppRedirect] Starting app launch for ${platform}`);
-      
-      attemptAppLaunch(deepLink, platform)
-        .then((success) => {
-          console.log(`[AppRedirect] App launch result: ${success}`);
-          setAppLaunchStatus(success ? "success" : "failed");
-          
-          // ANDROID FIX: If app launch failed on Android, show more prominent options
-          if (!success && platform === "android") {
-            setTimeout(() => {
-              setAppLaunchStatus("failed");
-            }, 1000);
-          }
-        })
-        .catch((error) => {
-          console.error("[AppRedirect] App launch error:", error);
-          setAppLaunchStatus("failed");
-        });
-    }
-  }, [countdown, platform, deepLink]);
-
-  // Countdown timer
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  // Get appropriate store link
-  const getStoreLink = () => {
-    if (platform === "ios") return appStoreLink;
-    if (platform === "android") return playStoreLink;
-    return playStoreLink; // Default to Play Store
-  };
-
-  // ANDROID FIX 5: Manual app launch handler with enhanced error handling
-  const handleManualAppLaunch = async () => {
-    if (attemptedRef.current) {
-      console.log("[AppRedirect] Manual launch - resetting attempt");
-      attemptedRef.current = false;
-    }
-    
-    setAppLaunchStatus("attempting");
-    
-    try {
-      const success = await attemptAppLaunch(deepLink, platform);
-      setAppLaunchStatus(success ? "success" : "failed");
-      
-      if (!success) {
-        console.log("[AppRedirect] Manual launch failed, showing store options");
-      }
-    } catch (error) {
-      console.error("[AppRedirect] Manual launch error:", error);
-      setAppLaunchStatus("failed");
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
-      <div className="bg-gray-800 rounded-xl max-w-md w-full p-6 text-center relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
-        >
-          ×
-        </button>
-
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
-          <img src="/logo.png" alt="Fleet App" className="w-12 h-12" />
-        </div>
-
-        <h2 className="text-xl font-bold text-white mb-2">
-          {appLaunchStatus === "success" ? "Opening Fleet App..." : "Watch in Fleet App"}
-        </h2>
-        
-        {clip?.car && (
-          <p className="text-gray-300 mb-4">
-            {clip.car.year} {clip.car.make} {clip.car.model}
-          </p>
-        )}
-
-        {/* ANDROID FIX 6: Enhanced status display with platform-specific messaging */}
-        <div className="mb-6">
-          {appLaunchStatus === "waiting" && countdown > 0 && (
-            <>
-              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-              <p className="text-gray-400">
-                Opening app in {countdown}...
-                {platform === "android" && (
-                  <span className="block text-sm mt-1">Android detected</span>
-                )}
-              </p>
-            </>
-          )}
-          
-          {appLaunchStatus === "attempting" && (
-            <>
-              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-              <p className="text-gray-400">
-                {platform === "android" ? "Launching Fleet App..." : "Opening Fleet App..."}
-              </p>
-            </>
-          )}
-          
-          {appLaunchStatus === "success" && (
-            <>
-              <div className="h-10 w-10 mx-auto bg-green-500 rounded-full flex items-center justify-center mb-2">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p className="text-green-400">App opened successfully!</p>
-            </>
-          )}
-          
-          {appLaunchStatus === "failed" && (
-            <>
-              <div className="h-10 w-10 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-2">
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <p className="text-gray-400">
-                {platform === "android" 
-                  ? "App not installed or couldn't open automatically."
-                  : "Couldn't open the app automatically."
-                }
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* ANDROID FIX 7: Platform-specific button layout */}
-        <div className="space-y-3">
-          {(appLaunchStatus === "failed" || appLaunchStatus === "waiting") && (
-            <button
-              onClick={handleManualAppLaunch}
-              className="block w-full py-3 bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
-            >
-              {appLaunchStatus === "failed" ? "Try Again" : "Open Fleet App"}
-            </button>
-          )}
-
-          {(appLaunchStatus === "failed" || redirectAttempted) && (
-            <a
-              href={getStoreLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
-            >
-              {platform === "android" ? "Get from Play Store" : "Download from App Store"}
-            </a>
-          )}
-
-          <button
-            onClick={onClose}
-            className="block w-full py-3 bg-transparent hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-medium"
-          >
-            Continue on Website
-          </button>
-        </div>
-
-        {/* ANDROID FIX 8: Platform-specific help text */}
-        {platform === "android" && appLaunchStatus === "failed" && (
-          <p className="text-xs text-gray-500 mt-4">
-            If the app doesn't open, make sure Fleet is installed and try the "Get from Play Store" link above.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Format relative time (unchanged)
+// Format relative time
 const getRelativeTime = (dateString: string | Date) => {
   if (!dateString) return "Recently";
 
@@ -432,12 +65,130 @@ const getRelativeTime = (dateString: string | Date) => {
   }
 };
 
-// Loading state component (unchanged)
+// Loading state component
 const LoadingState = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-900">
     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-accent"></div>
   </div>
 );
+
+// Simplified App Redirect Overlay for Android
+const AppRedirectOverlay = ({
+  clipId,
+  onClose,
+  clip,
+}: {
+  clipId: string;
+  onClose: () => void;
+  clip: AutoClip | null;
+}) => {
+  const [countdown, setCountdown] = useState(3);
+  const [redirectStatus, setRedirectStatus] = useState<"waiting" | "attempting" | "failed">("waiting");
+  const attemptedRef = useRef(false);
+  const { platform, isMobile } = detectPlatform();
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (!attemptedRef.current) {
+      attemptedRef.current = true;
+      handleAppLaunch();
+    }
+  }, [countdown]);
+
+  const handleAppLaunch = async () => {
+    setRedirectStatus("attempting");
+    const deepLink = getDeepLink('clip', clipId);
+    
+    if (platform === 'android') {
+      const success = await attemptAndroidAppLaunch(deepLink);
+      setRedirectStatus(success ? "attempting" : "failed");
+    } else if (platform === 'ios') {
+      // iOS handling
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        setRedirectStatus("failed");
+      }, 2000);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+      <div className="bg-gray-800 rounded-xl max-w-md w-full p-6 text-center relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
+        >
+          ×
+        </button>
+
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
+          <img src="/logo.png" alt="Fleet App" className="w-12 h-12" />
+        </div>
+
+        <h2 className="text-xl font-bold text-white mb-2">
+          Watch in Fleet App
+        </h2>
+        
+        {clip?.car && (
+          <p className="text-gray-300 mb-4">
+            {clip.car.year} {clip.car.make} {clip.car.model}
+          </p>
+        )}
+
+        <div className="mb-6">
+          {redirectStatus === "waiting" && countdown > 0 && (
+            <>
+              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
+              <p className="text-gray-400">Opening app in {countdown}...</p>
+            </>
+          )}
+          
+          {redirectStatus === "attempting" && (
+            <>
+              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
+              <p className="text-gray-400">Opening Fleet App...</p>
+            </>
+          )}
+          
+          {redirectStatus === "failed" && (
+            <p className="text-gray-400">
+              App not installed? Download Fleet to watch this video.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <a
+            href={getDeepLink('clip', clipId)}
+            className="block w-full py-3 bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
+          >
+            Open in Fleet App
+          </a>
+
+          <a
+            href={platform === 'android' ? DEEP_LINK_CONFIG.playStoreUrl : DEEP_LINK_CONFIG.appStoreUrl}
+            className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
+          >
+            Download Fleet App
+          </a>
+
+          <button
+            onClick={onClose}
+            className="block w-full py-3 bg-transparent hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-medium"
+          >
+            Continue on Website
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function ClipDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -449,53 +200,31 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
   const viewTracked = useRef<boolean>(false);
   const supabase = createClient();
 
-  // ANDROID FIX 9: Enhanced app redirect state management
   const [showAppRedirect, setShowAppRedirect] = useState(false);
-  const [platformInfo, setPlatformInfo] = useState<any>({ platform: "unknown" as const, isMobile: false });
   const redirectChecked = useRef(false);
-  const pageLoadTime = useRef(Date.now());
 
-  // ANDROID FIX 10: Enhanced mobile detection and redirect logic
+  // Auto-redirect for mobile devices
   useEffect(() => {
-    if (typeof window !== "undefined" && !redirectChecked.current) {
+    if (!redirectChecked.current && typeof window !== "undefined") {
       redirectChecked.current = true;
+      const { isMobile } = detectPlatform();
       
-      const detectedPlatform:any = detectPlatform();
-      setPlatformInfo(detectedPlatform);
-      
-      console.log("[ClipPage] Platform detection:", detectedPlatform);
-
-      // Show redirect for mobile users with platform-specific timing
-      if (detectedPlatform.isMobile) {
-        // Check preference cookie
+      if (isMobile) {
         const preferWeb = document.cookie.includes("preferWeb=true");
-        
         if (!preferWeb) {
-          // ANDROID FIX: Platform-specific delays
-          const delay = detectedPlatform.platform === "android" ? 2000 : 1500;
-          
-          setTimeout(() => {
-            const timeElapsed = Date.now() - pageLoadTime.current;
-            console.log(`[ClipPage] Showing redirect after ${timeElapsed}ms for ${detectedPlatform.platform}`);
-            setShowAppRedirect(true);
-          }, delay);
-        } else {
-          console.log("[ClipPage] User prefers web, skipping redirect");
+          setTimeout(() => setShowAppRedirect(true), 1000);
         }
       }
     }
   }, []);
 
-  // Handle closing the redirect and setting preference
   const handleCloseRedirect = useCallback(() => {
     setShowAppRedirect(false);
-    // Set cookie with longer duration for Android users
-    const maxAge = platformInfo.platform === "android" ? 604800 : 86400; // 7 days for Android, 1 day for others
-    document.cookie = `preferWeb=true; max-age=${maxAge}; path=/`;
-    console.log(`[ClipPage] Set preferWeb cookie for ${maxAge} seconds`);
-  }, [platformInfo.platform]);
+    // Set cookie to remember preference for 7 days
+    document.cookie = "preferWeb=true; max-age=604800; path=/";
+  }, []);
 
-  // Track clip view (unchanged)
+  // Track clip view
   const trackClipView = useCallback(async (clipId: string) => {
     if (viewTracked.current) return;
 
@@ -522,7 +251,7 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
     }
   }, [isGuest, guestId, user, supabase, clip]);
 
-  // Fetch clip data (unchanged)
+  // Fetch clip data
   useEffect(() => {
     const fetchClipData = async () => {
       try {
@@ -566,14 +295,14 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
     }
   }, [params.id, router, supabase]);
 
-  // Track clip view when the page loads and clip data is available
+  // Track clip view when data is available
   useEffect(() => {
     if (clip && !viewTracked.current) {
       trackClipView(clip.id.toString());
     }
   }, [clip, trackClipView]);
 
-  // Handle share functionality (unchanged)
+  // Handle share functionality
   const handleShare = async () => {
     if (!clip) return;
     
@@ -608,32 +337,6 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
-  // ANDROID FIX 11: Enhanced app launch handler for action buttons
-  const handleAppLaunch = useCallback(async () => {
-    if (!clip) return;
-    
-    const deepLink = `fleet://clips/${clip.id}`;
-    console.log(`[ActionButton] Launching app for ${platformInfo.platform}: ${deepLink}`);
-    
-    try {
-      const success = await attemptAppLaunch(deepLink, platformInfo.platform);
-      
-      if (!success) {
-        console.log("[ActionButton] App launch failed, showing redirect modal");
-        // If app launch fails, show the redirect modal as fallback
-        setTimeout(() => {
-          setShowAppRedirect(true);
-        }, 1000);
-      } else {
-        console.log("[ActionButton] App launch successful");
-      }
-    } catch (error) {
-      console.error("[ActionButton] App launch error:", error);
-      // Show redirect modal on error
-      setShowAppRedirect(true);
-    }
-  }, [clip, platformInfo.platform]);
-
   // View car details
   const viewCarDetails = () => {
     if (clip?.car) {
@@ -641,12 +344,10 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
     }
   };
 
-  // Show loading state if data is not yet available
   if (isLoading) {
     return <LoadingState />;
   }
 
-  // Show error state
   if (error || !clip) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
@@ -680,50 +381,36 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
           }
         />
 
-        {/* ANDROID FIX 12: Enhanced app link meta tags with additional Android-specific tags */}
-        <meta property="al:ios:url" content={`fleet://clips/${clip.id}`} />
+        {/* Android App Links */}
+        <link rel="alternate" href={`android-app://com.qwertyapp.clerkexpoquickstart/fleet/clips/${clip.id}`} />
+        
+        {/* Universal Links for iOS */}
+        <meta property="al:ios:url" content={getDeepLink('clip', clip.id.toString())} />
         <meta property="al:ios:app_store_id" content="6742141291" />
         <meta property="al:ios:app_name" content="Fleet" />
-
-        <meta property="al:android:url" content={`fleet://clips/${clip.id}`} />
+        
+        {/* App Links for Android */}
+        <meta property="al:android:url" content={getDeepLink('clip', clip.id.toString())} />
         <meta property="al:android:package" content="com.qwertyapp.clerkexpoquickstart" />
         <meta property="al:android:app_name" content="Fleet" />
         
-        {/* Additional Android-specific meta tags */}
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="android-app://com.qwertyapp.clerkexpoquickstart/fleet/clips" content={clip.id.toString()} />
-        
-        <link rel="alternate" href={`https://www.fleetapp.me/clips/${clip.id}`} />
-        <meta
-          name="apple-itunes-app"
-          content={`app-id=6742141291, app-argument=https://www.fleetapp.me/clips/${clip.id}`}
-        />
-
-        {/* Enhanced Open Graph tags */}
-        <meta
-          property="og:title"
-          content={
-            clip.car
-              ? `${clip.car.year} ${clip.car.make} ${clip.car.model} - Video | Fleet`
-              : clip.title || "Video | Fleet"
-          }
-        />
-        <meta
-          property="og:description"
-          content={
-            clip.description ||
-            (clip.car
-              ? `Video of ${clip.car.year} ${clip.car.make} ${clip.car.model}`
-              : "Watch this video on Fleet")
-          }
-        />
+        <meta property="og:title" content={
+          clip.car
+            ? `${clip.car.year} ${clip.car.make} ${clip.car.model} - Video | Fleet`
+            : clip.title || "Video | Fleet"
+        } />
+        <meta property="og:description" content={
+          clip.description ||
+          (clip.car
+            ? `Video of ${clip.car.year} ${clip.car.make} ${clip.car.model}`
+            : "Watch this video on Fleet")
+        } />
         <meta property="og:url" content={`https://www.fleetapp.me/clips/${clip.id}`} />
         <meta property="og:type" content="video.other" />
         {clip.video_url && <meta property="og:video" content={clip.video_url} />}
       </Head>
 
       <div className="min-h-screen bg-gray-900 text-white relative">
-        {/* Enhanced App Redirect Modal for Mobile Devices */}
         {showAppRedirect && (
           <AppRedirectOverlay
             clipId={clip.id.toString()}
@@ -732,7 +419,6 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
           />
         )}
 
-        {/* Back Button */}
         <button
           onClick={() => router.back()}
           className="absolute top-4 left-4 z-50 p-2 bg-gray-800 rounded-full hover:bg-gray-700"
@@ -740,7 +426,6 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
           <ChevronLeftIcon className="h-5 w-5" />
         </button>
 
-        {/* Main content */}
         <div className="container mx-auto px-4 pt-16 pb-20">
           {/* Video preview */}
           <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden mb-6">
@@ -814,14 +499,14 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {/* ANDROID FIX 13: Enhanced action buttons with improved app launch handling */}
+          {/* Action buttons */}
           <div className="flex flex-wrap gap-4 mb-8">
-            <button
-              onClick={handleAppLaunch}
-              className="px-6 py-3 bg-accent rounded-lg font-semibold hover:bg-accent/90 transition-colors flex-1"
+            <a
+              href={getDeepLink('clip', clip.id.toString())}
+              className="px-6 py-3 bg-accent rounded-lg font-semibold hover:bg-accent/90 transition-colors flex-1 text-center"
             >
               Open in App
-            </button>
+            </a>
             {clip.car && (
               <button
                 onClick={viewCarDetails}
@@ -853,7 +538,7 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
                 </p>
                 <div className="flex space-x-4">
                   <a
-                    href="https://apps.apple.com/app/6742141291"
+                    href={DEEP_LINK_CONFIG.appStoreUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-black rounded-lg hover:bg-gray-900 transition-colors"
@@ -861,7 +546,7 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
                     App Store
                   </a>
                   <a
-                    href="https://play.google.com/store/apps/details?id=com.qwertyapp.clerkexpoquickstart"
+                    href={DEEP_LINK_CONFIG.playStoreUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-black rounded-lg hover:bg-gray-900 transition-colors"
