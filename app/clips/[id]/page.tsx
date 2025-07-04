@@ -8,6 +8,7 @@ import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { detectPlatform, attemptAndroidAppLaunch, getDeepLink, DEEP_LINK_CONFIG } from "@/utils/androidDeepLinkUtils";
+import { AppRedirectOverlay } from "@/components/AppRedirectOverlay";
 
 interface AutoClip {
   id: number;
@@ -72,123 +73,7 @@ const LoadingState = () => (
   </div>
 );
 
-// Simplified App Redirect Overlay for Android
-const AppRedirectOverlay = ({
-  clipId,
-  onClose,
-  clip,
-}: {
-  clipId: string;
-  onClose: () => void;
-  clip: AutoClip | null;
-}) => {
-  const [countdown, setCountdown] = useState(3);
-  const [redirectStatus, setRedirectStatus] = useState<"waiting" | "attempting" | "failed">("waiting");
-  const attemptedRef = useRef(false);
-  const { platform, isMobile } = detectPlatform();
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (!attemptedRef.current) {
-      attemptedRef.current = true;
-      handleAppLaunch();
-    }
-  }, [countdown]);
-
-  const handleAppLaunch = async () => {
-    setRedirectStatus("attempting");
-    const deepLink = getDeepLink('clip', clipId);
-    
-    if (platform === 'android') {
-      const success = await attemptAndroidAppLaunch(deepLink);
-      setRedirectStatus(success ? "attempting" : "failed");
-    } else if (platform === 'ios') {
-      // iOS handling
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = deepLink;
-      document.body.appendChild(iframe);
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        setRedirectStatus("failed");
-      }, 2000);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
-      <div className="bg-gray-800 rounded-xl max-w-md w-full p-6 text-center relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
-        >
-          ×
-        </button>
-
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
-          <img src="/logo.png" alt="Fleet App" className="w-12 h-12" />
-        </div>
-
-        <h2 className="text-xl font-bold text-white mb-2">
-          Watch in Fleet App
-        </h2>
-        
-        {clip?.car && (
-          <p className="text-gray-300 mb-4">
-            {clip.car.year} {clip.car.make} {clip.car.model}
-          </p>
-        )}
-
-        <div className="mb-6">
-          {redirectStatus === "waiting" && countdown > 0 && (
-            <>
-              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-              <p className="text-gray-400">Opening app in {countdown}...</p>
-            </>
-          )}
-          
-          {redirectStatus === "attempting" && (
-            <>
-              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-              <p className="text-gray-400">Opening Fleet App...</p>
-            </>
-          )}
-          
-          {redirectStatus === "failed" && (
-            <p className="text-gray-400">
-              App not installed? Download Fleet to watch this video.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <a
-            href={getDeepLink('clip', clipId)}
-            className="block w-full py-3 bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
-          >
-            Open in Fleet App
-          </a>
-
-          <a
-            href={platform === 'android' ? DEEP_LINK_CONFIG.playStoreUrl : DEEP_LINK_CONFIG.appStoreUrl}
-            className="block w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium"
-          >
-            Download Fleet App
-          </a>
-
-          <button
-            onClick={onClose}
-            className="block w-full py-3 bg-transparent hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-medium"
-          >
-            Continue on Website
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function ClipDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -411,13 +296,8 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
       </Head>
 
       <div className="min-h-screen bg-gray-900 text-white relative">
-        {showAppRedirect && (
-          <AppRedirectOverlay
-            clipId={clip.id.toString()}
-            onClose={handleCloseRedirect}
-            clip={clip}
-          />
-        )}
+
+
 
         <button
           onClick={() => router.back()}
@@ -558,6 +438,13 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
         </div>
+        <AppRedirectOverlay
+   itemId={clip.id.toString()}
+ itemType="clip"
+ onClose={handleCloseRedirect}
+ title={clip.car ? `${clip.car.year} ${clip.car.make} ${clip.car.model}` : clip.title || "Video"}
+ subtitle="Watch this video in the app"
+ />
       </div>
     </>
   );

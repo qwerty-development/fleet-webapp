@@ -63,6 +63,7 @@ import {
 } from "react-icons/md";
 import Navbar from "@/components/home/Navbar";
 import MobileAppBanner from "@/components/MobileBanner";
+import { AppRedirectOverlay } from "@/components/AppRedirectOverlay";
 
 // [Previous VEHICLE_FEATURES and other constants remain the same...]
 const VEHICLE_FEATURES = {
@@ -435,124 +436,7 @@ const ImageThumbnail: React.FC<{
   </div>
 );
 
-// Simplified App Redirect Overlay for Android
-const AppRedirectOverlay = ({
-  carId,
-  onClose,
-  make,
-  model,
-  year,
-}: {
-  carId: string;
-  onClose: () => void;
-  make: string;
-  model: string;
-  year: number;
-}) => {
-  const [countdown, setCountdown] = useState(3);
-  const [redirectStatus, setRedirectStatus] = useState<"waiting" | "attempting" | "failed">("waiting");
-  const attemptedRef = useRef(false);
-  const { platform, isMobile } = detectPlatform();
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (!attemptedRef.current) {
-      attemptedRef.current = true;
-      handleAppLaunch();
-    }
-  }, [countdown]);
-
-  const handleAppLaunch = async () => {
-    setRedirectStatus("attempting");
-    const deepLink = getDeepLink('car', carId);
-    
-    if (platform === 'android') {
-      const success = await attemptAndroidAppLaunch(deepLink);
-      setRedirectStatus(success ? "attempting" : "failed");
-    } else if (platform === 'ios') {
-      // iOS handling
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = deepLink;
-      document.body.appendChild(iframe);
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        setRedirectStatus("failed");
-      }, 2000);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-xl max-w-md w-full p-6 text-center relative shadow-lg">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 text-xl"
-        >
-          ×
-        </button>
-
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
-          <img src="/logo-dark.png" alt="Fleet App" className="w-12 h-12" />
-        </div>
-
-        <h2 className="text-xl font-bold text-gray-900 mb-2">
-          Opening in Fleet App
-        </h2>
-        <p className="text-gray-600 mb-4">
-          {year} {make} {model}
-        </p>
-
-        <div className="mb-6">
-          {redirectStatus === "waiting" && countdown > 0 && (
-            <>
-              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-              <p className="text-gray-500">Redirecting in {countdown}...</p>
-            </>
-          )}
-          
-          {redirectStatus === "attempting" && (
-            <>
-              <div className="h-10 w-10 mx-auto border-t-2 border-accent rounded-full animate-spin mb-2"></div>
-              <p className="text-gray-500">Opening Fleet App...</p>
-            </>
-          )}
-          
-          {redirectStatus === "failed" && (
-            <p className="text-gray-500">
-              App not installed? Download Fleet to view this car.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <a
-            href={getDeepLink('car', carId)}
-            className="block w-full py-3 bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
-          >
-            Open in Fleet App
-          </a>
-
-          <a
-            href={platform === 'android' ? DEEP_LINK_CONFIG.playStoreUrl : DEEP_LINK_CONFIG.appStoreUrl}
-            className="block w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium"
-          >
-            Download Fleet App
-          </a>
-
-          <button
-            onClick={onClose}
-            className="block w-full py-3 bg-transparent hover:bg-gray-100 text-gray-500 hover:text-gray-900 rounded-lg font-medium"
-          >
-            Continue to Website
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Main component
 export default function CarDetailPage({ params }: { params: { id: string } }) {
@@ -972,15 +856,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
 
       <Navbar />
 
-      {showAppRedirect && car && (
-        <AppRedirectOverlay
-          carId={car.id}
-          onClose={handleCloseRedirect}
-          make={car.make}
-          model={car.model}
-          year={car.year}
-        />
-      )}
 
       <div className="pt-16">
         {car.images && car.images.length > 0 ? (
@@ -1398,6 +1273,13 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
+
+ <AppRedirectOverlay
+  itemId={car.id}
+  itemType="car"
+ onClose={handleCloseRedirect}
+  title={`${car.year} ${car.make} ${car.model}`}
+   />
         <MobileAppBanner />
 
         <style jsx global>{`
