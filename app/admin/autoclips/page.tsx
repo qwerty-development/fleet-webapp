@@ -176,12 +176,7 @@ const ThumbnailDisplay: React.FC<{
         )}
       </div>
 
-      <div className="absolute top-2 right-2">
-        <div className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs backdrop-blur-sm border border-yellow-500/30">
-          <PhotoIcon className="h-3 w-3 inline mr-1" />
-          NO PREVIEW
-        </div>
-      </div>
+  
     </div>
   );
 
@@ -853,7 +848,6 @@ export default function AdminAutoClipReview() {
       const updateData: any = {
         status: newStatus,
         reviewed_at: new Date().toISOString(),
-        reviewed_by: 'admin', // TODO: Get actual admin user ID from auth context
         ...additionalData
       };
 
