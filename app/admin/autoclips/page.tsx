@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import {
   ChevronLeftIcon,
@@ -27,8 +27,7 @@ import {
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
   PhotoIcon,
-  TruckIcon,
-  CheckIcon,
+  ArchiveBoxIcon,
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 
@@ -43,7 +42,7 @@ interface AutoClipReview {
   thumbnail_url: string;
   views: number;
   likes: number;
-  status: 'under_review' | 'published' | 'rejected' | 'draft';
+  status: 'under_review' | 'published' | 'rejected' | 'draft' | 'archived';
   created_at: string;
   submitted_at?: string;
   reviewed_at?: string;
@@ -72,22 +71,8 @@ interface ReviewStats {
   rejected_today: number;
   total_reviewed: number;
   draft: number;
-}
-
-interface Car {
-  id: number;
-  make: string;
-  model: string;
-  year: number;
-  price: number;
-  dealership_id: number;
-}
-
-interface Dealership {
-  id: number;
-  name: string;
-  logo: string;
-  location: string;
+  archived: number;
+  published: number;
 }
 
 const STATUS_FILTERS = [
@@ -95,6 +80,7 @@ const STATUS_FILTERS = [
   { label: "Published", value: "published", color: "emerald", icon: CheckCircleIcon },
   { label: "Rejected", value: "rejected", color: "red", icon: XCircleIcon },
   { label: "Draft", value: "draft", color: "gray", icon: DocumentTextIcon },
+  { label: "Archived", value: "archived", color: "purple", icon: ArchiveBoxIcon },
   { label: "All Statuses", value: "all", color: "indigo", icon: FunnelIcon },
 ];
 
@@ -112,6 +98,23 @@ const REJECTION_REASONS = [
 
 const ITEMS_PER_PAGE = 12;
 
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 // Enhanced Thumbnail Component
 const ThumbnailDisplay: React.FC<{
   clip: AutoClipReview;
@@ -119,42 +122,17 @@ const ThumbnailDisplay: React.FC<{
   className?: string;
 }> = ({ clip, onClick, className = "w-full h-full" }) => {
   const [thumbnailError, setThumbnailError] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  const [showVideoPreview, setShowVideoPreview] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Reset errors when clip changes
   useEffect(() => {
     setThumbnailError(false);
-    setVideoError(false);
-    setShowVideoPreview(false);
+    setIsLoading(true);
   }, [clip.id]);
 
-  // Generate video thumbnail by capturing frame
-  const generateVideoThumbnail = () => {
-    if (videoRef.current && !videoError) {
-      setShowVideoPreview(true);
-      // Try to seek to 1 second to get a better frame
-      videoRef.current.currentTime = 1;
-    }
-  };
-
-  // Handle video load to capture thumbnail
-  const handleVideoLoad = () => {
-    if (videoRef.current) {
-      setShowVideoPreview(true);
-    }
-  };
-
-  const handleVideoError = () => {
-    setVideoError(true);
-    setShowVideoPreview(false);
-  };
-
-  // Render placeholder when no media is available
+  // Placeholder component
   const PlaceholderThumbnail = () => (
     <div className={`${className} bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center p-6`}>
-      {/* Car icon or video icon */}
       <div className="mb-4">
         {clip.car ? (
           <div className="bg-indigo-500/20 rounded-full p-4">
@@ -179,7 +157,6 @@ const ThumbnailDisplay: React.FC<{
         )}
       </div>
 
-      {/* Car details or generic info */}
       <div className="text-center">
         {clip.car ? (
           <>
@@ -199,7 +176,6 @@ const ThumbnailDisplay: React.FC<{
         )}
       </div>
 
-      {/* Preview unavailable indicator */}
       <div className="absolute top-2 right-2">
         <div className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs backdrop-blur-sm border border-yellow-500/30">
           <PhotoIcon className="h-3 w-3 inline mr-1" />
@@ -209,85 +185,46 @@ const ThumbnailDisplay: React.FC<{
     </div>
   );
 
-  // Determine what to show based on available resources
-  const renderThumbnail = () => {
-    // Priority 1: Show thumbnail_url if available and no error
-    if (clip.thumbnail_url && !thumbnailError) {
-      return (
-        <img
-          src={clip.thumbnail_url}
-          alt={clip.title}
-          className={`${className} object-cover`}
-          onError={() => {
-            console.log('Thumbnail failed, trying video preview');
-            setThumbnailError(true);
-            generateVideoThumbnail();
-          }}
-          onLoad={() => setThumbnailError(false)}
-        />
-      );
-    }
-
-    // Priority 2: Show video as thumbnail if available and no error
-    if (clip.video_url && !videoError && showVideoPreview) {
-      return (
-        <video
-          ref={videoRef}
-          src={clip.video_url}
-          className={`${className} object-cover`}
-          muted
-          playsInline
-          onLoadedData={handleVideoLoad}
-          onError={handleVideoError}
-          onCanPlay={() => {
-            // Pause immediately to use as thumbnail
-            if (videoRef.current) {
-              videoRef.current.pause();
-            }
-          }}
-        />
-      );
-    }
-
-    // Priority 3: Try to load video for thumbnail generation
-    if (clip.video_url && !videoError && !showVideoPreview) {
-      return (
-        <>
-          <video
-            ref={videoRef}
-            src={clip.video_url}
-            className="hidden"
-            muted
-            playsInline
-            preload="metadata"
-            onLoadedData={handleVideoLoad}
-            onError={handleVideoError}
-          />
-          <PlaceholderThumbnail />
-        </>
-      );
-    }
-
-    // Priority 4: Show placeholder
-    return <PlaceholderThumbnail />;
-  };
-
   return (
     <div 
       className={`relative bg-gray-900 overflow-hidden ${className} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
     >
-      {renderThumbnail()}
+      {/* Show loading state initially */}
+      {isLoading && !thumbnailError && (
+        <div className={`${className} bg-gray-800 animate-pulse flex items-center justify-center`}>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      )}
+      
+      {/* Try to show thumbnail */}
+      {clip.thumbnail_url && !thumbnailError && (
+        <img
+          src={clip.thumbnail_url}
+          alt={clip.title}
+          className={`${className} object-cover ${isLoading ? 'hidden' : ''}`}
+          onError={() => {
+            setThumbnailError(true);
+            setIsLoading(false);
+          }}
+          onLoad={() => setIsLoading(false)}
+        />
+      )}
+      
+      {/* Show placeholder if no thumbnail or error */}
+      {(!clip.thumbnail_url || thumbnailError) && !isLoading && <PlaceholderThumbnail />}
       
       {/* Play button overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors">
-        <div className="bg-white/20 hover:bg-white/30 rounded-full p-3 backdrop-blur-sm transition-colors">
-          <PlayIcon className="h-8 w-8 text-white" />
+      {!isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors">
+          <div className="bg-white/20 hover:bg-white/30 rounded-full p-3 backdrop-blur-sm transition-colors">
+            <PlayIcon className="h-8 w-8 text-white" />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Video quality indicator */}
-      {clip.video_url && (
+      {/* Video indicator */}
+      {clip.video_url && !isLoading && (
         <div className="absolute bottom-2 left-2">
           <div className="bg-black/60 text-white px-2 py-1 rounded text-xs backdrop-blur-sm">
             <VideoCameraIcon className="h-3 w-3 inline mr-1" />
@@ -299,16 +236,8 @@ const ThumbnailDisplay: React.FC<{
   );
 };
 
-// AutoClip Review Modal Component - Enhanced with better video handling
-function AutoClipReviewModal({
-  clip,
-  isVisible,
-  onClose,
-  onApprove,
-  onReject,
-  onStatusChange,
-  onRefresh
-}: {
+// AutoClip Review Modal Component
+const AutoClipReviewModal: React.FC<{
   clip: AutoClipReview;
   isVisible: boolean;
   onClose: () => void;
@@ -316,7 +245,7 @@ function AutoClipReviewModal({
   onReject: (clip: AutoClipReview, reason: string, notes?: string) => Promise<boolean>;
   onStatusChange: (clip: AutoClipReview, newStatus: string) => void;
   onRefresh: () => void;
-}) {
+}> = ({ clip, isVisible, onClose, onApprove, onReject, onStatusChange, onRefresh }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [reviewNotes, setReviewNotes] = useState(clip.review_notes || "");
@@ -328,17 +257,26 @@ function AutoClipReviewModal({
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Reset state when clip changes
+  useEffect(() => {
+    setReviewNotes(clip.review_notes || "");
+    setRejectionReason(clip.rejection_reason || "");
+    setCustomReason("");
+    setVideoError(false);
+    setIsPlaying(false);
+    setIsMuted(false);
+  }, [clip]);
+
   if (!isVisible) return null;
 
   const handleVideoPlay = () => {
-    if (videoRef.current) {
+    if (videoRef.current && !videoError) {
       if (isPlaying) {
         videoRef.current.pause();
-        setIsPlaying(false);
       } else {
-        videoRef.current.play();
-        setIsPlaying(true);
+        videoRef.current.play().catch(() => setVideoError(true));
       }
+      setIsPlaying(!isPlaying);
     }
   };
 
@@ -349,15 +287,6 @@ function AutoClipReviewModal({
     }
   };
 
-  const handleVideoEnded = () => {
-    setIsPlaying(false);
-  };
-
-  const handleVideoError = () => {
-    setVideoError(true);
-    console.error('Video playback error');
-  };
-
   const handleApprove = async () => {
     setIsProcessing(true);
     try {
@@ -366,10 +295,9 @@ function AutoClipReviewModal({
         onRefresh();
         onClose();
       }
-    } catch (error) {
-      console.error('Error approving clip:', error);
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   const handleReject = async () => {
@@ -387,22 +315,9 @@ function AutoClipReviewModal({
         onRefresh();
         onClose();
       }
-    } catch (error) {
-      console.error('Error rejecting clip:', error);
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
-  };
-
-  const handleStatusChange = async (newStatus: string) => {
-    setIsProcessing(true);
-    try {
-      await onStatusChange(clip, newStatus);
-      onRefresh();
-      onClose();
-    } catch (error) {
-      console.error('Error changing status:', error);
-    }
-    setIsProcessing(false);
   };
 
   const formatDate = (dateString?: string) => {
@@ -426,6 +341,8 @@ function AutoClipReviewModal({
         return { color: 'text-red-400', icon: XCircleIcon, label: 'Rejected' };
       case 'draft':
         return { color: 'text-gray-400', icon: DocumentTextIcon, label: 'Draft' };
+      case 'archived':
+        return { color: 'text-purple-400', icon: ArchiveBoxIcon, label: 'Archived' };
       default:
         return { color: 'text-gray-400', icon: ExclamationTriangleIcon, label: 'Unknown' };
     }
@@ -435,8 +352,11 @@ function AutoClipReviewModal({
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-xl max-w-6xl w-full max-h-[95vh] overflow-hidden border border-gray-700">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div 
+        className="bg-gray-900 rounded-xl max-w-6xl w-full max-h-[95vh] overflow-hidden border border-gray-700"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <div className="flex items-center space-x-4">
@@ -458,9 +378,9 @@ function AutoClipReviewModal({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
             {/* Left Column - Video and Basic Info */}
             <div className="space-y-6">
-              {/* Enhanced Video Player */}
+              {/* Video Player */}
               <div className="relative bg-black rounded-xl overflow-hidden">
-                {videoError ? (
+                {videoError || !clip.video_url ? (
                   <div className="aspect-video flex items-center justify-center bg-gray-800">
                     <div className="text-center">
                       <ExclamationTriangleIcon className="h-12 w-12 text-red-400 mx-auto mb-4" />
@@ -475,8 +395,9 @@ function AutoClipReviewModal({
                       src={clip.video_url}
                       poster={clip.thumbnail_url}
                       className="w-full aspect-video object-cover"
-                      onEnded={handleVideoEnded}
-                      onError={handleVideoError}
+                      onEnded={() => setIsPlaying(false)}
+                      onError={() => setVideoError(true)}
+                      muted={isMuted}
                     />
                     
                     {/* Video Controls */}
@@ -508,7 +429,6 @@ function AutoClipReviewModal({
                 )}
               </div>
 
-              {/* Rest of modal content remains the same... */}
               {/* Basic Info */}
               <div className="bg-gray-800/50 rounded-xl p-6 space-y-4">
                 <div>
@@ -623,10 +543,51 @@ function AutoClipReviewModal({
                 </div>
               </div>
 
+              {/* Review Notes */}
+              {clip.status === 'under_review' && (
+                <>
+                  <div className="bg-gray-800/50 rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-white mb-4">Review Notes</h4>
+                    <textarea
+                      value={reviewNotes}
+                      onChange={(e) => setReviewNotes(e.target.value)}
+                      placeholder="Add your review notes..."
+                      className="w-full h-24 px-4 py-3 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    />
+                  </div>
+
+                  <div className="bg-gray-800/50 rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-white mb-4">Rejection Reason</h4>
+                    <select
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+                    >
+                      <option value="">Select a reason...</option>
+                      {REJECTION_REASONS.map((reason) => (
+                        <option key={reason} value={reason}>
+                          {reason}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    {rejectionReason === "Other (specify in notes)" && (
+                      <input
+                        type="text"
+                        value={customReason}
+                        onChange={(e) => setCustomReason(e.target.value)}
+                        placeholder="Specify custom reason..."
+                        className="w-full px-4 py-3 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+
               {/* Previous Review Information */}
               {(clip.review_notes || clip.rejection_reason) && (
                 <div className="bg-gray-800/50 rounded-xl p-6">
-                  <h4 className="text-lg font-semibold text-white mb-4">Previous Review</h4>
+                  <h4 className="text-lg font-semibold text-white mb-4">Review History</h4>
                   {clip.rejection_reason && (
                     <div className="mb-3">
                       <span className="text-red-400 text-sm font-medium">Rejection Reason:</span>
@@ -642,66 +603,29 @@ function AutoClipReviewModal({
                 </div>
               )}
 
-              {/* Review Notes */}
-              <div className="bg-gray-800/50 rounded-xl p-6">
-                <h4 className="text-lg font-semibold text-white mb-4">Review Notes</h4>
-                <textarea
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  placeholder="Add your review notes..."
-                  className="w-full h-24 px-4 py-3 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
-
-              {/* Rejection Reason */}
-              <div className="bg-gray-800/50 rounded-xl p-6">
-                <h4 className="text-lg font-semibold text-white mb-4">Rejection Reason</h4>
-                <select
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
-                >
-                  <option value="">Select a reason...</option>
-                  {REJECTION_REASONS.map((reason) => (
-                    <option key={reason} value={reason}>
-                      {reason}
-                    </option>
-                  ))}
-                </select>
-                
-                {rejectionReason === "Other (specify in notes)" && (
-                  <input
-                    type="text"
-                    value={customReason}
-                    onChange={(e) => setCustomReason(e.target.value)}
-                    placeholder="Specify custom reason..."
-                    className="w-full px-4 py-3 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                )}
-              </div>
-
               {/* Action Buttons */}
               <div className="space-y-4">
-                {/* Primary Actions */}
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={handleApprove}
-                    disabled={isProcessing}
-                    className="flex items-center justify-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <CheckCircleIcon className="h-5 w-5 mr-2" />
-                    {isProcessing ? 'Processing...' : 'Approve & Publish'}
-                  </button>
-                  
-                  <button
-                    onClick={handleReject}
-                    disabled={isProcessing || !rejectionReason}
-                    className="flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <XCircleIcon className="h-5 w-5 mr-2" />
-                    {isProcessing ? 'Processing...' : 'Reject'}
-                  </button>
-                </div>
+                {clip.status === 'under_review' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={handleApprove}
+                      disabled={isProcessing}
+                      className="flex items-center justify-center px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white rounded-lg font-medium transition-colors"
+                    >
+                      <CheckCircleIcon className="h-5 w-5 mr-2" />
+                      {isProcessing ? 'Processing...' : 'Approve & Publish'}
+                    </button>
+                    
+                    <button
+                      onClick={handleReject}
+                      disabled={isProcessing || !rejectionReason}
+                      className="flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white rounded-lg font-medium transition-colors"
+                    >
+                      <XCircleIcon className="h-5 w-5 mr-2" />
+                      {isProcessing ? 'Processing...' : 'Reject'}
+                    </button>
+                  </div>
+                )}
 
                 {/* Status Change Actions */}
                 <div className="border-t border-gray-700 pt-4">
@@ -709,7 +633,7 @@ function AutoClipReviewModal({
                   <div className="grid grid-cols-2 gap-2">
                     {clip.status !== 'under_review' && (
                       <button
-                        onClick={() => handleStatusChange('under_review')}
+                        onClick={() => onStatusChange(clip, 'under_review')}
                         disabled={isProcessing}
                         className="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-lg text-sm transition-colors border border-amber-600/30"
                       >
@@ -718,11 +642,29 @@ function AutoClipReviewModal({
                     )}
                     {clip.status !== 'draft' && (
                       <button
-                        onClick={() => handleStatusChange('draft')}
+                        onClick={() => onStatusChange(clip, 'draft')}
                         disabled={isProcessing}
                         className="px-4 py-2 bg-gray-600/20 hover:bg-gray-600/30 text-gray-400 rounded-lg text-sm transition-colors border border-gray-600/30"
                       >
                         Move to Draft
+                      </button>
+                    )}
+                    {clip.status !== 'archived' && (
+                      <button
+                        onClick={() => onStatusChange(clip, 'archived')}
+                        disabled={isProcessing}
+                        className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 rounded-lg text-sm transition-colors border border-purple-600/30"
+                      >
+                        Archive
+                      </button>
+                    )}
+                    {clip.status === 'archived' && (
+                      <button
+                        onClick={() => onStatusChange(clip, 'draft')}
+                        disabled={isProcessing}
+                        className="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-sm transition-colors border border-indigo-600/30"
+                      >
+                        Unarchive
                       </button>
                     )}
                   </div>
@@ -734,7 +676,7 @@ function AutoClipReviewModal({
       </div>
     </div>
   );
-}
+};
 
 // Main Admin AutoClips Page
 export default function AdminAutoClipReview() {
@@ -759,24 +701,51 @@ export default function AdminAutoClipReview() {
     rejected_today: 0,
     total_reviewed: 0,
     draft: 0,
+    archived: 0,
+    published: 0,
   });
 
   // Selected clips for bulk actions
   const [selectedClips, setSelectedClips] = useState<Set<number>>(new Set());
+  
+  // Debounced search query
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const supabase = createClient();
 
   // Initialize data on mount
   useEffect(() => {
-    initializeData();
+    let mounted = true;
+
+    const init = async () => {
+      if (mounted) {
+        await initializeData();
+      }
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Refresh data when filters change
   useEffect(() => {
-    if (!isLoading) {
-      fetchClips();
-    }
-  }, [statusFilter, currentPage, searchQuery]);
+    let mounted = true;
+
+    const fetch = async () => {
+      if (mounted && !isLoading) {
+        await fetchClips();
+      }
+    };
+
+    fetch();
+
+    return () => {
+      mounted = false;
+    };
+  }, [statusFilter, currentPage, debouncedSearchQuery]);
 
   const initializeData = async () => {
     setIsLoading(true);
@@ -804,13 +773,17 @@ export default function AdminAutoClipReview() {
         { count: approvedTodayCount },
         { count: rejectedTodayCount },
         { count: totalReviewedCount },
-        { count: draftCount }
+        { count: draftCount },
+        { count: archivedCount },
+        { count: publishedCount }
       ] = await Promise.all([
         supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'under_review'),
         supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'published').gte('reviewed_at', todayISOString),
         supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'rejected').gte('reviewed_at', todayISOString),
         supabase.from('auto_clips').select('id', { count: 'exact' }).in('status', ['published', 'rejected']).not('reviewed_at', 'is', null),
-        supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'draft')
+        supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'draft'),
+        supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'archived'),
+        supabase.from('auto_clips').select('id', { count: 'exact' }).eq('status', 'published')
       ]);
 
       setReviewStats({
@@ -819,6 +792,8 @@ export default function AdminAutoClipReview() {
         rejected_today: rejectedTodayCount || 0,
         total_reviewed: totalReviewedCount || 0,
         draft: draftCount || 0,
+        archived: archivedCount || 0,
+        published: publishedCount || 0,
       });
 
     } catch (error) {
@@ -844,9 +819,9 @@ export default function AdminAutoClipReview() {
       }
 
       // Apply search filter
-      if (searchQuery.trim()) {
+      if (debouncedSearchQuery.trim()) {
         query = query.or(
-          `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+          `title.ilike.%${debouncedSearchQuery}%,description.ilike.%${debouncedSearchQuery}%`
         );
       }
 
@@ -875,15 +850,15 @@ export default function AdminAutoClipReview() {
 
   const updateClipStatus = async (clipId: number, newStatus: string, additionalData: any = {}) => {
     try {
-      const updateData = {
+      const updateData: any = {
         status: newStatus,
         reviewed_at: new Date().toISOString(),
-        reviewed_by: 'admin', // Replace with actual admin user ID from auth context
+        reviewed_by: 'admin', // TODO: Get actual admin user ID from auth context
         ...additionalData
       };
 
       // Add published_at for published status
-      if (newStatus === 'published') {
+      if (newStatus === 'published' && !updateData.published_at) {
         updateData.published_at = new Date().toISOString();
       }
 
@@ -959,6 +934,8 @@ export default function AdminAutoClipReview() {
         } else if (action === 'reject') {
           const reason = 'Bulk rejected by admin';
           return updateClipStatus(clipId, 'rejected', { rejection_reason: reason, review_notes: reason });
+        } else if (action === 'archive') {
+          return updateClipStatus(clipId, 'archived', { review_notes: 'Bulk archived' });
         }
         return Promise.resolve(false);
       });
@@ -1031,13 +1008,17 @@ export default function AdminAutoClipReview() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return "Invalid date";
+    }
   };
 
   const getStatusConfig = (status: string) => {
@@ -1066,6 +1047,12 @@ export default function AdminAutoClipReview() {
           icon: DocumentTextIcon,
           label: 'Draft'
         };
+      case 'archived':
+        return {
+          color: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+          icon: ArchiveBoxIcon,
+          label: 'Archived'
+        };
       default:
         return {
           color: 'bg-gray-500/10 text-gray-400 border-gray-500/30',
@@ -1077,15 +1064,26 @@ export default function AdminAutoClipReview() {
 
   // Statistics Dashboard Component
   const StatsDashboard = () => (
-    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
       <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5">
         <div className="flex justify-between items-start">
-          <p className="text-gray-400 text-sm font-medium">Pending Review</p>
+          <p className="text-gray-400 text-sm font-medium">Pending</p>
           <ClockIcon className="h-5 w-5 text-amber-400" />
         </div>
         <div className="mt-2">
           <p className="text-white text-3xl font-bold">{reviewStats.pending}</p>
-          <p className="text-amber-400 text-xs mt-1">Awaiting action</p>
+          <p className="text-amber-400 text-xs mt-1">Awaiting</p>
+        </div>
+      </div>
+
+      <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5">
+        <div className="flex justify-between items-start">
+          <p className="text-gray-400 text-sm font-medium">Published</p>
+          <CheckCircleIcon className="h-5 w-5 text-emerald-400" />
+        </div>
+        <div className="mt-2">
+          <p className="text-white text-3xl font-bold">{reviewStats.published}</p>
+          <p className="text-emerald-400 text-xs mt-1">Live</p>
         </div>
       </div>
 
@@ -1096,7 +1094,7 @@ export default function AdminAutoClipReview() {
         </div>
         <div className="mt-2">
           <p className="text-white text-3xl font-bold">{reviewStats.approved_today}</p>
-          <p className="text-emerald-400 text-xs mt-1">Published clips</p>
+          <p className="text-emerald-400 text-xs mt-1">Today</p>
         </div>
       </div>
 
@@ -1107,7 +1105,7 @@ export default function AdminAutoClipReview() {
         </div>
         <div className="mt-2">
           <p className="text-white text-3xl font-bold">{reviewStats.rejected_today}</p>
-          <p className="text-red-400 text-xs mt-1">Declined clips</p>
+          <p className="text-red-400 text-xs mt-1">Today</p>
         </div>
       </div>
 
@@ -1119,6 +1117,17 @@ export default function AdminAutoClipReview() {
         <div className="mt-2">
           <p className="text-white text-3xl font-bold">{reviewStats.draft}</p>
           <p className="text-gray-400 text-xs mt-1">Unpublished</p>
+        </div>
+      </div>
+
+      <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5">
+        <div className="flex justify-between items-start">
+          <p className="text-gray-400 text-sm font-medium">Archived</p>
+          <ArchiveBoxIcon className="h-5 w-5 text-purple-400" />
+        </div>
+        <div className="mt-2">
+          <p className="text-white text-3xl font-bold">{reviewStats.archived}</p>
+          <p className="text-purple-400 text-xs mt-1">Stored</p>
         </div>
       </div>
 
@@ -1141,7 +1150,9 @@ export default function AdminAutoClipReview() {
       {STATUS_FILTERS.map((filter) => {
         const IconComponent = filter.icon;
         const count = filter.value === 'under_review' ? reviewStats.pending : 
-                     filter.value === 'draft' ? reviewStats.draft : null;
+                     filter.value === 'draft' ? reviewStats.draft :
+                     filter.value === 'archived' ? reviewStats.archived :
+                     filter.value === 'published' ? reviewStats.published : null;
         
         return (
           <button
@@ -1167,7 +1178,7 @@ export default function AdminAutoClipReview() {
   );
 
   // Enhanced AutoClip Card Component
-  const AutoClipCard = ({ clip }: any) => {
+  const AutoClipCard = ({ clip }: { clip: AutoClipReview }) => {
     const statusConfig = getStatusConfig(clip.status);
     const StatusIcon = statusConfig.icon;
     const isSelected = selectedClips.has(clip.id);
@@ -1221,28 +1232,32 @@ export default function AdminAutoClipReview() {
             <h3 className="text-white font-bold text-lg mb-1 line-clamp-1">
               {clip.title}
             </h3>
-            <p className="text-gray-300 text-sm line-clamp-1">
-              {clip.car?.year} {clip.car?.make} {clip.car?.model}
-            </p>
+            {clip.car && (
+              <p className="text-gray-300 text-sm line-clamp-1">
+                {clip.car.year} {clip.car.make} {clip.car.model}
+              </p>
+            )}
           </div>
 
           {/* Dealership info */}
-          <div className="flex items-center space-x-2 mb-3">
-            <BuildingOffice2Icon className="h-4 w-4 text-gray-400" />
-            {clip.dealership?.logo && (
-              <img
-                src={clip.dealership.logo}
-                alt={clip.dealership.name}
-                className="w-5 h-5 rounded-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            )}
-            <span className="text-gray-300 text-sm truncate">
-              {clip.dealership?.name || 'Unknown Dealership'}
-            </span>
-          </div>
+          {clip.dealership && (
+            <div className="flex items-center space-x-2 mb-3">
+              <BuildingOffice2Icon className="h-4 w-4 text-gray-400" />
+              {clip.dealership.logo && (
+                <img
+                  src={clip.dealership.logo}
+                  alt={clip.dealership.name}
+                  className="w-5 h-5 rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
+              <span className="text-gray-300 text-sm truncate">
+                {clip.dealership.name || 'Unknown Dealership'}
+              </span>
+            </div>
+          )}
 
           {/* Metrics */}
           <div className="flex justify-between items-center mb-3">
@@ -1286,9 +1301,9 @@ export default function AdminAutoClipReview() {
 
           {/* Action buttons */}
           <div className="space-y-2">
-            {/* Status change buttons */}
-            <div className="grid grid-cols-2 gap-2">
-              {clip.status !== 'published' && (
+            {/* Quick actions based on status */}
+            {clip.status === 'under_review' && (
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => handleQuickApprove(clip)}
                   className="flex items-center justify-center px-3 py-2 bg-emerald-600/90 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors"
@@ -1296,9 +1311,7 @@ export default function AdminAutoClipReview() {
                   <CheckCircleIcon className="h-4 w-4 mr-1" />
                   Approve
                 </button>
-              )}
-              
-              {clip.status !== 'rejected' && (
+                
                 <button
                   onClick={() => handleQuickReject(clip)}
                   className="flex items-center justify-center px-3 py-2 bg-red-600/90 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
@@ -1306,8 +1319,8 @@ export default function AdminAutoClipReview() {
                   <XCircleIcon className="h-4 w-4 mr-1" />
                   Reject
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Management buttons */}
             <div className="grid grid-cols-2 gap-2">
@@ -1331,8 +1344,8 @@ export default function AdminAutoClipReview() {
               </button>
             </div>
 
-            {/* Status change dropdown for published/rejected clips */}
-            {(clip.status === 'published' || clip.status === 'rejected') && (
+            {/* Status change dropdown for non-pending clips */}
+            {clip.status !== 'under_review' && (
               <select
                 onChange={(e) => {
                   if (e.target.value) {
@@ -1348,6 +1361,7 @@ export default function AdminAutoClipReview() {
                 {clip.status !== 'published' && <option value="published">Publish</option>}
                 {clip.status !== 'rejected' && <option value="rejected">Reject</option>}
                 {clip.status !== 'draft' && <option value="draft">Move to Draft</option>}
+                {clip.status !== 'archived' && <option value="archived">Archive</option>}
               </select>
             )}
           </div>
@@ -1404,12 +1418,15 @@ export default function AdminAutoClipReview() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <button
-                    type="submit"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                  >
-                    Search
-                  </button>
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  )}
                 </form>
                 
                 <FilterTabs />
@@ -1436,10 +1453,16 @@ export default function AdminAutoClipReview() {
                         Bulk Reject
                       </button>
                       <button
+                        onClick={() => handleBulkAction('archive')}
+                        className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm"
+                      >
+                        Bulk Archive
+                      </button>
+                      <button
                         onClick={clearSelection}
                         className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm"
                       >
-                        Clear Selection
+                        Clear
                       </button>
                     </div>
                   </div>
