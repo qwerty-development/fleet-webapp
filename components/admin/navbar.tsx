@@ -447,17 +447,7 @@ const AdminNavbar: React.FC = () => {
             )}
 
             {/* UPDATED: Mobile notification indicator */}
-            {notificationStats.active_dealerships > 0 && !pendingReviewCount && (
-              <Link
-                href="/admin/notifications"
-                className="relative p-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 rounded-lg shadow-sm transition-all duration-200"
-              >
-                <BellIcon className="h-5 w-5 text-white" />
-                <div className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-                  {notificationStats.active_dealerships > 9 ? "9+" : notificationStats.active_dealerships}
-                </div>
-              </Link>
-            )}
+            
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -524,30 +514,7 @@ const AdminNavbar: React.FC = () => {
           )}
 
           {/* UPDATED: Mobile Notification Stats */}
-          {notificationStats.active_dealerships > 0 && !pendingReviewCount && (
-            <div className="px-4 py-3 border-t border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center">
-                    <BellIcon className="h-5 w-5 text-blue-600 mr-2" />
-                    <div>
-                      <p className="font-medium text-gray-700">Send Notifications</p>
-                      <p className="text-xs text-gray-500">{notificationStats.active_dealerships} active dealers</p>
-                    </div>
-                  </div>
-                
-                </div>
-                <Link
-                  href="/admin/notifications"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white py-2 rounded-lg font-medium transition-all duration-200 shadow-sm space-x-2"
-                >
-                  <BellIcon className="h-4 w-4" />
-                  <span>Send Notification</span>
-                </Link>
-              </div>
-            </div>
-          )}
+   
 
           {/* Mobile Logout Button */}
           <div className="p-4 border-t border-gray-200 bg-gray-50/50">

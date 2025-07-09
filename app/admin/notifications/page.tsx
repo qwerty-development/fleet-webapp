@@ -507,38 +507,45 @@ export default function AdminNotifications() {
                 Notification Details
               </h2>
 
-              {/* Type Selector */}
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                <button
-                  onClick={() => setNotificationType('dealership_notification')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    notificationType === 'dealership_notification'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  Update
-                </button>
-                <button
-                  onClick={() => setNotificationType('announcement')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    notificationType === 'announcement'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  Announcement
-                </button>
-                <button
-                  onClick={() => setNotificationType('subscription_reminder')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    notificationType === 'subscription_reminder'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  Subscription
-                </button>
+              {/* Type Selector - FIXED: Mobile responsive */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Notification Type
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => setNotificationType('dealership_notification')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 ${
+                      notificationType === 'dealership_notification'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={() => setNotificationType('announcement')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 ${
+                      notificationType === 'announcement'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <span className="hidden sm:inline">Announcement</span>
+                    <span className="sm:hidden">Announcement</span>
+                  </button>
+                  <button
+                    onClick={() => setNotificationType('subscription_reminder')}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex-1 ${
+                      notificationType === 'subscription_reminder'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    <span className="hidden sm:inline">Subscription</span>
+                    <span className="sm:hidden">Subscription</span>
+                  </button>
+                </div>
               </div>
 
               {/* Title Input */}
