@@ -266,13 +266,7 @@ const AdminNavbar: React.FC = () => {
       );
     }
     
-    if (item.badge === "notification_count" && notificationStats.active_dealerships > 0) {
-      return (
-        <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full min-w-[18px] h-5 flex items-center justify-center px-1.5 shadow-sm">
-          {notificationStats.active_dealerships > 99 ? "99+" : notificationStats.active_dealerships}
-        </div>
-      );
-    }
+ 
     
     return null;
   };
@@ -397,31 +391,7 @@ const AdminNavbar: React.FC = () => {
             </div>
           )}
 
-          {/* UPDATED: Notification Quick Stats (Desktop Only) */}
-          {notificationStats.active_dealerships > 0 && !pendingReviewCount && (
-            <div className="px-4 py-3 border-t border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <div className="bg-white border border-blue-200 rounded-lg p-3 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <BellIcon className="h-4 w-4 text-blue-600 mr-2" />
-                    <span className="text-sm font-medium text-gray-700">Active Dealers</span>
-                  </div>
-                  <span className="text-lg font-bold text-blue-600">
-                    {notificationStats.active_dealerships}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-600 mb-2">
-                  {notificationStats.sent_today} sent today
-                </div>
-                <Link
-                  href="/admin/notifications"
-                  className="block w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-center py-1.5 rounded-md text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Send Notification
-                </Link>
-              </div>
-            </div>
-          )}
+ 
 
           {/* Logout Button */}
           <div className="p-4 border-t border-gray-200 bg-gray-50/50">
@@ -565,9 +535,7 @@ const AdminNavbar: React.FC = () => {
                       <p className="text-xs text-gray-500">{notificationStats.active_dealerships} active dealers</p>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-blue-600">
-                    {notificationStats.sent_today} today
-                  </span>
+                
                 </div>
                 <Link
                   href="/admin/notifications"

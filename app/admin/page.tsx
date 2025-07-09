@@ -314,7 +314,7 @@ export default function AdminDashboard() {
           ) : (
             <>
               {/* Quick Stats - UPDATED: Added notifications stat */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
@@ -422,35 +422,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* UPDATED: New Notifications stat card */}
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <p className="text-gray-400 text-sm font-medium">
-                      Notifications
-                    </p>
-                    <span className="flex items-center justify-center p-1.5 rounded-md bg-rose-500/20 text-rose-300">
-                      <BellIcon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-white text-2xl font-semibold">
-                      {stats.notifications.sent_today}
-                    </p>
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-400">
-                        <span className="text-rose-400">
-                          {stats.notifications.total_sent}
-                        </span>{" "}
-                        total sent
-                      </span>
-                      <span className="text-gray-400">
-                        <span className="text-emerald-400">
-                          {stats.notifications.active_dealerships}
-                        </span>{" "}
-                        active dealers
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              
               </div>
 
               {/* Cars by Status */}

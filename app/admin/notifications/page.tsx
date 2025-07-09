@@ -92,7 +92,24 @@ export default function AdminNotifications() {
 
       if (error) throw error;
       
-      setDealerships(data || []);
+      // FIXED: Debug dealership data and filter out invalid entries
+      console.log('Raw dealership data:', data);
+      
+      const validDealerships = (data || []).filter(dealership => {
+        const hasValidUser = dealership.user_id && dealership.user;
+        if (!hasValidUser) {
+          console.warn('Dealership missing user account:', {
+            id: dealership.id,
+            name: dealership.name,
+            user_id: dealership.user_id,
+            user: dealership.user
+          });
+        }
+        return hasValidUser;
+      });
+
+      console.log(`Filtered dealerships: ${validDealerships.length}/${(data || []).length} valid`);
+      setDealerships(validDealerships);
     } catch (error) {
       console.error('Error fetching dealerships:', error);
       alert('Failed to fetch dealerships');
@@ -195,8 +212,44 @@ export default function AdminNotifications() {
     try {
       setSending(true);
 
-      // Create pending notifications for each selected dealership
-      const notificationsToInsert = selectedDealerships.map(userId => ({
+      // FIXED: Validate that all selected user IDs exist in users table
+      console.log('Validating user IDs...', selectedDealerships);
+      const { data: validUsers, error: validationError } = await supabase
+        .from('users')
+        .select('id')
+        .in('id', selectedDealerships);
+
+      if (validationError) {
+        console.error('Error validating users:', validationError);
+        throw new Error('Failed to validate recipient users');
+      }
+
+      const validUserIds = validUsers?.map(u => u.id) || [];
+      const invalidUserIds = selectedDealerships.filter(id => !validUserIds.includes(id));
+
+      if (invalidUserIds.length > 0) {
+        console.warn('Invalid user IDs found:', invalidUserIds);
+        const shouldContinue = confirm(
+          `${invalidUserIds.length} dealership(s) have invalid user accounts. Continue with ${validUserIds.length} valid recipients?`
+        );
+        if (!shouldContinue) {
+          setSending(false);
+          return;
+        }
+      }
+
+      const finalRecipients = validUserIds;
+      if (finalRecipients.length === 0) {
+        alert('No valid recipients found. Please check dealership user accounts.');
+        setSending(false);
+        return;
+      }
+
+      // FIXED: Create notifications with required fields
+      const now = new Date();
+      const hourMark = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+      
+      const notificationsToInsert = finalRecipients.map(userId => ({
         user_id: userId,
         type: notificationType,
         data: {
@@ -205,55 +258,187 @@ export default function AdminNotifications() {
           screen: getNotificationScreenByType(notificationType),
           metadata: {
             sentBy: user?.id,
-            sentAt: new Date().toISOString(),
+            sentAt: now.toISOString(),
             recipientType: 'dealership',
             priority: 'normal'
           }
         },
-        processed: false
+        processed: false,
+        created_at_hour: hourMark.toISOString()
       }));
 
-      // Batch insert notifications
-      const { error: insertError } = await supabase
-        .from('pending_notifications')
-        .insert(notificationsToInsert);
+      console.log('Inserting notifications...', notificationsToInsert.length);
 
-      if (insertError) throw insertError;
-
-      // Log the admin action
-      const { error: logError } = await supabase
-        .from('notification_admin_logs')
-        .insert({
-          sent_by: user?.id,
-          title: title.trim(),
-          message: message.trim(),
-          recipients_count: selectedDealerships.length,
-          recipient_type: selectedDealerships.length === dealerships.length ? 'all' : 'selected',
-          recipient_ids: selectedDealerships,
-          notification_type: notificationType,
-          metadata: {
-            filterActive,
-            filterExpired,
-            searchQuery
-          }
-        });
-
-      if (logError) {
-        console.log('Failed to log notification (table might not exist):', logError);
+      // FIXED: Batch insert in smaller chunks to avoid limits
+      const BATCH_SIZE = 10;
+      const batches = [];
+      for (let i = 0; i < notificationsToInsert.length; i += BATCH_SIZE) {
+        batches.push(notificationsToInsert.slice(i, i + BATCH_SIZE));
       }
 
-      alert(
-        `Notifications sent to ${selectedDealerships.length} dealership${selectedDealerships.length > 1 ? 's' : ''}!`
-      );
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`Processing batch ${i + 1}/${batches.length} (${batch.length} notifications)`);
+        
+        try {
+          const { error: batchError } = await supabase
+            .from('pending_notifications')
+            .insert(batch);
+
+          if (batchError) {
+            console.error(`Batch ${i + 1} error:`, batchError);
+            errorCount += batch.length;
+          } else {
+            console.log(`Batch ${i + 1} success`);
+            successCount += batch.length;
+          }
+        } catch (batchErr) {
+          console.error(`Batch ${i + 1} exception:`, batchErr);
+          errorCount += batch.length;
+        }
+
+        // Small delay between batches to avoid overwhelming the database
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`Batch processing complete. Success: ${successCount}, Errors: ${errorCount}`);
+
+      if (successCount === 0) {
+        throw new Error('All notification batches failed to insert');
+      }
+
+      // FIXED: Log the admin action with better error handling
+      try {
+        const { error: logError } = await supabase
+          .from('notification_admin_logs')
+          .insert({
+            sent_by: user?.id,
+            title: title.trim(),
+            message: message.trim(),
+            recipients_count: successCount,
+            recipient_type: selectedDealerships.length === dealerships.length ? 'all' : 'selected',
+            recipient_ids: finalRecipients,
+            notification_type: notificationType,
+            metadata: {
+              filterActive,
+              filterExpired,
+              searchQuery,
+              batchInfo: {
+                totalBatches: batches.length,
+                successCount,
+                errorCount,
+                originalRecipientCount: selectedDealerships.length,
+                validRecipientCount: finalRecipients.length
+              }
+            }
+          });
+
+        if (logError) {
+          console.error('Failed to log notification:', logError);
+          // Don't throw here - the notifications were sent successfully
+        }
+      } catch (logErr) {
+        console.error('Exception logging notification:', logErr);
+        // Don't throw here - the notifications were sent successfully
+      }
+
+      // Show success message
+      if (errorCount > 0) {
+        alert(
+          `Partially successful: ${successCount} notifications sent, ${errorCount} failed. Check logs for details.`
+        );
+      } else {
+        alert(
+          `Success! Notifications sent to ${successCount} dealership${successCount > 1 ? 's' : ''}!`
+        );
+      }
 
       // Reset form and refresh
       resetForm();
       fetchNotificationHistory();
     } catch (error) {
       console.error('Error sending notifications:', error);
-      alert('Failed to send notifications. Please try again.');
+      
+      // More specific error messages
+      let errorMessage = 'Failed to send notifications. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('validate')) {
+          errorMessage = 'Failed to validate recipients. Please check dealership accounts.';
+        } else if (error.message.includes('insert')) {
+          errorMessage = 'Database error while sending notifications. Please try again.';
+        } else if (error.message.includes('batch')) {
+          errorMessage = 'Error processing notification batches. Some may have been sent.';
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setSending(false);
+    }
+  };
+
+  // ADDED: Test notification system
+  const testNotificationSystem = async () => {
+    try {
+      setLoading(true);
+      console.log('Testing notification system...');
+
+      // Test 1: Check if tables exist and are accessible
+      const tests = [
+        { name: 'pending_notifications table', query: () => supabase.from('pending_notifications').select('id').limit(1) },
+        { name: 'notification_admin_logs table', query: () => supabase.from('notification_admin_logs').select('id').limit(1) },
+        { name: 'users table', query: () => supabase.from('users').select('id').limit(1) },
+        { name: 'dealerships table', query: () => supabase.from('dealerships').select('id').limit(1) }
+      ];
+
+      const results = [];
+      for (const test of tests) {
+        try {
+          await test.query();
+          results.push(`✅ ${test.name}: OK`);
+        } catch (error:any) {
+          results.push(`❌ ${test.name}: ${error.message}`);
+        }
+      }
+
+      // Test 2: Check dealership-user relationships
+      const { data: dealershipCheck, error: dealershipError } = await supabase
+        .from('dealerships')
+        .select('id, name, user_id, user:users!dealerships_user_id_fkey(id, email)')
+        .limit(5);
+
+      if (dealershipError) {
+        results.push(`❌ Dealership-User join: ${dealershipError.message}`);
+      } else {
+        const validLinks = dealershipCheck?.filter(d => d.user_id && d.user) || [];
+        results.push(`✅ Dealership-User links: ${validLinks.length}/${dealershipCheck?.length || 0} valid`);
+      }
+
+      // Test 3: Check current user permissions
+      const { data: currentUserTest, error: userError } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('id', user?.id)
+        .single();
+
+      if (userError) {
+        results.push(`❌ Current user check: ${userError.message}`);
+      } else {
+        results.push(`✅ Current user: ${currentUserTest?.role || 'no role'}`);
+      }
+
+      alert(`Notification System Test Results:\n\n${results.join('\n')}`);
+    } catch (error:any) {
+      alert(`Test failed: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -289,13 +474,29 @@ export default function AdminNotifications() {
               <h1 className="text-3xl font-bold text-white mb-2">Send Notifications</h1>
               <p className="text-gray-400">Send notifications to dealerships</p>
             </div>
-            <button
-              onClick={() => setShowHistory(true)}
-              className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors mt-4 md:mt-0"
-            >
-              <ClockIcon className="h-5 w-5 mr-2" />
-              View History
-            </button>
+            <div className="flex items-center space-x-2 mt-4 md:mt-0">
+              <button
+                onClick={testNotificationSystem}
+                disabled={loading}
+                className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                Test System
+              </button>
+              <button
+                onClick={() => setShowHistory(true)}
+                className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                <ClockIcon className="h-5 w-5 mr-2" />
+                View History
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
