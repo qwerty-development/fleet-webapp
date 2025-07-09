@@ -16,6 +16,7 @@ import {
   VideoCameraIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  BellIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -26,6 +27,7 @@ import {
   Cog6ToothIcon as Cog6ToothIconSolid,
   ListBulletIcon as ListBulletIcon,
   VideoCameraIcon as VideoCameraIconSolid,
+  BellIcon as BellIconSolid,
 } from "@heroicons/react/24/solid";
 
 import { useAuth } from "@/utils/AuthContext";
@@ -37,11 +39,11 @@ interface NavItem {
   href: string;
   icon: React.ForwardRefExoticComponent<any>;
   iconActive: React.ForwardRefExoticComponent<any>;
-  badge?: "pending";
+  badge?: "pending" | "notification_count";
   description?: string;
 }
 
-// ENHANCED: Navigation items with AutoClip review integration
+// UPDATED: Navigation items with Notifications integration
 const navItems: NavItem[] = [
   {
     name: "Dashboard",
@@ -64,6 +66,14 @@ const navItems: NavItem[] = [
     iconActive: VideoCameraIconSolid,
     badge: "pending",
     description: "Review video submissions",
+  },
+  {
+    name: "Send Notifications",
+    href: "/admin/notifications",
+    icon: BellIcon,
+    iconActive: BellIconSolid,
+    badge: "notification_count",
+    description: "Send notifications to dealerships",
   },
   {
     name: "Users",
@@ -106,11 +116,19 @@ const AdminNavbar: React.FC = () => {
   // STATE: AutoClip review tracking
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [isLoadingCount, setIsLoadingCount] = useState(true);
+  
+  // UPDATED: Add notification tracking
+  const [notificationStats, setNotificationStats] = useState({
+    sent_today: 0,
+    active_dealerships: 0,
+  });
+  
   const supabase = createClient();
 
-  // RULE: Initialize pending review count on component mount
+  // UPDATED: Initialize both pending review count and notification stats
   useEffect(() => {
     fetchPendingReviewCount();
+    fetchNotificationStats();
     
     // RULE: Set up real-time subscription for pending count updates
     const subscription = supabase
@@ -129,8 +147,25 @@ const AdminNavbar: React.FC = () => {
       )
       .subscribe();
 
+    // UPDATED: Set up subscription for notification stats
+    const notificationSubscription = supabase
+      .channel('notification_logs_navbar')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notification_admin_logs'
+        },
+        () => {
+          fetchNotificationStats();
+        }
+      )
+      .subscribe();
+
     return () => {
       subscription.unsubscribe();
+      notificationSubscription.unsubscribe();
     };
   }, []);
 
@@ -153,6 +188,34 @@ const AdminNavbar: React.FC = () => {
       setPendingReviewCount(0);
     } finally {
       setIsLoadingCount(false);
+    }
+  };
+
+  // UPDATED: Fetch notification stats
+  const fetchNotificationStats = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISOString = today.toISOString();
+
+      const [
+        { count: sentTodayCount },
+        { count: activeDealershipsCount }
+      ] = await Promise.all([
+        supabase.from('notification_admin_logs').select('id', { count: 'exact' }).gte('created_at', todayISOString),
+        supabase.from('dealerships').select('id', { count: 'exact' }).gte('subscription_end_date', new Date().toISOString().split('T')[0])
+      ]);
+
+      setNotificationStats({
+        sent_today: sentTodayCount || 0,
+        active_dealerships: activeDealershipsCount || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching notification stats:', error);
+      setNotificationStats({
+        sent_today: 0,
+        active_dealerships: 0,
+      });
     }
   };
 
@@ -193,7 +256,7 @@ const AdminNavbar: React.FC = () => {
     return pathname.startsWith(href);
   };
 
-  // COMPONENT: Navigation badge for pending items
+  // UPDATED: Navigation badge for pending items and notification stats
   const NavigationBadge = ({ item }: { item: NavItem }) => {
     if (item.badge === "pending" && pendingReviewCount > 0) {
       return (
@@ -202,6 +265,15 @@ const AdminNavbar: React.FC = () => {
         </div>
       );
     }
+    
+    if (item.badge === "notification_count" && notificationStats.active_dealerships > 0) {
+      return (
+        <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full min-w-[18px] h-5 flex items-center justify-center px-1.5 shadow-sm">
+          {notificationStats.active_dealerships > 99 ? "99+" : notificationStats.active_dealerships}
+        </div>
+      );
+    }
+    
     return null;
   };
 
@@ -225,6 +297,7 @@ const AdminNavbar: React.FC = () => {
   }) => {
     const active = isActive(item.href);
     const hasPendingBadge = item.badge === "pending" && pendingReviewCount > 0;
+    const hasNotificationBadge = item.badge === "notification_count" && notificationStats.active_dealerships > 0;
 
     return (
       <Link
@@ -234,7 +307,7 @@ const AdminNavbar: React.FC = () => {
           active
             ? "bg-accent text-white shadow-sm"
             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-        } ${hasPendingBadge ? 'ring-1 ring-orange-200' : ''}`}
+        } ${(hasPendingBadge || hasNotificationBadge) ? 'ring-1 ring-orange-200' : ''}`}
         onClick={() => isMobile && setIsMobileMenuOpen(false)}
       >
         <div className="relative flex items-center">
@@ -256,13 +329,19 @@ const AdminNavbar: React.FC = () => {
           )}
         </div>
 
-        {/* INDICATOR: Pending review status for AutoClip item */}
+        {/* UPDATED: Pending review status and notification indicators */}
         {item.badge === "pending" && pendingReviewCount > 0 && !isMobile && (
           <div className="flex items-center ml-2">
             <ClockIcon className="h-3 w-3 text-orange-500" />
             {pendingReviewCount > 10 && (
               <ExclamationTriangleIcon className="h-3 w-3 text-red-500 ml-1" />
             )}
+          </div>
+        )}
+        
+        {item.badge === "notification_count" && notificationStats.active_dealerships > 0 && !isMobile && (
+          <div className="flex items-center ml-2">
+            <BellIcon className="h-3 w-3 text-blue-500" />
           </div>
         )}
       </Link>
@@ -318,6 +397,32 @@ const AdminNavbar: React.FC = () => {
             </div>
           )}
 
+          {/* UPDATED: Notification Quick Stats (Desktop Only) */}
+          {notificationStats.active_dealerships > 0 && !pendingReviewCount && (
+            <div className="px-4 py-3 border-t border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="bg-white border border-blue-200 rounded-lg p-3 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <BellIcon className="h-4 w-4 text-blue-600 mr-2" />
+                    <span className="text-sm font-medium text-gray-700">Active Dealers</span>
+                  </div>
+                  <span className="text-lg font-bold text-blue-600">
+                    {notificationStats.active_dealerships}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-600 mb-2">
+                  {notificationStats.sent_today} sent today
+                </div>
+                <Link
+                  href="/admin/notifications"
+                  className="block w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-center py-1.5 rounded-md text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Send Notification
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Logout Button */}
           <div className="p-4 border-t border-gray-200 bg-gray-50/50">
             <button
@@ -367,6 +472,19 @@ const AdminNavbar: React.FC = () => {
                 <VideoCameraIcon className="h-5 w-5 text-white" />
                 <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
                   {pendingReviewCount > 9 ? "9+" : pendingReviewCount}
+                </div>
+              </Link>
+            )}
+
+            {/* UPDATED: Mobile notification indicator */}
+            {notificationStats.active_dealerships > 0 && !pendingReviewCount && (
+              <Link
+                href="/admin/notifications"
+                className="relative p-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 rounded-lg shadow-sm transition-all duration-200"
+              >
+                <BellIcon className="h-5 w-5 text-white" />
+                <div className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                  {notificationStats.active_dealerships > 9 ? "9+" : notificationStats.active_dealerships}
                 </div>
               </Link>
             )}
@@ -430,6 +548,34 @@ const AdminNavbar: React.FC = () => {
                 >
                   <ClockIcon className="h-4 w-4" />
                   <span>Review Now</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* UPDATED: Mobile Notification Stats */}
+          {notificationStats.active_dealerships > 0 && !pendingReviewCount && (
+            <div className="px-4 py-3 border-t border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <BellIcon className="h-5 w-5 text-blue-600 mr-2" />
+                    <div>
+                      <p className="font-medium text-gray-700">Send Notifications</p>
+                      <p className="text-xs text-gray-500">{notificationStats.active_dealerships} active dealers</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-blue-600">
+                    {notificationStats.sent_today} today
+                  </span>
+                </div>
+                <Link
+                  href="/admin/notifications"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-center w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white py-2 rounded-lg font-medium transition-all duration-200 shadow-sm space-x-2"
+                >
+                  <BellIcon className="h-4 w-4" />
+                  <span>Send Notification</span>
                 </Link>
               </div>
             </div>

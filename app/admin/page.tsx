@@ -16,12 +16,13 @@ import {
   BanknotesIcon,
   ArrowUpIcon,
   ArrowDownIcon,
+  BellIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/components/home/Navbar";
 import AdminNavbar from "@/components/admin/navbar";
 
-// Dashboard sections
+// Dashboard sections - UPDATED: Added Notifications section
 const SECTIONS = [
   {
     id: "listings",
@@ -43,6 +44,13 @@ const SECTIONS = [
     description: "Manage dealership profiles",
     icon: BuildingOffice2Icon,
     color: "from-amber-500 to-orange-500",
+  },
+  {
+    id: "notifications",
+    name: "Notifications",
+    description: "Send notifications to dealerships",
+    icon: BellIcon,
+    color: "from-rose-500 to-pink-500",
   },
   {
     id: "analytics",
@@ -73,6 +81,12 @@ export default function AdminDashboard() {
       totalLikes: 0,
       avgPrice: 0,
     },
+    // UPDATED: Added notifications stats
+    notifications: {
+      sent_today: 0,
+      total_sent: 0,
+      active_dealerships: 0,
+    },
   });
 
   const [popularCars, setPopularCars] = useState<any[]>([]);
@@ -98,6 +112,22 @@ export default function AdminDashboard() {
           .select("*");
 
         if (usersError) throw usersError;
+
+        // UPDATED: Fetch notifications data
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayISOString = today.toISOString();
+
+        // Get notification stats
+        const [
+          { count: sentTodayCount },
+          { count: totalSentCount },
+          { count: activeDealershipsCount }
+        ] = await Promise.all([
+          supabase.from('notification_admin_logs').select('id', { count: 'exact' }).gte('created_at', todayISOString),
+          supabase.from('notification_admin_logs').select('id', { count: 'exact' }),
+          supabase.from('dealerships').select('id', { count: 'exact' }).gte('subscription_end_date', new Date().toISOString().split('T')[0])
+        ]);
 
         // Process cars data
         if (carsData) {
@@ -135,6 +165,12 @@ export default function AdminDashboard() {
               totalViews,
               totalLikes,
               avgPrice,
+            },
+            // UPDATED: Set notifications stats
+            notifications: {
+              sent_today: sentTodayCount || 0,
+              total_sent: totalSentCount || 0,
+              active_dealerships: activeDealershipsCount || 0,
             },
           }));
 
@@ -277,8 +313,8 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <>
-              {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {/* Quick Stats - UPDATED: Added notifications stat */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
@@ -295,11 +331,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center text-xs mt-1 text-gray-400">
                       <span className="text-emerald-400 flex items-center">
                         <ArrowUpIcon className="h-3 w-3 mr-1" />
-                        {Math.round(
-                          (stats.cars.total / (stats.cars.total - 1)) * 100 -
-                            100
-                        )}
-                        %
+                        {stats.cars.total > 0 ? Math.round((stats.cars.total / (stats.cars.total + 1)) * 100) : 0}%
                       </span>
                       <span className="ml-2">from last month</span>
                     </div>
@@ -377,13 +409,44 @@ export default function AdminDashboard() {
                       </span>
                       <span className="text-gray-400">
                         <span className="text-emerald-400">
-                          {Math.round(
+                          {stats.cars.totalViews > 0 ? Math.round(
                             (stats.cars.totalLikes / stats.cars.totalViews) *
                               100
-                          )}
+                          ) : 0}
                           %
                         </span>{" "}
                         conversion
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* UPDATED: New Notifications stat card */}
+                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                  <div className="flex justify-between items-start">
+                    <p className="text-gray-400 text-sm font-medium">
+                      Notifications
+                    </p>
+                    <span className="flex items-center justify-center p-1.5 rounded-md bg-rose-500/20 text-rose-300">
+                      <BellIcon className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-white text-2xl font-semibold">
+                      {stats.notifications.sent_today}
+                    </p>
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className="text-gray-400">
+                        <span className="text-rose-400">
+                          {stats.notifications.total_sent}
+                        </span>{" "}
+                        total sent
+                      </span>
+                      <span className="text-gray-400">
+                        <span className="text-emerald-400">
+                          {stats.notifications.active_dealerships}
+                        </span>{" "}
+                        active dealers
                       </span>
                     </div>
                   </div>
@@ -433,8 +496,8 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Main Sections Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              {/* Main Sections Grid - UPDATED: Now shows 5 sections including notifications */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
                 {SECTIONS.map((section) => (
                   <div
                     key={section.id}
