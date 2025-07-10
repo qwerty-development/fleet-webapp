@@ -1,9 +1,9 @@
 // components/MarqueeLogos.tsx
 import React, { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { getLogoUrl } from "./CarCard";
 import { motion } from "framer-motion";
 import { UserCircleIcon } from "@heroicons/react/24/outline";
+import { getLogoUrl } from "@/utils/getLogoUrl";
 
 interface Brand {
   make: string;

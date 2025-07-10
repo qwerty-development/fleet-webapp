@@ -10,6 +10,7 @@ import SortSelector from "@/components/home/SortSelector";
 import { createClient } from "@/utils/supabase/client";
 import { ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { Car as GlobalCar } from "@/types"; // Import the Car type from global types
+import { getLogoUrl } from "@/utils/getLogoUrl";
 
 // Define constants for sort options
 const SORT_OPTIONS = {
@@ -43,40 +44,12 @@ export default function BrandPage() {
   const ITEMS_PER_PAGE = 9;
   const supabase = createClient();
 
-  // Get logo URL function
-  const getLogoUrl = (make: string): string => {
-    const formattedMake = make.toLowerCase().replace(/\s+/g, "-");
-    switch (formattedMake) {
-      case "range-rover":
-        return "https://www.carlogos.org/car-logos/land-rover-logo-2020-green.png";
-      case "infiniti":
-        return "https://www.carlogos.org/car-logos/infiniti-logo.png";
-      case "jetour":
-        return "https://upload.wikimedia.org/wikipedia/commons/8/8a/Jetour_Logo.png?20230608073743";
-      case "audi":
-        return "https://www.freepnglogos.com/uploads/audi-logo-2.png";
-      case "nissan":
-        return "https://cdn.freebiesupply.com/logos/large/2x/nissan-6-logo-png-transparent.png";
-      case "mercedes":
-      case "mercedes-benz":
-        return "https://www.carlogos.org/car-logos/mercedes-benz-logo.png";
-      case "bmw":
-        return "https://www.carlogos.org/car-logos/bmw-logo.png";
-      case "toyota":
-        return "https://www.carlogos.org/car-logos/toyota-logo.png";
-      case "honda":
-        return "https://www.carlogos.org/car-logos/honda-logo.png";
-      case "ford":
-        return "https://www.carlogos.org/car-logos/ford-logo.png";
-      default:
-        return `https://www.carlogos.org/car-logos/${formattedMake}-logo.png`;
-    }
-  };
+
 
   // Set the brand logo on initial load
   useEffect(() => {
     if (brand) {
-      setBrandLogo(getLogoUrl(brand));
+      setBrandLogo(getLogoUrl(brand, true));
     }
   }, [brand]);
 

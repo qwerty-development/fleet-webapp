@@ -11,6 +11,8 @@ import {
 } from "@heroicons/react/24/outline";
 
 import FavoriteButton from "./FavoriteButton";
+import { getLogoUrl } from "@/utils/getLogoUrl";
+
 
 interface CarCardProps {
   car: any;
@@ -19,34 +21,6 @@ interface CarCardProps {
 
 const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
   // Helper function to get brand logo URL
-  const getLogoUrl = (make: string): string => {
-    const formattedMake = make.toLowerCase().replace(/\s+/g, "-");
-    switch (formattedMake) {
-      case "range-rover":
-        return "https://www.carlogos.org/car-logos/land-rover-logo-2020-green.png";
-      case "infiniti":
-        return "https://www.carlogos.org/car-logos/infiniti-logo.png";
-      case "jetour":
-        return "https://upload.wikimedia.org/wikipedia/commons/8/8a/Jetour_Logo.png?20230608073743";
-      case "audi":
-        return "https://www.freepnglogos.com/uploads/audi-logo-2.png";
-      case "nissan":
-        return "https://cdn.freebiesupply.com/logos/large/2x/nissan-6-logo-png-transparent.png";
-      case "mercedes":
-      case "mercedes-benz":
-        return "https://www.carlogos.org/car-logos/mercedes-benz-logo.png";
-      case "bmw":
-        return "https://www.carlogos.org/car-logos/bmw-logo.png";
-      case "toyota":
-        return "https://www.carlogos.org/car-logos/toyota-logo.png";
-      case "honda":
-        return "https://www.carlogos.org/car-logos/honda-logo.png";
-      case "ford":
-        return "https://www.carlogos.org/car-logos/ford-logo.png";
-      default:
-        return `https://www.carlogos.org/car-logos/${formattedMake}-logo.png`;
-    }
-  };
 
   // Handle missing images
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -98,7 +72,7 @@ const CarCard: React.FC<CarCardProps> = ({ car, isDealer = false }) => {
             <div className="flex items-center">
               <div className="h-8 w-8 mr-2 flex-shrink-0">
                 <img
-                  src={getLogoUrl(car.make)}
+                  src={getLogoUrl(car.make, true)}
                   alt={car.make}
                   className="w-full h-full object-contain"
                   onError={handleLogoError}

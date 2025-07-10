@@ -6,6 +6,7 @@ import Navbar from "@/components/home/Navbar";
 import SearchBar from "@/components/home/SearchBar";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+import { getLogoUrl } from "@/utils/getLogoUrl";
 
 interface Brand {
   name: string;
@@ -21,35 +22,6 @@ export default function AllBrandsPage() {
 
   const supabase = createClient();
 
-  // Get logo URL function
-  const getLogoUrl = (make: string): string => {
-    const formattedMake = make.toLowerCase().replace(/\s+/g, "-");
-    switch (formattedMake) {
-      case "range-rover":
-        return "https://www.carlogos.org/car-logos/land-rover-logo-2020-green.png";
-      case "infiniti":
-        return "https://www.carlogos.org/car-logos/infiniti-logo.png";
-      case "jetour":
-        return "https://upload.wikimedia.org/wikipedia/commons/8/8a/Jetour_Logo.png?20230608073743";
-      case "audi":
-        return "https://www.freepnglogos.com/uploads/audi-logo-2.png";
-      case "nissan":
-        return "https://cdn.freebiesupply.com/logos/large/2x/nissan-6-logo-png-transparent.png";
-      case "mercedes":
-      case "mercedes-benz":
-        return "https://www.carlogos.org/car-logos/mercedes-benz-logo.png";
-      case "bmw":
-        return "https://www.carlogos.org/car-logos/bmw-logo.png";
-      case "toyota":
-        return "https://www.carlogos.org/car-logos/toyota-logo.png";
-      case "honda":
-        return "https://www.carlogos.org/car-logos/honda-logo.png";
-      case "ford":
-        return "https://www.carlogos.org/car-logos/ford-logo.png";
-      default:
-        return `https://www.carlogos.org/car-logos/${formattedMake}-logo.png`;
-    }
-  };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.src = '';
@@ -77,7 +49,7 @@ export default function AllBrandsPage() {
       const uniqueBrands = Array.from(new Set(data.map((item) => item.make)));
       const brandsData: Brand[] = uniqueBrands.map((make) => ({
         name: make,
-        logoUrl: getLogoUrl(make),
+        logoUrl: getLogoUrl(make, true),
         carCount: counts[make] || 0
       }));
 

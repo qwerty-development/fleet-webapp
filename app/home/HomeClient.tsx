@@ -15,6 +15,7 @@ import { FilterState, Car, Brand } from "@/types";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getLogoUrl } from "@/utils/getLogoUrl";
 
 // Define constants for filter options to avoid string literals
 export const SORT_OPTIONS = {
@@ -224,26 +225,7 @@ export default function HomePage() {
     redirectBasedOnRole();
   }, [isLoaded, isSignedIn, profile]);
 
-  // Get logo URL function
-  const getLogoUrl = (make: string, isLightMode: boolean): string => {
-    const formattedMake = make.toLowerCase().replace(/\s+/g, "-");
-    switch (formattedMake) {
-      case "range-rover":
-        return isLightMode
-          ? "https://www.carlogos.org/car-logos/land-rover-logo-2020-green.png"
-          : "https://www.carlogos.org/car-logos/land-rover-logo.png";
-      case "infiniti":
-        return "https://www.carlogos.org/car-logos/infiniti-logo.png";
-      case "jetour":
-        return "https://upload.wikimedia.org/wikipedia/commons/8/8a/Jetour_Logo.png?20230608073743";
-      case "audi":
-        return "https://www.freepnglogos.com/uploads/audi-logo-2.png";
-      case "nissan":
-        return "https://cdn.freebiesupply.com/logos/large/2x/nissan-6-logo-png-transparent.png";
-      default:
-        return `https://www.carlogos.org/car-logos/${formattedMake}-logo.png`;
-    }
-  };
+
 
   const fetchCars = useCallback(
     async (

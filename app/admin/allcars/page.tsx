@@ -18,27 +18,9 @@ import {
   CheckIcon
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
+import { getLogoUrl } from "@/utils/getLogoUrl";
 
-// Utility function to get car logo URL (same as in mobile app)
-const getLogoUrl = (make: string, isLightMode: boolean = true) => {
-  const formattedMake = make.toLowerCase().replace(/\s+/g, "-");
-  switch (formattedMake) {
-    case "range-rover":
-      return isLightMode
-        ? "https://www.carlogos.org/car-logos/land-rover-logo-2020-green.png"
-        : "https://www.carlogos.org/car-logos/land-rover-logo.png";
-    case "infiniti":
-      return "https://www.carlogos.org/car-logos/infiniti-logo.png";
-    case "audi":
-      return "https://www.freepnglogos.com/uploads/audi-logo-2.png";
-    case "nissan":
-      return "https://cdn.freebiesupply.com/logos/large/2x/nissan-6-logo-png-transparent.png";
-    case "jetour":
-      return "https://1000logos.net/wp-content/uploads/2023/12/Jetour-Logo.jpg";
-    default:
-      return `https://www.carlogos.org/car-logos/${formattedMake}-logo.png`;
-  }
-};
+
 
 // Items per page for pagination
 const ITEMS_PER_PAGE = 20;
@@ -203,7 +185,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     return (
       <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
         <img
-          src={getLogoUrl(option)}
+          src={getLogoUrl(option, true)}
           alt={`${option} logo`}
           className="w-5 h-5 object-contain"
           onError={(e) => {
@@ -816,7 +798,7 @@ export default function CarMakesModelsAdmin() {
                 <div className="flex items-center space-x-2 px-3 py-1 bg-indigo-600/20 text-indigo-300 rounded-full text-sm border border-indigo-500/30">
                   <div className="w-4 h-4 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center">
                     <img
-                      src={getLogoUrl(selectedMake)}
+                      src={getLogoUrl(selectedMake, true)}
                       alt={`${selectedMake} logo`}
                       className="w-3 h-3 object-contain"
                       onError={(e) => {
@@ -929,7 +911,7 @@ export default function CarMakesModelsAdmin() {
                                 {item.make && (
                                   <>
                                     <img
-                                      src={getLogoUrl(item.make)}
+                                      src={getLogoUrl(item.make, true)}
                                       alt={`${item.make} logo`}
                                       className="h-8 w-8 object-contain"
                                       onError={(e) => {
