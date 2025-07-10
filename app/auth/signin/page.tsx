@@ -362,30 +362,33 @@ export default function SignInPage() {
     }
   };
 
-  const handleGuestSignIn = async () => {
-    setIsGuestLoading(true);
-    setError("");
+const handleGuestSignIn = async () => {
+  console.log('Starting guest sign-in...');
+  setIsGuestLoading(true);
+  setError("");
 
-    try {
-      const result = await setGuestMode(true);
+  try {
+    console.log('Calling setGuestMode(true)...');
+    const result = await setGuestMode(true);
+    console.log('setGuestMode result:', result);
 
-      if (result) {
-        // Get the 'next' parameter from URL if it exists
-        const params = new URLSearchParams(window.location.search);
-        const nextPath = params.get("next") || "/home";
-
-        // Use router instead of direct location change
-        router.push(nextPath);
-      } else {
-        setError("Failed to activate guest mode. Please try again.");
-      }
-    } catch (err: any) {
-      console.error("Guest mode error:", err);
-      setError("Failed to continue as guest. Please try again.");
-    } finally {
-      setIsGuestLoading(false);
+    if (result) {
+      const params = new URLSearchParams(window.location.search);
+      const nextPath = params.get("next") || "/home";
+      console.log('Navigating to:', nextPath);
+      
+      router.push(nextPath);
+    } else {
+      console.log('setGuestMode returned falsy value:', result);
+      setError("Failed to activate guest mode. Please try again.");
     }
-  };
+  } catch (err) {
+    console.error("Guest mode error:", err);
+    setError("Failed to continue as guest. Please try again.");
+  } finally {
+    setIsGuestLoading(false);
+  }
+};
 
   // Prevent showing the sign-in page if already authenticated
   if (isAuthenticated) {
