@@ -63,7 +63,6 @@ const DealershipCarsSection: React.FC<DealershipCarsSectionProps> = ({
         }
 
         // Limit to a reasonable number to avoid performance issues
-        query = query.limit(8);
 
         const { data, error: supabaseError } = await query;
 
