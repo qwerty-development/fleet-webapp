@@ -416,7 +416,7 @@ export default function CarMakesModelsAdmin() {
   // Fetch unique makes for the filter dropdown with proper pagination
   const fetchUniqueMakes = useCallback(async () => {
     try {
-      let allMakes = [];
+      let allMakes: any[] = [];
       let hasMore = true;
       let offset = 0;
       const limit = 1000;
@@ -626,29 +626,49 @@ export default function CarMakesModelsAdmin() {
     setIsExporting(true);
     
     try {
-      // Fetch all car makes and models with current filters
-      let query = supabase
-        .from('allcars')
-        .select('*');
-      
-      if (selectedMake) {
-        query = query.eq('make', selectedMake);
+      const allData: CarMakeModelTrim[] = [];
+      let hasMore = true;
+      let offset = 0;
+      const limit = 1000;
+
+      while (hasMore) {
+        let query = supabase
+          .from('allcars')
+          .select('*');
+        
+        if (selectedMake) {
+          query = query.eq('make', selectedMake);
+        }
+        
+        if (searchQuery) {
+          query = query.or(`make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%`);
+        }
+        
+        query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+        
+        const { data, error } = await query.range(offset, offset + limit - 1);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allData.push(...data);
+          offset += limit;
+          hasMore = data.length === limit;
+        } else {
+          hasMore = false;
+        }
+
+        // Safety break to prevent infinite loops on unexpected data
+        if (offset > 50000) {
+          console.warn("Export process stopped after fetching 50,000 records to prevent excessive load.");
+          break;
+        }
       }
-      
-      if (searchQuery) {
-        query = query.or(`make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%`);
-      }
-      
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
       
       // Convert to CSV
       const headers = ['id', 'make', 'model', 'trims'];
       
-      const csvData = data.map((item: any) => 
+      const csvData = allData.map((item: any) => 
         headers.map(header => {
           let value = item[header];
           
