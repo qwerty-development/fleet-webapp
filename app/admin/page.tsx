@@ -32,6 +32,13 @@ const SECTIONS = [
     color: "from-indigo-500 to-blue-500",
   },
   {
+    id: "add-car",
+    name: "Add Car",
+    description: "Add a new car listing",
+    icon: ShoppingBagIcon,
+    color: "from-indigo-500 to-blue-500",
+  },
+  {
     id: "users",
     name: "Users",
     description: "Manage user accounts",

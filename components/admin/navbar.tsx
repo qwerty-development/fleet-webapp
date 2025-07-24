@@ -33,6 +33,7 @@ import {
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { createClient } from "@/utils/supabase/client";
+import { CarIcon } from "lucide-react";
 
 interface NavItem {
   name: string;
@@ -58,6 +59,13 @@ const navItems: NavItem[] = [
     icon: ShoppingBagIcon,
     iconActive: ShoppingBagIconSolid,
     description: "Manage car listings",
+  },
+  {
+    name: "Add Car",
+    href: "/admin/add-car",
+    icon: CarIcon,
+    iconActive: CarIcon,
+    description: "Add a new car listing",
   },
   {
     name: "AutoClip Review",
