@@ -526,27 +526,63 @@ export default function AdminAddCarListing() {
    */
   useEffect(() => {
     async function fetchMakes() {
+      setIsLoadingMakes(true);
+      setErrors(prev => ({ ...prev, make_fetch: undefined }));
+    
       try {
-        setIsLoadingMakes(true);
-        const { data, error } = await supabase
-          .from('allcars')
-          .select('make')
-          .order('make');
+        let allMakes: any[] = [];
+        let hasMore = true;
+        let offset = 0;
+        const limit = 1000;
 
-        if (error) throw error;
+        // Fetch all makes with pagination to avoid missing any due to default limits
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('allcars')
+            .select('make', { count: 'exact' })
+            .range(offset, offset + limit - 1)
+            .order('make');
 
-        const uniqueMakes = Array.from(
-          new Set(
-            (data || [])
-              .map((row: any) => row.make)
-              .filter((m: string | null) => m && m.trim().length > 0)
-          )
-        ).sort((a, b) => a.localeCompare(b));
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            allMakes = [...allMakes, ...data];
+            offset += limit;
+            hasMore = data.length === limit; // Continue if we got a full batch
+          } else {
+            hasMore = false;
+          }
+
+          // Safety check to prevent infinite loops
+          if (offset > 50000) {
+            console.warn('Stopped fetching after 50k records to prevent infinite loop');
+            break;
+          }
+        }
+
+        console.log(`Fetched ${allMakes.length} total make records`);
+
+        // Process and clean the makes data
+        const uniqueMakes = [...new Set(
+          allMakes
+            .map(item => item.make)
+            .filter(make => make && typeof make === 'string' && make.trim().length > 0) // Filter out null, undefined, empty strings
+            .map(make => make.trim()) // Remove leading/trailing spaces
+            .filter(make => make.length > 0) // Double-check for empty strings after trimming
+        )]
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())); // Sort alphabetically, case-insensitive
+
+        console.log(`Processed to ${uniqueMakes.length} unique makes:`, uniqueMakes.slice(0, 10), '...');
+
+        if (uniqueMakes.length === 0) {
+          throw new Error('No valid brands found in database');
+        }
 
         setMakes(uniqueMakes);
-      } catch (err) {
-        console.error('Error fetching makes:', err);
-        setErrors(prev => ({ ...prev, make_fetch: 'Failed to load vehicle makes' }));
+      } catch (err: any) {
+        console.error("Error fetching car brands:", err);
+        setErrors(prev => ({ ...prev, make_fetch: err.message || 'Failed to fetch brands' }));
+        setMakes([]);
       } finally {
         setIsLoadingMakes(false);
       }
