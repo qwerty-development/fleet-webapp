@@ -134,22 +134,62 @@ export default function AnalyticsPage() {
       .order("likes", { ascending: false })
       .limit(5);
 
-    // Car Obsession Tracker - Users who interact with cars the most
+    // Car Obsession Tracker - Real user interaction data
     const { data: carObsessionUsers } = await supabase
       .from("users")
-      .select("name, email, is_guest, favorite")
-      .not("favorite", "is", null)
-      .limit(10);
+      .select(`
+        name, 
+        email, 
+        is_guest, 
+        favorite,
+        total_time_spent_minutes,
+        last_active,
+        created_at
+      `)
+      .not("last_active", "is", null)
+      .order("total_time_spent_minutes", { ascending: false })
+      .limit(20);
 
-    // Create car obsession data from existing metrics
+    // Create real car obsession data based on actual user metrics
     if (carObsessionUsers) {
       const obsessionData = carObsessionUsers.map(user => {
+        // Calculate real obsession score based on multiple factors
         const favoriteCount = Array.isArray(user.favorite) ? user.favorite.length : 0;
-        const obsessionScore = favoriteCount * 10 + Math.floor(Math.random() * 50); // Add some randomness for demo
+        const timeSpent = user.total_time_spent_minutes || 0;
+        const daysSinceCreated = user.created_at ? 
+          Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        const lastActiveDays = user.last_active ? 
+          Math.floor((Date.now() - new Date(user.last_active).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        
+        // Real obsession score calculation:
+        // - Favorite cars: 15 points each
+        // - Time spent: 1 point per 10 minutes (capped at 50 points)
+        // - Recency bonus: 20 points if active in last 7 days, 10 if in last 30 days
+        // - Engagement bonus: 10 points if user has been around for more than 7 days
+        
+        let obsessionScore = favoriteCount * 15;
+        obsessionScore += Math.min(timeSpent / 10, 50); // Time spent bonus (capped)
+        
+        // Recency bonus
+        if (lastActiveDays <= 7) {
+          obsessionScore += 20;
+        } else if (lastActiveDays <= 30) {
+          obsessionScore += 10;
+        }
+        
+        // Engagement bonus for long-term users
+        if (daysSinceCreated > 7) {
+          obsessionScore += 10;
+        }
+        
+        // Guest users get a small penalty but can still be obsessed
+        if (user.is_guest) {
+          obsessionScore *= 0.8;
+        }
         
         return {
           name: user.name || user.email || 'Car Phantom',
-          obsession_score: obsessionScore,
+          obsession_score: Math.round(obsessionScore),
           type: user.is_guest ? 'Lurker' : 'Collector'
         };
       }).sort((a, b) => b.obsession_score - a.obsession_score).slice(0, 8);
@@ -370,7 +410,7 @@ export default function AnalyticsPage() {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  STEALTH MODE ACTIVATED
+                  NATOUR MODE ACTIVATED
                 </motion.h2>
                 
                 <motion.p
@@ -524,10 +564,16 @@ export default function AnalyticsPage() {
                 <button
                   className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg"
                   onClick={() => setShowNatourMode(false)}
-                  onMouseEnter={(e) => e.target.textContent = "TERMINATE SURVEILLANCE"}
-                  onMouseLeave={(e) => e.target.textContent = "EXIT STEALTH MODE"}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLButtonElement;
+                    target.textContent = "TERMINATE SURVEILLANCE";
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLButtonElement;
+                    target.textContent = "EXIT NATOUR MODE";
+                  }}
                 >
-                  EXIT STEALTH MODE
+                  EXIT NATOUR MODE
                 </button>
               </motion.div>
             </motion.div>
