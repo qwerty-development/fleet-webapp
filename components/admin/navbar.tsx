@@ -17,6 +17,7 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   BellIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -109,6 +110,13 @@ const navItems: NavItem[] = [
     href: "/admin/analytics",
     icon: ChartBarIcon,
     iconActive: ChartBarIconSolid,
+    description: "View platform metrics",
+  },
+  {
+    name: "Celebrate",
+    href: "/admin/live-stats",
+    icon: SparklesIcon,
+    iconActive: SparklesIcon,
     description: "View platform metrics",
   },
 ];
