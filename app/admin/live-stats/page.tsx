@@ -1,6 +1,6 @@
 "use client";
 
-import { AwaitedReactNode, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -32,13 +32,13 @@ interface AnalyticsStats {
   totalDealerships: number;
   topCars: { make: string; model: string; views: number }[];
   topClips: { title: string; likes: number }[];
-  liveUserEmails: { email: string; last_active: string; is_guest: boolean }[];
+  liveUserEmails: { email: string; last_active: string; is_guest: boolean; name?: string }[];
 }
 
 interface StatCardProps {
   title: string;
   value: number;
-  icon: ReactNode;
+  icon: React.ReactNode;
   gradient: string;
   isLive?: boolean;
   large?: boolean;
@@ -47,7 +47,7 @@ interface StatCardProps {
 interface TopListItem {
   name: string;
   value: number;
-  icon: ReactNode;
+  icon: React.ReactNode;
 }
 
 interface TopListProps {
@@ -61,6 +61,11 @@ export default function AnalyticsPage() {
   const [bigCelebration, setBigCelebration] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showLiveUsers, setShowLiveUsers] = useState(false);
+  const [showNatourMode, setShowNatourMode] = useState(false);
+  const [mostActiveUser, setMostActiveUser] = useState<{email: string, activity_count: number, is_guest: boolean} | null>(null);
+  const [topUsers, setTopUsers] = useState<{email: string, login_count: number, is_guest: boolean, last_active: string}[]>([]);
+  const [showEmailInSurveillance, setShowEmailInSurveillance] = useState(true);
+  const [carObsessionData, setCarObsessionData] = useState<{name: string, obsession_score: number, type: string}[]>([]);
 
   // Your original fetch stats function
   const fetchStats = async () => {
@@ -78,7 +83,7 @@ export default function AnalyticsPage() {
     // Get live users' emails (active in last 5 mins)
     const { data: liveUsersData } = await supabase
       .from("users")
-      .select("email, last_active, is_guest")
+      .select("email, last_active, is_guest, name")
       .gte("last_active", new Date(Date.now() - 5 * 60 * 1000).toISOString())
       .order("last_active", { ascending: false });
 
@@ -128,6 +133,106 @@ export default function AnalyticsPage() {
       .select("title, likes")
       .order("likes", { ascending: false })
       .limit(5);
+
+    // Car Obsession Tracker - Users who interact with cars the most
+    const { data: carObsessionUsers } = await supabase
+      .from("users")
+      .select("name, email, is_guest, favorite")
+      .not("favorite", "is", null)
+      .limit(10);
+
+    // Create car obsession data from existing metrics
+    if (carObsessionUsers) {
+      const obsessionData = carObsessionUsers.map(user => {
+        const favoriteCount = Array.isArray(user.favorite) ? user.favorite.length : 0;
+        const obsessionScore = favoriteCount * 10 + Math.floor(Math.random() * 50); // Add some randomness for demo
+        
+        return {
+          name: user.name || user.email || 'Car Phantom',
+          obsession_score: obsessionScore,
+          type: user.is_guest ? 'Lurker' : 'Collector'
+        };
+      }).sort((a, b) => b.obsession_score - a.obsession_score).slice(0, 8);
+      
+      setCarObsessionData(obsessionData);
+    }
+
+    // Most active user (by counting their total sessions/activities)
+    const { data: mostActiveUserData } = await supabase
+      .from("users")
+      .select("email, is_guest")
+      .not("last_active", "is", null)
+      .order("last_active", { ascending: false })
+      .limit(1);
+
+    // Top 10 users by REAL TIME SPENT (using session data)
+    const { data: topUsersData } = await supabase
+      .from("users")
+      .select(`
+        id,
+        email,
+        is_guest,
+        last_active,
+        total_time_spent_minutes
+      `)
+      .not("last_active", "is", null)
+      .order("total_time_spent_minutes", { ascending: false })
+      .limit(10);
+
+    // Alternative query if you want to calculate from sessions table directly:
+    /*
+    const { data: topUsersData } = await supabase
+      .rpc('get_top_users_by_time', { limit_count: 10 });
+    
+    -- Create this RPC function in Supabase:
+    CREATE OR REPLACE FUNCTION get_top_users_by_time(limit_count integer)
+    RETURNS TABLE (
+      user_id text,
+      email text,
+      is_guest boolean,
+      total_minutes integer,
+      session_count bigint,
+      last_active timestamp with time zone
+    )
+    LANGUAGE plpgsql
+    AS $
+    BEGIN
+      RETURN QUERY
+      SELECT 
+        u.id,
+        u.email,
+        u.is_guest,
+        COALESCE(SUM(s.duration_minutes)::integer, 0) as total_minutes,
+        COUNT(s.id) as session_count,
+        u.last_active
+      FROM users u
+      LEFT JOIN user_sessions s ON u.id = s.user_id
+      WHERE u.last_active IS NOT NULL
+      GROUP BY u.id, u.email, u.is_guest, u.last_active
+      ORDER BY total_minutes DESC
+      LIMIT limit_count;
+    END;
+    $;
+    */
+
+    if (topUsersData) {
+      setTopUsers(topUsersData.map(user => ({
+        email: user.email || 'Guest User',
+        login_count: user.total_time_spent_minutes || 0, // Real time spent in minutes
+        is_guest: user.is_guest,
+        last_active: user.last_active
+      })));
+    }
+
+    // If we want to get actual activity count, we'd need to query a sessions table or count login events
+    // For now, we'll use the most recently active user as a proxy
+    if (mostActiveUserData && mostActiveUserData[0]) {
+      setMostActiveUser({
+        email: mostActiveUserData[0].email || 'Guest User',
+        activity_count: Math.floor(Math.random() * 500) + 100, // Mock activity count for demo
+        is_guest: mostActiveUserData[0].is_guest
+      });
+    }
 
     const newStats = {
       activeUsers: activeUsers || 0,
@@ -224,6 +329,228 @@ export default function AnalyticsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Spy Mode Modal */}
+      <AnimatePresence>
+        {showNatourMode && (
+          <motion.div
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-90 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowNatourMode(false)}
+          >
+            <motion.div
+              className="bg-gradient-to-br from-gray-900 via-black to-red-900 rounded-3xl p-8 max-w-4xl mx-4 border border-red-500/30 shadow-2xl max-h-[80vh] overflow-hidden"
+              initial={{ scale: 0, rotate: -10 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: 10 }}
+              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-6">
+                <motion.div
+                  className="text-6xl mb-4"
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    rotate: [0, -5, 5, 0]
+                  }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                >
+                  🕵️
+                </motion.div>
+                
+                <motion.h2
+                  className="text-3xl font-bold text-red-400 mb-2"
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  STEALTH MODE ACTIVATED
+                </motion.h2>
+                
+                <motion.p
+                  className="text-gray-300 text-sm mb-4"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  Surveillance system online • Tracking all targets
+                </motion.p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[50vh] overflow-hidden">
+                {/* Live Users Section */}
+                <motion.div
+                  className="bg-black/40 rounded-2xl p-6 border border-red-500/20"
+                  initial={{ x: -50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                      <h3 className="text-lg font-bold text-red-300">LIVE SURVEILLANCE</h3>
+                      <span className="text-xs bg-red-500/20 text-red-300 px-2 py-1 rounded">
+                        {stats.liveUserEmails.length} ACTIVE
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setShowEmailInSurveillance(!showEmailInSurveillance)}
+                      className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-all"
+                    >
+                      {showEmailInSurveillance ? '👤 NAME' : '📧 EMAIL'}
+                    </button>
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar">
+                    {stats.liveUserEmails.length > 0 ? (
+                      stats.liveUserEmails.map((user, i) => (
+                        <motion.div 
+                          key={i} 
+                          className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50 hover:border-red-500/30 transition-all"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.8 + i * 0.1 }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${user.is_guest ? 'bg-orange-400' : 'bg-green-400'} animate-pulse`} />
+                              <span className="text-gray-300 text-sm font-mono">
+                                {showEmailInSurveillance 
+                                  ? (user.email || 'Unknown Target')
+                                  : (user.name || user.email || 'Anonymous Agent')
+                                }
+                              </span>
+                              {user.is_guest && (
+                                <span className="text-orange-300 text-xs bg-orange-500/20 px-1 rounded">
+                                  GUEST
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-gray-500 text-xs">
+                              {new Date(user.last_active).toLocaleTimeString()}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="text-gray-500 text-center py-8">
+                        No active targets detected
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Car Obsession Tracker */}
+                <motion.div
+                  className="bg-black/40 rounded-2xl p-6 border border-purple-500/20"
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-purple-400">🚗</div>
+                    <h3 className="text-lg font-bold text-purple-300">CAR OBSESSION TRACKER</h3>
+                    <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
+                      ADDICTION LEVEL
+                    </span>
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar">
+                    {carObsessionData.length > 0 ? (
+                      carObsessionData.map((user, i) => {
+                        const getObsessionLevel = (score: number) => {
+                          if (score >= 80) return { emoji: '🔥', level: 'ADDICT', color: 'text-red-400' };
+                          if (score >= 50) return { emoji: '😍', level: 'FANATIC', color: 'text-pink-400' };
+                          if (score >= 20) return { emoji: '👀', level: 'INTERESTED', color: 'text-yellow-400' };
+                          return { emoji: '🤔', level: 'CURIOUS', color: 'text-gray-400' };
+                        };
+                        
+                        const obsession = getObsessionLevel(user.obsession_score);
+                        
+                        return (
+                          <motion.div 
+                            key={i} 
+                            className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50 hover:border-purple-500/30 transition-all"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8 + i * 0.05 }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`text-sm font-bold ${i === 0 ? 'text-purple-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-500'}`}>
+                                  #{i + 1}
+                                </div>
+                                <div className={`w-2 h-2 rounded-full ${user.type === 'Lurker' ? 'bg-orange-400' : 'bg-purple-400'}`} />
+                                <span className="text-gray-300 text-sm font-mono">
+                                  {user.name}
+                                </span>
+                                <span className={`text-xs bg-purple-500/20 text-purple-300 px-1 rounded`}>
+                                  {user.type}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <div className={`text-sm font-bold ${obsession.color}`}>
+                                  {obsession.emoji} {obsession.level}
+                                </div>
+                                <div className="text-purple-300 text-xs font-bold">
+                                  {user.obsession_score} pts
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-gray-500 text-center py-8">
+                        Analyzing car obsession patterns...
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+
+              <motion.div
+                className="mt-6 flex justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+              >
+                <button
+                  className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg"
+                  onClick={() => setShowNatourMode(false)}
+                  onMouseEnter={(e) => e.target.textContent = "TERMINATE SURVEILLANCE"}
+                  onMouseLeave={(e) => e.target.textContent = "EXIT STEALTH MODE"}
+                >
+                  EXIT STEALTH MODE
+                </button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(55, 65, 81, 0.3);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(168, 85, 247, 0.5);
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(168, 85, 247, 0.7);
+        }
+      `}</style>
 
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -323,7 +650,14 @@ export default function AnalyticsPage() {
           <div className="lg:col-span-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
             <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
               <TrendingUp className="w-6 h-6 text-green-400" />
-              Live User Activity
+              Live{" "}
+              <span 
+                className="cursor-pointer hover:text-yellow-400 transition-colors duration-300 hover:underline"
+                onClick={() => setShowNatourMode(true)}
+              >
+                User
+              </span>{" "}
+              Activity
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={[
@@ -529,7 +863,7 @@ function TopList({
         {title}
       </h3>
       <div className="space-y-4">
-        {items.map((item: TopListItem, i: number) => (
+        {items.map((item, i) => (
           <motion.div 
             key={i} 
             className="flex items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all duration-300 group"
