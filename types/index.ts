@@ -23,7 +23,6 @@ export interface Car {
   id: string;
   make: string;
   model: string;
-  trim?: string;
   year: number;
   price: number;
   mileage: number;

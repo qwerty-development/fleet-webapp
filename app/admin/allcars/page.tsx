@@ -269,24 +269,82 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 };
 
 // Trim Badge Component
-const TrimBadge: React.FC<{ trim: string; onRemove?: () => void; isEditable?: boolean }> = ({ 
+const TrimBadge: React.FC<{ 
+  trim: string; 
+  onRemove?: () => void; 
+  onEdit?: (oldValue: string, newValue: string) => void;
+  isEditable?: boolean 
+}> = ({ 
   trim, 
   onRemove, 
+  onEdit,
   isEditable = false 
-}) => (
-  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-    {trim}
-    {isEditable && onRemove && (
-      <button
-        onClick={onRemove}
-        className="ml-1 hover:text-indigo-100 transition-colors"
-        type="button"
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(trim);
+
+  const handleSave = () => {
+    const trimmedValue = editValue.trim();
+    if (trimmedValue && trimmedValue !== trim && onEdit) {
+      onEdit(trim, trimmedValue);
+    }
+    setIsEditing(false);
+    setEditValue(trim);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditValue(trim);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  if (isEditing && isEditable) {
+    return (
+      <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 border border-indigo-500/30">
+        <input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          onBlur={handleSave}
+          autoFocus
+          className="bg-transparent text-indigo-300 outline-none border-none w-16 min-w-0"
+          style={{ width: `${Math.max(editValue.length * 8, 40)}px` }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+      <span 
+        className={isEditable ? "cursor-pointer hover:text-indigo-100 transition-colors" : ""}
+        onClick={isEditable ? () => setIsEditing(true) : undefined}
+        title={isEditable ? "Click to edit" : undefined}
       >
-        <XMarkIcon className="h-3 w-3" />
-      </button>
-    )}
-  </span>
-);
+        {trim}
+      </span>
+      {isEditable && onRemove && (
+        <button
+          onClick={onRemove}
+          className="ml-1 hover:text-indigo-100 transition-colors"
+          type="button"
+        >
+          <XMarkIcon className="h-3 w-3" />
+        </button>
+      )}
+    </span>
+  );
+};
 
 // Trim Manager Component
 const TrimManager: React.FC<{
@@ -306,6 +364,14 @@ const TrimManager: React.FC<{
 
   const handleRemoveTrim = (indexToRemove: number) => {
     onChange(trims.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleEditTrim = (oldValue: string, newValue: string) => {
+    const trimmedNewValue = newValue.trim();
+    if (trimmedNewValue && trimmedNewValue !== oldValue && !trims.includes(trimmedNewValue)) {
+      const updatedTrims = trims.map(trim => trim === oldValue ? trimmedNewValue : trim);
+      onChange(updatedTrims);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -343,6 +409,7 @@ const TrimManager: React.FC<{
               key={index}
               trim={trim}
               onRemove={() => handleRemoveTrim(index)}
+              onEdit={handleEditTrim}
               isEditable
             />
           ))}
