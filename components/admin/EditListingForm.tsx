@@ -66,13 +66,14 @@ const VEHICLE_FEATURES = [
   { id: 'remote_start', label: 'Remote Start', icon: 'remote' },
 ];
 
-// Helper function to normalize trim data
-const normalizeTrims = (trim: any): string[] => {
-  if (!trim) return [];
+// Helper function to normalize trim data - only returns single trim for cars table
+const normalizeSingleTrim = (trim: any): string => {
+  if (!trim) return '';
   
-  // If it's already an array, return it
+  // If it's already an array, return the first valid trim
   if (Array.isArray(trim)) {
-    return trim.filter(t => typeof t === 'string' && t.trim().length > 0);
+    const validTrims = trim.filter(t => typeof t === 'string' && t.trim().length > 0);
+    return validTrims.length > 0 ? validTrims[0] : '';
   }
   
   // If it's a string, try to parse as JSON first
@@ -80,15 +81,17 @@ const normalizeTrims = (trim: any): string[] => {
     try {
       const parsed = JSON.parse(trim);
       if (Array.isArray(parsed)) {
-        return parsed.filter(t => typeof t === 'string' && t.trim().length > 0);
+        const validTrims = parsed.filter(t => typeof t === 'string' && t.trim().length > 0);
+        return validTrims.length > 0 ? validTrims[0] : '';
       }
     } catch (e) {
-      // If JSON parsing fails, treat as comma-separated string
-      return trim.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      // If JSON parsing fails, treat as comma-separated string and take first
+      const trimArray = trim.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      return trimArray.length > 0 ? trimArray[0] : '';
     }
   }
   
-  return [];
+  return '';
 };
 
 // Trim Badge Component
@@ -315,11 +318,11 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
     category: listing.category || "",
   });
 
-  // Initialize features, images, and trims state
+  // Initialize features, images, and trim state
   const [selectedFeatures, setSelectedFeatures] = useState(parseFeatures());
   const [images, setImages] = useState<string[]>(listing.images || []);
   const [originalImages] = useState<string[]>(listing.images || []);
-  const [trims, setTrims] = useState<string[]>(normalizeTrims(listing.trim));
+  const [trim, setTrim] = useState<string>(normalizeSingleTrim(listing.trim));
   const [imagesModified, setImagesModified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -441,7 +444,7 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
         ...formData,
         features: prepareFeatures(),
         images: images, // Include the modified images array
-        trim: trims.length > 0 ? trims : null // Include trims
+        trim: trim.trim() || null // Include single trim
       };
       
       onSubmit(dataToSubmit);
@@ -826,16 +829,18 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
             <label className="block text-sm font-medium text-gray-300 mb-2">
               <div className="flex items-center">
                 <TagIcon className="h-4 w-4 mr-2" />
-                Trim Levels (Optional)
+                Trim Level (Optional)
               </div>
             </label>
-            <TrimManager
-              trims={trims}
-              onChange={setTrims}
+            <input
+              type="text"
+              value={trim}
+              onChange={(e) => setTrim(e.target.value)}
               placeholder="e.g. LE, XLE, Sport..."
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Add trim levels for this vehicle. Press Enter or click + to add each trim.
+              Enter a single trim level for this vehicle.
             </p>
           </div>
           

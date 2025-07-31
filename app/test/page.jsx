@@ -40,14 +40,14 @@ const STATUS_FILTERS = [
 const ITEMS_PER_PAGE = 10;
 
 // Trim Badge Component - Non-editable for display in listing cards
-const TrimBadge: React.FC<{ trim: string }> = ({ trim }) => (
+const TrimBadge = ({ trim }) => (
   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
     {trim}
   </span>
 );
 
 // Helper function to normalize trim data - only returns single trim
-const normalizeSingleTrim = (trim: any): string | null => {
+const normalizeSingleTrim = (trim) => {
   if (!trim) return null;
   
   // If it's already an array, return the first valid trim
@@ -76,23 +76,21 @@ const normalizeSingleTrim = (trim: any): string | null => {
 
 export default function AdminBrowseScreen() {
   // State variables
-  const [listings, setListings] = useState<Car[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [sortBy, setSortBy] = useState<string>("listed_at");
-  const [sortOrder, setSortOrder] = useState<string>("desc");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [listings, setListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("listed_at");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [isListingModalVisible, setIsListingModalVisible] =
-    useState<boolean>(false);
-  const [selectedListing, setSelectedListing] = useState<Car | null>(null);
-  const [dealerships, setDealerships] = useState<Dealership[]>([]);
-  const [selectedDealershipId, setSelectedDealershipId] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [currentImageIndexes, setCurrentImageIndexes] = useState<
-    Record<string, number>
-  >({});
+    useState(false);
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [dealerships, setDealerships] = useState([]);
+  const [selectedDealershipId, setSelectedDealershipId] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentImageIndexes, setCurrentImageIndexes] = useState({});
 
   const supabase = createClient();
 
@@ -120,7 +118,7 @@ export default function AdminBrowseScreen() {
       const { data, error } = await supabase.from("dealerships").select("*");
       if (error) throw error;
       setDealerships(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching dealerships:", error);
       alert(`Failed to fetch dealerships: ${error.message}`);
     } finally {
@@ -169,7 +167,7 @@ export default function AdminBrowseScreen() {
 
       setListings(data || []);
       setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching listings:", error);
       alert(`Failed to fetch listings: ${error.message}`);
     } finally {
@@ -187,7 +185,7 @@ export default function AdminBrowseScreen() {
   ]);
 
   // Handler for deleting a listing
-  const handleDeleteListing = useCallback((id: string) => {
+  const handleDeleteListing = useCallback((id) => {
     if (confirm("Are you sure you want to delete this listing?")) {
       try {
         supabase
@@ -199,7 +197,7 @@ export default function AdminBrowseScreen() {
             fetchListings();
             alert("Listing deleted successfully");
           });
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error deleting listing:", error);
         alert(`Failed to delete listing: ${error.message}`);
       }
@@ -207,14 +205,14 @@ export default function AdminBrowseScreen() {
   }, []);
 
   // Handler for editing a listing
-  const handleEditListing = useCallback((listing: Car) => {
+  const handleEditListing = useCallback((listing) => {
     setSelectedListing(listing);
     setIsListingModalVisible(true);
   }, []);
 
   // Handler for form submission when editing
   const handleSubmitListing = useCallback(
-    async (formData: any) => {
+    async (formData) => {
       if (!selectedListing) return;
 
       try {
@@ -229,7 +227,7 @@ export default function AdminBrowseScreen() {
         setIsListingModalVisible(false);
         setSelectedListing(null);
         alert("Listing updated successfully");
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error updating listing:", error);
         alert(`Failed to update listing: ${error.message}`);
       }
@@ -246,7 +244,7 @@ export default function AdminBrowseScreen() {
 
   // Handle sort change
   const handleSortChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
+    (e) => {
       const value = e.target.value;
       const [newSortBy, newSortOrder] = value.split("_");
       setSortBy(newSortBy === "date" ? "listed_at" : newSortBy);
@@ -258,7 +256,7 @@ export default function AdminBrowseScreen() {
 
   // Handle status filter change
   const handleStatusFilterChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
+    (e) => {
       setFilterStatus(e.target.value);
       setCurrentPage(1);
     },
@@ -267,7 +265,7 @@ export default function AdminBrowseScreen() {
 
   // Handle dealership filter change - FIXED: Store ID as string, convert when querying
   const handleDealershipChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
+    (e) => {
       const dealershipId = e.target.value;
       setSelectedDealershipId(dealershipId);
       setCurrentPage(1);
@@ -277,13 +275,13 @@ export default function AdminBrowseScreen() {
 
   // Handle search input
   const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e) => {
       setSearchQuery(e.target.value);
     },
     []
   );
 
-  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+  const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();
     setCurrentPage(1);
     fetchListings();
