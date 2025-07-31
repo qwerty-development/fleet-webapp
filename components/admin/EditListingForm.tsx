@@ -6,7 +6,9 @@ import {
   ChevronDownIcon, 
   TrashIcon,
   PhotoIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  PlusIcon,
+  TagIcon
 } from "@heroicons/react/24/outline";
 
 interface EditListingFormProps {
@@ -63,6 +65,182 @@ const VEHICLE_FEATURES = [
   { id: 'premium_audio', label: 'Premium Audio', icon: 'speaker' },
   { id: 'remote_start', label: 'Remote Start', icon: 'remote' },
 ];
+
+// Helper function to normalize trim data
+const normalizeTrims = (trim: any): string[] => {
+  if (!trim) return [];
+  
+  // If it's already an array, return it
+  if (Array.isArray(trim)) {
+    return trim.filter(t => typeof t === 'string' && t.trim().length > 0);
+  }
+  
+  // If it's a string, try to parse as JSON first
+  if (typeof trim === 'string') {
+    try {
+      const parsed = JSON.parse(trim);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(t => typeof t === 'string' && t.trim().length > 0);
+      }
+    } catch (e) {
+      // If JSON parsing fails, treat as comma-separated string
+      return trim.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    }
+  }
+  
+  return [];
+};
+
+// Trim Badge Component
+const TrimBadge: React.FC<{ 
+  trim: string; 
+  onRemove?: () => void; 
+  onEdit?: (oldValue: string, newValue: string) => void;
+  isEditable?: boolean 
+}> = ({ 
+  trim, 
+  onRemove, 
+  onEdit,
+  isEditable = false 
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(trim);
+
+  const handleSave = () => {
+    const trimmedValue = editValue.trim();
+    if (trimmedValue && trimmedValue !== trim && onEdit) {
+      onEdit(trim, trimmedValue);
+    }
+    setIsEditing(false);
+    setEditValue(trim);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditValue(trim);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  if (isEditing && isEditable) {
+    return (
+      <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 border border-indigo-500/30">
+        <input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          onBlur={handleSave}
+          autoFocus
+          className="bg-transparent text-indigo-300 outline-none border-none w-16 min-w-0"
+          style={{ width: `${Math.max(editValue.length * 8, 40)}px` }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+      <span 
+        className={isEditable ? "cursor-pointer hover:text-indigo-100 transition-colors" : ""}
+        onClick={isEditable ? () => setIsEditing(true) : undefined}
+        title={isEditable ? "Click to edit" : undefined}
+      >
+        {trim}
+      </span>
+      {isEditable && onRemove && (
+        <button
+          onClick={onRemove}
+          className="ml-1 hover:text-indigo-100 transition-colors"
+          type="button"
+        >
+          <XMarkIcon className="h-3 w-3" />
+        </button>
+      )}
+    </span>
+  );
+};
+
+// Trim Manager Component
+const TrimManager: React.FC<{
+  trims: string[];
+  onChange: (trims: string[]) => void;
+  placeholder?: string;
+}> = ({ trims, onChange, placeholder = "Add trim..." }) => {
+  const [newTrim, setNewTrim] = useState("");
+
+  const handleAddTrim = () => {
+    const trimmedValue = newTrim.trim();
+    if (trimmedValue && !trims.includes(trimmedValue)) {
+      onChange([...trims, trimmedValue]);
+      setNewTrim("");
+    }
+  };
+
+  const handleRemoveTrim = (indexToRemove: number) => {
+    onChange(trims.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleEditTrim = (oldValue: string, newValue: string) => {
+    const trimmedNewValue = newValue.trim();
+    if (trimmedNewValue && trimmedNewValue !== oldValue && !trims.includes(trimmedNewValue)) {
+      const updatedTrims = trims.map(trim => trim === oldValue ? trimmedNewValue : trim);
+      onChange(updatedTrims);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTrim();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newTrim}
+          onChange={(e) => setNewTrim(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white text-sm"
+        />
+        <button
+          type="button"
+          onClick={handleAddTrim}
+          disabled={!newTrim.trim() || trims.includes(newTrim.trim())}
+          className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+        >
+          <PlusIcon className="h-4 w-4" />
+        </button>
+      </div>
+      
+      {trims.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {trims.map((trim, index) => (
+            <TrimBadge
+              key={index}
+              trim={trim}
+              onRemove={() => handleRemoveTrim(index)}
+              onEdit={handleEditTrim}
+              isEditable
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EditListingForm: React.FC<EditListingFormProps> = ({
   listing,
@@ -137,10 +315,11 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
     category: listing.category || "",
   });
 
-  // Initialize features and images state
+  // Initialize features, images, and trims state
   const [selectedFeatures, setSelectedFeatures] = useState(parseFeatures());
   const [images, setImages] = useState<string[]>(listing.images || []);
   const [originalImages] = useState<string[]>(listing.images || []);
+  const [trims, setTrims] = useState<string[]>(normalizeTrims(listing.trim));
   const [imagesModified, setImagesModified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -261,7 +440,8 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
       const dataToSubmit = {
         ...formData,
         features: prepareFeatures(),
-        images: images // Include the modified images array
+        images: images, // Include the modified images array
+        trim: trims.length > 0 ? trims : null // Include trims
       };
       
       onSubmit(dataToSubmit);
@@ -639,6 +819,24 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
                 placeholder="e.g. Sedan, SUV, etc."
               />
             </div>
+          </div>
+          
+          {/* Trims Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <div className="flex items-center">
+                <TagIcon className="h-4 w-4 mr-2" />
+                Trim Levels (Optional)
+              </div>
+            </label>
+            <TrimManager
+              trims={trims}
+              onChange={setTrims}
+              placeholder="e.g. LE, XLE, Sport..."
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Add trim levels for this vehicle. Press Enter or click + to add each trim.
+            </p>
           </div>
           
           <div>

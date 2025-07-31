@@ -38,6 +38,7 @@ export interface Car {
   status: string;
   listed_at: string;
   views: number;
+  trim?: string[];
   dealership_name: string;
   dealership_logo: string;
   dealership_phone: string;

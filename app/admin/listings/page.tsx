@@ -10,6 +10,8 @@ import {
   EyeIcon,
   HeartIcon,
   TruckIcon,
+  XMarkIcon,
+  TagIcon,
 } from "@heroicons/react/24/outline";
 import { Car, Dealership } from "@/types";
 import Navbar from "@/components/home/Navbar";
@@ -36,6 +38,38 @@ const STATUS_FILTERS = [
 ];
 
 const ITEMS_PER_PAGE = 10;
+
+// Trim Badge Component - Non-editable for display in listing cards
+const TrimBadge: React.FC<{ trim: string }> = ({ trim }) => (
+  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+    {trim}
+  </span>
+);
+
+// Helper function to normalize trim data
+const normalizeTrims = (trim: any): string[] => {
+  if (!trim) return [];
+  
+  // If it's already an array, return it
+  if (Array.isArray(trim)) {
+    return trim.filter(t => typeof t === 'string' && t.trim().length > 0);
+  }
+  
+  // If it's a string, try to parse as JSON first
+  if (typeof trim === 'string') {
+    try {
+      const parsed = JSON.parse(trim);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(t => typeof t === 'string' && t.trim().length > 0);
+      }
+    } catch (e) {
+      // If JSON parsing fails, treat as comma-separated string
+      return trim.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    }
+  }
+  
+  return [];
+};
 
 export default function AdminBrowseScreen() {
   // State variables
@@ -92,7 +126,7 @@ export default function AdminBrowseScreen() {
   };
 
   // Function to fetch car listings with filters and pagination
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -139,7 +173,15 @@ export default function AdminBrowseScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [
+    sortBy,
+    sortOrder,
+    selectedDealershipId,
+    filterStatus,
+    searchQuery,
+    currentPage,
+    supabase,
+  ]);
 
   // Handler for deleting a listing
   const handleDeleteListing = useCallback((id: string) => {
@@ -197,7 +239,7 @@ export default function AdminBrowseScreen() {
     setIsRefreshing(true);
     setCurrentPage(1);
     fetchListings();
-  }, []);
+  }, [fetchListings]);
 
   // Handle sort change
   const handleSortChange = useCallback(
@@ -242,7 +284,7 @@ export default function AdminBrowseScreen() {
     e.preventDefault();
     setCurrentPage(1);
     fetchListings();
-  }, []);
+  }, [fetchListings]);
 
   // Pagination handlers
   const goToPreviousPage = useCallback(() => {
@@ -559,6 +601,24 @@ export default function AdminBrowseScreen() {
                       <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
                         {car.description || "No description available"}
                       </p>
+
+                      {/* Trims Display */}
+                      {(() => {
+                        const normalizedTrims = normalizeTrims(car.trim);
+                        return normalizedTrims.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex items-center mb-2">
+                              <TagIcon className="h-4 w-4 text-gray-400 mr-1" />
+                              <span className="text-gray-400 text-sm font-medium">Trims:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {normalizedTrims.map((trim: string, index: number) => (
+                                <TrimBadge key={index} trim={trim} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Action Buttons - Now with Status Change Button */}
                       <div className="space-y-3">
