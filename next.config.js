@@ -19,7 +19,7 @@ const nextConfig = {
               default-src 'self';
               script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://*.googleapis.com;
               style-src 'self' 'unsafe-inline';
-              connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://apis.google.com http://localhost:* http://127.0.0.1:*;
+              connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://apis.google.com https://ai-python-ashy.vercel.app http://localhost:* http://127.0.0.1:*;
               img-src 'self' data: https: blob:;
               media-src 'self' https://*.supabase.co blob: data:;
               font-src 'self' data:;

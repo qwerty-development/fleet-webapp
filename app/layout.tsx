@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import GuestModeHandler from "@/components/GuestModeHandler";
+import FloatingChatButton from "@/components/FloatingChatButton";
 import { Suspense, useEffect } from "react";
 
 const geistSans = localFont({
@@ -37,6 +38,7 @@ export default function RootLayout({
             <GuestModeHandler />
           </Suspense>
           {children}
+          <FloatingChatButton />
         </Providers>
       </body>
     </html>
