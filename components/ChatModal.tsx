@@ -135,11 +135,16 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
     try {
       console.log('🔍 ChatModal: Sending message:', userMessage);
       
-      // Sync our conversation history to ChatbotService before sending
-      ChatbotService.clearConversationHistory();
-      messages.forEach(msg => {
-        ChatbotService.addMessage(msg.text || msg.message || '', msg.isUser, msg.car_ids);
-      });
+      // Sync our conversation history to ChatbotService using the new sync method
+      // This maintains conversation context without clearing existing history
+      const messagesToSync = messages.map(msg => ({
+        id: msg.id,
+        message: msg.text || msg.message || '',
+        isUser: msg.isUser,
+        timestamp: msg.timestamp,
+        car_ids: msg.car_ids
+      }));
+      ChatbotService.syncConversationHistory(messagesToSync);
       
       // Use ChatbotService.sendMessageWithContext for proper conversation memory
       const result = await ChatbotService.sendMessageWithContext(userMessage);
@@ -247,11 +252,16 @@ export default function ChatModal({ isOpen, onClose }: ChatModalProps) {
       isUser: false,
     };
     
+    // Clear the local UI state
     setMessages([welcomeMessage]);
     localStorage.setItem('ai_chat_messages_web', JSON.stringify([welcomeMessage]));
+    
+    // Clear the ChatbotService conversation history as well
+    ChatbotService.clearConversationHistory();
+    
     // Stop any loading state
     setIsLoading(false);
-    console.log('🔍 ChatModal: Conversation cleared');
+    console.log('🔍 ChatModal: Conversation and chat history cleared');
   };
 
   if (!isOpen) return null;

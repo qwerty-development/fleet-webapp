@@ -30,10 +30,24 @@ export class ChatbotService {
   // Store current request controller for abortion
   private static currentController: AbortController | null = null;
   
+  // Initialize conversation history from localStorage on first use
+  private static isInitialized = false;
+  
+  /**
+   * Initialize the service and load conversation history
+   */
+  private static initialize(): void {
+    if (!this.isInitialized) {
+      this.loadConversationHistory();
+      this.isInitialized = true;
+    }
+  }
+  
   /**
    * Get the full conversation history
    */
   static getConversationHistory(): ChatMessage[] {
+    this.initialize(); // Ensure initialized before returning history
     return [...this.conversationHistory];
   }
   
@@ -68,6 +82,8 @@ export class ChatbotService {
    * Add a message to conversation history
    */
   static addMessage(message: string, isUser: boolean, car_ids?: number[]): ChatMessage {
+    this.initialize(); // Ensure initialized before adding messages
+    
     const chatMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       message,
@@ -113,6 +129,8 @@ export class ChatbotService {
     botMessage?: ChatMessage;
     error?: string;
   }> {
+    this.initialize(); // Ensure initialized before sending messages
+    
     console.log('🔍 Starting sendMessage function');
     
     // Input validation
@@ -282,6 +300,8 @@ export class ChatbotService {
     botMessage?: ChatMessage;
     error?: string;
   }> {
+    this.initialize(); // Ensure initialized before sending messages with context
+    
     // Input validation
     if (!userMessage?.trim()) {
       return {
@@ -298,8 +318,7 @@ export class ChatbotService {
       const userChatMessage = this.addMessage(userMessage.trim(), true);
       
       // Get last 5 messages for conversation memory (like a dealership conversation)
-      const recentMessages = this.conversationHistory
-        .slice(-5) // Only last 5 messages for focused context
+      const recentMessages = this.getRecentContext(5)
         .map(msg => ({
           role: msg.isUser ? 'user' : 'assistant',
           content: msg.message
@@ -431,6 +450,8 @@ Your response should be conversational, reference previous messages when relevan
    * Export conversation history for debugging or saving
    */
   static exportConversation(): string {
+    this.initialize(); // Ensure initialized before exporting
+    
     const conversation = this.conversationHistory
       .map(msg => {
         const timestamp = msg.timestamp.toLocaleString();
@@ -444,6 +465,46 @@ Your response should be conversational, reference previous messages when relevan
   }
   
   /**
+   * Sync external messages to conversation history without clearing existing history
+   * This maintains conversation context while allowing UI to manage its own state
+   */
+  static syncConversationHistory(messages: ChatMessage[]): void {
+    this.initialize(); // Ensure initialized before syncing
+    
+    // Only add messages that don't already exist (by ID)
+    const existingIds = new Set(this.conversationHistory.map(msg => msg.id));
+    const newMessages = messages.filter(msg => !existingIds.has(msg.id));
+    
+    if (newMessages.length > 0) {
+      this.conversationHistory.push(...newMessages);
+      
+      // Sort by timestamp to maintain chronological order
+      this.conversationHistory.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_chat_messages', JSON.stringify(this.conversationHistory));
+      }
+    }
+  }
+  
+  /**
+   * Get recent conversation context (last N messages) for context-aware responses
+   */
+  static getRecentContext(maxMessages: number = 5): ChatMessage[] {
+    this.initialize(); // Ensure initialized before getting context
+    return this.conversationHistory.slice(-maxMessages);
+  }
+  
+  /**
+   * Check if conversation history has any messages
+   */
+  static hasConversationHistory(): boolean {
+    this.initialize(); // Ensure initialized before checking
+    return this.conversationHistory.length > 0;
+  }
+  
+  /**
    * Get conversation statistics
    */
   static getConversationStats(): {
@@ -453,6 +514,8 @@ Your response should be conversational, reference previous messages when relevan
     carsRecommended: number;
     uniqueCarIds: number[];
   } {
+    this.initialize(); // Ensure initialized before getting stats
+    
     const userMessages = this.conversationHistory.filter(msg => msg.isUser).length;
     const botMessages = this.conversationHistory.filter(msg => !msg.isUser).length;
     

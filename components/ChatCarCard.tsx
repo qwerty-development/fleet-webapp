@@ -4,9 +4,10 @@ import React from 'react';
 import Image from 'next/image';
 import { CalendarIcon, MapPinIcon, CogIcon } from '@heroicons/react/24/outline';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
+import { Car } from '@/types';
 
 interface ChatCarCardProps {
-  car: any;
+  car: Car;
   onPress: () => void;
 }
 
@@ -76,27 +77,35 @@ export default function ChatCarCard({ car, onPress }: ChatCarCardProps) {
 
         {/* Dealer Row */}
         <div className="flex items-center">
-          {car.dealership_logo ? (
+          {(car.dealerships?.logo || car.dealership_logo) ? (
             <div className="relative w-8 h-8 rounded-full overflow-hidden mr-2 bg-gray-200 dark:bg-[#444]">
               <Image
-                src={car.dealership_logo}
-                alt={car.dealership_name || 'Dealership'}
+                src={car.dealerships?.logo || car.dealership_logo}
+                alt={car.dealerships?.name || car.dealership_name || 'Dealership'}
                 fill
                 className="object-cover"
+                onError={(e) => {
+                  // Hide the image and show the placeholder div instead
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-[#444] mr-2"></div>
+            <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-[#444] mr-2 flex items-center justify-center">
+              <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+              </svg>
+            </div>
           )}
           
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-              {car.dealership_name || 'Unknown Dealership'}
+              {car.dealerships?.name || car.dealership_name || 'Unknown Dealership'}
             </p>
             <div className="flex items-center">
               <MapPinIcon className="w-3 h-3 text-gray-400 mr-1" />
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {car.dealership_location || 'Location N/A'}
+                {car.dealerships?.location || car.dealership_location || 'Location N/A'}
               </p>
             </div>
           </div>
