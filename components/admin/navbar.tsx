@@ -77,6 +77,13 @@ const navItems: NavItem[] = [
     description: "Review video submissions",
   },
   {
+    name: "Create AutoClip",
+    href: "/admin/create-autoclips",
+    icon: VideoCameraIcon,
+    iconActive: VideoCameraIconSolid,
+    description: "Create autoclips for dealerships",
+  },
+  {
     name: "Send Notifications",
     href: "/admin/notifications",
     icon: BellIcon,
