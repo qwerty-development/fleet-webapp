@@ -14,13 +14,14 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
+import { useFavorites } from "@/utils/FavoritesContext";
+import { GitCompare } from 'lucide-react';
 
 const navItems = [
   { name: "Home", href: "/home", icon: HomeIcon },
   { name: "Dealerships", href: "/dealerships", icon: BuildingOffice2Icon },
   { name: "Autoclips", href: "/autoclips", icon: VideoCameraIcon },
   { name: "Favorites", href: "/favorites", icon: HeartIcon },
-  { name: "Profile", href: "/profile", icon: UserCircleIcon },
 ];
 
 const Navbar: React.FC = () => {
@@ -31,6 +32,9 @@ const Navbar: React.FC = () => {
   const { isGuest, clearGuestMode } = useGuestUser();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { favorites } = useFavorites();
+
+const canCompare = !isGuest && favorites.length >= 2;
 
   const handleSignOut = async () => {
     try {
@@ -89,6 +93,20 @@ const Navbar: React.FC = () => {
                   </Link>
                 );
               })}
+              {canCompare && (
+                <Link href="/comparison">
+                  <p
+                    className={`flex items-center px-2 lg:px-3 py-2 rounded-md text-sm transition-colors duration-200 ${
+                      pathname === "/comparison"
+                        ? "bg-accent text-white"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <GitCompare className="h-5 w-5 mr-1" />
+                    <span className="hidden sm:inline">Compare</span>
+                  </p>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -233,6 +251,24 @@ const Navbar: React.FC = () => {
                 </Link>
               );
             })}
+            
+            {canCompare && (
+              <Link 
+                href="/comparison"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <p
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    pathname === "/comparison"
+                      ? "bg-accent text-white"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <GitCompare className="h-5 w-5 mr-3" />
+                  Compare
+                </p>
+              </Link>
+            )}
             
             {/* Mobile User Actions */}
             <div className="pt-4 border-t  border-gray-200">
