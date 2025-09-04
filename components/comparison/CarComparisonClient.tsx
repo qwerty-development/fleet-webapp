@@ -137,8 +137,8 @@ export default function CarComparisonClient() {
         return <BasicsTab car1={selectedCars[0]} car2={selectedCars[1]} />;
       case 'features':
         return <FeaturesTab car1={selectedCars[0]} car2={selectedCars[1]} />;
-      case 'cost':
-        return <CostTab car1={selectedCars[0]} car2={selectedCars[1]} />;
+      // case 'cost':
+      //   return <CostTab car1={selectedCars[0]} car2={selectedCars[1]} />;
       case 'summary':
         return <SummaryTab car1={selectedCars[0]} car2={selectedCars[1]} />;
       default:

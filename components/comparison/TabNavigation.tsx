@@ -4,15 +4,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 interface TabNavigationProps {
-  activeTab: 'basics' | 'features' | 'cost' | 'summary';
-  onTabChange: (tab: 'basics' | 'features' | 'cost' | 'summary') => void;
+  // activeTab: 'basics' | 'features' | 'cost' | 'summary';
+  activeTab: 'basics' | 'features'  | 'summary';
+
+  // onTabChange: (tab: 'basics' | 'features' | 'cost' | 'summary') => void;
+    onTabChange: (tab: 'basics' | 'features' | 'summary') => void;
 }
 
 export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'basics', label: 'Basics' },
     { id: 'features', label: 'Features' },
-    { id: 'cost', label: 'Cost' },
+    // { id: 'cost', label: 'Cost' },
     { id: 'summary', label: 'Summary' },
   ] as const;
 
