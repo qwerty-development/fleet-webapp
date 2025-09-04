@@ -31,7 +31,8 @@ export default function CarComparisonClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerPosition, setPickerPosition] = useState<'left' | 'right'>('left');
-  const [activeTab, setActiveTab] = useState<'basics' | 'features' | 'cost' | 'summary'>('basics');
+  // const [activeTab, setActiveTab] = useState<'basics' | 'features' | 'cost' | 'summary'>('basics');
+  const [activeTab, setActiveTab] = useState<'basics' | 'features'  | 'summary'>('basics');
 
   useEffect(() => {
     const fetchFavoriteCars = async () => {
