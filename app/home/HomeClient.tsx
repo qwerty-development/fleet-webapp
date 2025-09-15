@@ -16,6 +16,7 @@ import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getLogoUrl } from "@/utils/getLogoUrl";
+import BannerList from "@/components/banners/BannerList";
 
 // Define constants for filter options to avoid string literals
 export const SORT_OPTIONS = {
@@ -727,6 +728,12 @@ export default function HomePage() {
             selectedCategories={filters.categories}
             onCategoryPress={handleCategoryPress}
           />
+
+          {/* Banners Section */}
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Promotions</h2>
+            <BannerList limit={3} />
+          </div>
 
           {isLoading ? (
             <div className="flex justify-center mt-12">

@@ -17,6 +17,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   BellIcon,
+  PhotoIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/components/home/Navbar";
@@ -65,6 +66,13 @@ const SECTIONS = [
     description: "View platform metrics",
     icon: ChartBarIcon,
     color: "from-purple-500 to-violet-500",
+  },
+  {
+    id: "banners",
+    name: "Banners",
+    description: "Manage promotional banners",
+    icon: PhotoIcon,
+    color: "from-cyan-500 to-blue-500",
   },
 ];
 
