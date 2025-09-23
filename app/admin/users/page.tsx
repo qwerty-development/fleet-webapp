@@ -76,7 +76,8 @@ export default function AdminUsersPage() {
   // State variables
   const [users, setUsers] = useState<ProcessedUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<ProcessedUser[]>([]);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<ProcessedUser | null>(null);
   const [userDetails, setUserDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,6 +101,14 @@ export default function AdminUsersPage() {
     role: "all",
     status: "all",
   });
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalUsersCount, setTotalUsersCount] = useState(0);
+  const [totalDealersCount, setTotalDealersCount] = useState(0);
+  const [totalActiveCount, setTotalActiveCount] = useState(0);
 
   const [dealershipForm, setDealershipForm] = useState<DealershipForm>({
     location: "",
@@ -135,15 +144,71 @@ export default function AdminUsersPage() {
     setError(null);
 
     try {
-      // Fetch users from the users table
-      const { data: usersList, error } = await supabase
-        .from('users')
-        .select('*');
+      // Determine ordering column based on sortConfig
+      const sortFieldToColumn: Record<string, string> = {
+        name: 'name',
+        email: 'email',
+        createdAt: 'created_at',
+        lastSignInAt: 'last_active',
+      };
+      const orderColumn = sortFieldToColumn[sortConfig.field] || 'created_at';
 
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        // Exclude guest users server-side
+        .not('email', 'ilike', '%guest%')
+        .neq('name', 'Guest User')
+        .not('id', 'like', 'guest%')
+        .order(orderColumn, { ascending: sortConfig.ascending })
+        .range(from, to);
+
+      // Apply search if present
+      if (appliedSearch) {
+        const term = appliedSearch.replace(/%/g, '').trim();
+        if (term.length > 0) {
+          query = query.or(
+            `name.ilike.%${term}%,email.ilike.%${term}%,id.ilike.%${term}%`
+          );
+        }
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
+      setTotalCount(count || 0);
+
+      // Fetch global counters (independent of pagination and search), excluding guests
+      const baseFilter = supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .not('email', 'ilike', '%guest%')
+        .neq('name', 'Guest User')
+        .not('id', 'like', 'guest%');
+
+      const [{ count: allCount, error: allErr }] = await Promise.all([
+        baseFilter,
+      ]);
+      if (allErr) throw allErr;
+      setTotalUsersCount(allCount || 0);
+
+      const { count: dealersCount, error: dealersErr } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .not('email', 'ilike', '%guest%')
+        .neq('name', 'Guest User')
+        .not('id', 'like', 'guest%')
+        .eq('role', 'dealer');
+      if (dealersErr) throw dealersErr;
+      setTotalDealersCount(dealersCount || 0);
+
+      // Active count: users not banned/locked — not tracked in public table; approximate as all users for now
+      setTotalActiveCount(allCount || 0);
 
       // Filter out guest users and process the remaining users
-      const filteredUsersList = usersList.filter(user => !isGuestUser(user));
+      const filteredUsersList = (data || []).filter(user => !isGuestUser(user));
 
       // Process the users directly from the table
       const processedUsers = filteredUsersList.map(user => ({
@@ -162,14 +227,14 @@ export default function AdminUsersPage() {
       }));
 
       setUsers(processedUsers);
-      applyFiltersAndSort(processedUsers, filterConfig, sortConfig, search);
+      applyFiltersAndSort(processedUsers, filterConfig, sortConfig, appliedSearch);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError('Failed to load users. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [filterConfig, sortConfig, search, supabase]);
+  }, [filterConfig, sortConfig, appliedSearch, page, pageSize, supabase]);
 
   // Fetch user's liked cars and viewed cars with enhanced error handling
   const fetchUserDetails = async (userId: string) => {
@@ -323,9 +388,9 @@ export default function AdminUsersPage() {
   // Effect to apply filters and sort when users, filters, sort config, or search term changes
   useEffect(() => {
     if (users.length > 0) {
-      applyFiltersAndSort(users, filterConfig, sortConfig, search);
+      applyFiltersAndSort(users, filterConfig, sortConfig, appliedSearch);
     }
-  }, [users, filterConfig, sortConfig, search, applyFiltersAndSort]);
+  }, [users, filterConfig, sortConfig, appliedSearch, applyFiltersAndSort]);
 
   // Enhanced role transition validation
   const isAllowedRoleTransition = (currentRole: string, newRole: string): boolean => {
@@ -818,21 +883,17 @@ export default function AdminUsersPage() {
 
             <div className="mt-4 md:mt-0 flex items-center gap-2">
               <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
-                <span className="font-semibold text-white">{users.length}</span>{" "}
+                <span className="font-semibold text-white">{totalUsersCount}</span>{" "}
                 total users
               </div>
 
               <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
-                <span className="font-semibold text-white">
-                  {users.filter((u) => u.user_metadata.role === "dealer").length}
-                </span>{" "}
+                <span className="font-semibold text-white">{totalDealersCount}</span>{" "}
                 dealers
               </div>
 
               <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
-                <span className="font-semibold text-white">
-                  {users.filter((u) => !u.banned && !u.locked).length}
-                </span>{" "}
+                <span className="font-semibold text-white">{totalActiveCount}</span>{" "}
                 active
               </div>
             </div>
@@ -846,19 +907,25 @@ export default function AdminUsersPage() {
               </div>
               <input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search users by name, email, or ID..."
-                className="block w-full pl-10 pr-10 py-3 bg-gray-800/60 backdrop-blur-sm border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
+                className="block w-full pl-10 pr-24 py-3 bg-gray-800/60 backdrop-blur-sm border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
               />
-              {search && (
+              {searchInput && (
                 <button
-                  onClick={() => setSearch("")}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setSearchInput("")}
+                  className="absolute inset-y-0 right-24 pr-3 flex items-center"
                 >
                   <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-white" />
                 </button>
               )}
+              <button
+                onClick={() => { setAppliedSearch(searchInput); setPage(1); fetchUsers(); }}
+                className="absolute inset-y-0 right-0 mr-2 my-1 px-3 bg-indigo-600 hover:bg-indigo-700 rounded-md text-white text-sm"
+              >
+                Search
+              </button>
             </div>
 
             {/* Filter Pills */}
@@ -1056,14 +1123,15 @@ export default function AdminUsersPage() {
                 No Users Found
               </h3>
               <p className="text-gray-400">
-                {search
+                {appliedSearch
                   ? "No users match your search criteria. Try a different search term or clear filters."
                   : "No users match the selected filters. Try adjusting your filter settings."}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredUsers.map((user) => {
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredUsers.map((user) => {
                 const currentRole = user.user_metadata.role || 'user';
                 return (
                   <div
@@ -1246,7 +1314,48 @@ export default function AdminUsersPage() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-gray-400 text-sm">
+                  {totalCount > 0 ? (
+                    <>
+                      Showing {(page - 1) * pageSize + 1}
+                      -{Math.min(page * pageSize, totalCount)} of {totalCount}
+                    </>
+                  ) : (
+                    <>No results</>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="bg-gray-800/60 border border-gray-700 text-gray-300 rounded-md px-2 py-1 text-sm"
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(parseInt(e.target.value || '24', 10)); setPage(1); fetchUsers(); }}
+                  >
+                    <option value={12}>12 / page</option>
+                    <option value={24}>24 / page</option>
+                    <option value={48}>48 / page</option>
+                    <option value={96}>96 / page</option>
+                  </select>
+                  <button
+                    onClick={() => { if (page > 1) { setPage(page - 1); fetchUsers(); } }}
+                    disabled={page === 1 || isLoading}
+                    className="px-3 py-1.5 bg-gray-800/60 border border-gray-700 text-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => { const maxPage = Math.ceil(totalCount / pageSize); if (page < maxPage) { setPage(page + 1); fetchUsers(); } }}
+                    disabled={isLoading || page >= Math.ceil((totalCount || 0) / pageSize)}
+                    className="px-3 py-1.5 bg-gray-800/60 border border-gray-700 text-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

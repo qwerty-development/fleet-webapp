@@ -121,12 +121,26 @@ export default function AdminDashboard() {
 
         if (carsError) throw carsError;
 
-        // Fetch users data
-        const { data: usersData, error: usersError } = await supabase
-          .from("users")
-          .select("*");
+        // Users counts (server-side counts avoid 1000-row cap)
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgoISOString = thirtyDaysAgo.toISOString();
 
-        if (usersError) throw usersError;
+        const [
+          { count: totalUsersCount, error: totalUsersError },
+          { count: guestUsersCount, error: guestUsersError },
+          { count: activeUsersCount, error: activeUsersError },
+          { data: recentUsersData, error: recentUsersError }
+        ] = await Promise.all([
+          supabase.from('users').select('id', { count: 'exact', head: true }),
+          supabase.from('users').select('id', { count: 'exact', head: true }).eq('is_guest', true),
+          supabase.from('users').select('id', { count: 'exact', head: true }).gte('last_active', thirtyDaysAgoISOString),
+          supabase.from('users').select('*').order('created_at', { ascending: false }).limit(5)
+        ]);
+
+        if (totalUsersError) throw totalUsersError;
+        if (guestUsersError) throw guestUsersError;
+        if (activeUsersError) throw activeUsersError;
+        if (recentUsersError) throw recentUsersError;
 
         // UPDATED: Fetch notifications data
         const today = new Date();
@@ -208,36 +222,17 @@ export default function AdminDashboard() {
           setRecentListings(sortedByDate);
         }
 
-        // Process users data
-        if (usersData) {
-          const guestUsers = usersData.filter((user) => user.is_guest === true);
-          const activeUsers = usersData.filter(
-            (user) =>
-              user.last_active &&
-              new Date(user.last_active).getTime() >
-                new Date().getTime() - 30 * 24 * 60 * 60 * 1000
-          );
+        // Users stats from counts, recent users limited query
+        setStats((prev) => ({
+          ...prev,
+          users: {
+            total: totalUsersCount || 0,
+            guests: guestUsersCount || 0,
+            active: activeUsersCount || 0,
+          },
+        }));
 
-          setStats((prev) => ({
-            ...prev,
-            users: {
-              total: usersData.length,
-              guests: guestUsers.length,
-              active: activeUsers.length,
-            },
-          }));
-
-          // Sort users by creation date to get the most recent ones
-          const sortedUsers = [...usersData]
-            .sort(
-              (a, b) =>
-                new Date(b.created_at || 0).getTime() -
-                new Date(a.created_at || 0).getTime()
-            )
-            .slice(0, 5);
-
-          setRecentUsers(sortedUsers);
-        }
+        setRecentUsers(recentUsersData || []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
