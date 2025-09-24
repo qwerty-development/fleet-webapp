@@ -204,8 +204,14 @@ export default function AdminUsersPage() {
       if (dealersErr) throw dealersErr;
       setTotalDealersCount(dealersCount || 0);
 
-      // Active count: users not banned/locked — not tracked in public table; approximate as all users for now
-      setTotalActiveCount(allCount || 0);
+      // Active count: match dashboard logic (users active in last 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { count: activeCount, error: activeErr } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('last_active', thirtyDaysAgo);
+      if (activeErr) throw activeErr;
+      setTotalActiveCount(activeCount || 0);
 
       // Filter out guest users and process the remaining users
       const filteredUsersList = (data || []).filter(user => !isGuestUser(user));

@@ -209,8 +209,8 @@ export default function AdminNotifications() {
   const getFilteredUsers = useCallback(() => {
     return users.filter(user => {
       // Search filter
-      const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = (user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (user.email || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
 
