@@ -25,14 +25,20 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({
   const router = useRouter();
   const supabase = createClient();
 
-  // Fetch favorites when user or guest status changes
+  // Fetch favorites when user status changes (skip guests entirely)
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
         setIsLoaded(false);
 
-        // Get the appropriate user ID (guest or authenticated)
-        const userId = isGuest ? `guest_${guestId}` : user?.id;
+        // Do not query the database for guest users
+        if (isGuest) {
+          setFavorites([]);
+          setIsLoaded(true);
+          return;
+        }
+
+        const userId = user?.id;
 
         if (!userId) {
           setFavorites([]);
@@ -61,7 +67,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    if ((isSignedIn || isGuest) && (user?.id || isGuest)) {
+    if (isSignedIn && user?.id) {
       fetchFavorites();
     } else {
       setFavorites([]);

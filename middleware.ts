@@ -125,20 +125,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(nextPath, request.url));
   }
 
-  // CRITICAL FIX 2: Handle the edge case where user lands on signin page with auth cookies
-  // This specifically addresses the Apple Auth 405 issue
-  if (pathname === '/auth/signin' && request.nextUrl.searchParams.has('next')) {
-    // Check for auth cookies directly from the request
-    const hasSbCookie = request.cookies.getAll().some(cookie =>
-      cookie.name.startsWith('sb-') || cookie.name.includes('supabase')
-    );
-
-    if (hasSbCookie) {
-      console.log('Middleware: Detected auth cookies on signin page, redirecting to destination');
-      const destination = request.nextUrl.searchParams.get('next') || '/home';
-      return NextResponse.redirect(new URL(destination, request.url));
-    }
-  }
+  // Prevent potential redirect loops on signin when cookies exist but session is not resolved
+  // Do NOT redirect based solely on presence of auth cookies; rely on actual session above
+  // (Removed cookie-based redirect that could loop between /auth/signin and protected routes)
 
   // Check for guest mode in various ways (cookie or header)
   let isGuestMode = false;

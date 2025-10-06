@@ -22,9 +22,9 @@ export default function MobileAppBanner() {
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="h-2 bg-gradient-to-t from-transparent to-black/5" />
-      <div className="bg-white border-t border-gray-200 px-4 py-3">
+  <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="h-2 bg-gradient-to-b from-transparent to-black/5" />
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center space-x-3 mb-3">
           <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accent/80 p-0.5 shadow-sm flex-shrink-0">
             <div className="absolute inset-0 bg-white rounded-lg m-0.5" />

@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import { detectPlatform, getDeepLink, DEEP_LINK_CONFIG } from "@/utils/androidDeepLinkUtils";
-import { AppRedirectOverlay } from "@/components/AppRedirectOverlay";
+// Removed AppRedirectOverlay (mobile modal) per request
 import Navbar from "@/components/home/Navbar";
 import MobileAppBanner from "@/components/MobileBanner";
 import { getLogoUrl } from "@/utils/getLogoUrl";
@@ -117,28 +117,11 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
   const viewTracked = useRef<boolean>(false);
   const supabase = createClient();
 
-  const [showAppRedirect, setShowAppRedirect] = useState(false);
-  const redirectChecked = useRef(false);
+  // Removed app redirect overlay state
 
-  // Auto-redirect for mobile devices
-  useEffect(() => {
-    if (!redirectChecked.current && typeof window !== "undefined") {
-      redirectChecked.current = true;
-      const { isMobile } = detectPlatform();
-      
-      if (isMobile) {
-        const preferWeb = document.cookie.includes("preferWeb=true");
-        if (!preferWeb) {
-          setTimeout(() => setShowAppRedirect(true), 1000);
-        }
-      }
-    }
-  }, []);
+  // Removed auto app-redirect overlay on mobile
 
-  const handleCloseRedirect = useCallback(() => {
-    setShowAppRedirect(false);
-    document.cookie = "preferWeb=true; max-age=604800; path=/";
-  }, []);
+  // Removed overlay close handler
 
   // Track clip view
   const trackClipView = useCallback(async (clipId: string) => {
@@ -612,14 +595,6 @@ export default function ClipDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       </div>
-
-      <AppRedirectOverlay
-        itemId={clip.id.toString()}
-        itemType="clip"
-        onClose={handleCloseRedirect}
-        title={clip.cars ? `${clip.cars.year} ${clip.cars.make} ${clip.cars.model}` : clip.title || "Video"}
-        subtitle="Watch this video in the app"
-      />
 
       <MobileAppBanner />
     </div>

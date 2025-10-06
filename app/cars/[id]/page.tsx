@@ -63,7 +63,7 @@ import {
 } from "react-icons/md";
 import Navbar from "@/components/home/Navbar";
 import MobileAppBanner from "@/components/MobileBanner";
-import { AppRedirectOverlay } from "@/components/AppRedirectOverlay";
+// Removed AppRedirectOverlay (mobile modal) per request
 import { getLogoUrl } from "@/utils/getLogoUrl";
 
 // [Previous VEHICLE_FEATURES and other constants remain the same...]
@@ -434,29 +434,11 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
   const viewTracked = useRef<boolean>(false);
   const supabase = createClient();
 
-  const [showAppRedirect, setShowAppRedirect] = useState(false);
-  const redirectChecked = useRef(false);
+  // Removed app redirect overlay state
 
-  // Auto-redirect for mobile devices
-  useEffect(() => {
-    if (!redirectChecked.current && typeof window !== "undefined") {
-      redirectChecked.current = true;
-      const { isMobile } = detectPlatform();
-      
-      if (isMobile) {
-        const preferWeb = document.cookie.includes("preferWeb=true");
-        if (!preferWeb) {
-          setTimeout(() => setShowAppRedirect(true), 1000);
-        }
-      }
-    }
-  }, []);
+  // Removed auto app-redirect overlay on mobile
 
-  const handleCloseRedirect = () => {
-    setShowAppRedirect(false);
-    // Set cookie to remember preference for 7 days
-    document.cookie = "preferWeb=true; max-age=604800; path=/";
-  };
+  // Removed overlay close handler
 
   // [Rest of the component remains the same...]
   const trackCarView = useCallback(
@@ -1257,12 +1239,6 @@ export default function CarDetailPage({ params }: { params: { id: string } }) {
         </div>
 
 
- <AppRedirectOverlay
-  itemId={car.id}
-  itemType="car"
- onClose={handleCloseRedirect}
-  title={`${car.year} ${car.make} ${car.model}`}
-   />
         <MobileAppBanner />
 
         <style jsx global>{`
