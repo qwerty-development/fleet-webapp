@@ -41,6 +41,7 @@ const STATUS_FILTERS = [
 const LISTING_TYPES = [
   { label: "Cars for Sale", value: "sale" },
   { label: "Cars for Rent", value: "rent" },
+  { label: "Number Plates", value: "plates" },
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -157,25 +158,48 @@ export default function AdminBrowseScreen() {
 
     // Apply search filter if query exists
     if (searchQuery.trim()) {
-      filteredQuery = filteredQuery.or(
-        `make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,color.ilike.%${searchQuery}%`
-      );
+      // Different search fields based on listing type
+      if (listingType === "plates") {
+        // Search by letter and digits for number plates
+        filteredQuery = filteredQuery.or(
+          `letter.ilike.%${searchQuery}%,digits.ilike.%${searchQuery}%`
+        );
+      } else {
+        // Search by car fields for cars (sale and rent)
+        filteredQuery = filteredQuery.or(
+          `make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,color.ilike.%${searchQuery}%`
+        );
+      }
     }
 
     return filteredQuery;
-  }, [selectedDealershipId, filterStatus, searchQuery]);
+  }, [selectedDealershipId, filterStatus, searchQuery, listingType]);
 
   // Function to fetch car listings with filters and pagination
   const fetchListings = useCallback(async () => {
     setIsLoading(true);
     try {
       // Determine which table to query based on listing type
-      const tableName = listingType === "sale" ? "cars" : "cars_rent";
+      const tableName = 
+        listingType === "sale" ? "cars" : 
+        listingType === "rent" ? "cars_rent" : 
+        "number_plates";
+      
+      // Adjust sort field based on table - number_plates uses created_at instead of listed_at
+      let adjustedSortBy = sortBy;
+      if (listingType === "plates") {
+        if (sortBy === "listed_at") {
+          adjustedSortBy = "created_at";
+        } else if (sortBy === "views" || sortBy === "likes") {
+          // Number plates don't have views/likes, default to created_at
+          adjustedSortBy = "created_at";
+        }
+      }
       
       let query = supabase
         .from(tableName)
         .select("*, dealerships(id, name, logo, location)", { count: "exact" })
-        .order(sortBy, { ascending: sortOrder === "asc" });
+        .order(adjustedSortBy, { ascending: sortOrder === "asc" });
 
       // Apply all filters
       query = applyFiltersToQuery(query);
@@ -210,7 +234,10 @@ export default function AdminBrowseScreen() {
   const handleDeleteListing = useCallback((id: string) => {
     if (confirm("Are you sure you want to delete this listing?")) {
       try {
-        const tableName = listingType === "sale" ? "cars" : "cars_rent";
+        const tableName = 
+          listingType === "sale" ? "cars" : 
+          listingType === "rent" ? "cars_rent" : 
+          "number_plates";
         supabase
           .from(tableName)
           .delete()
@@ -239,7 +266,10 @@ export default function AdminBrowseScreen() {
       if (!selectedListing) return;
 
       try {
-        const tableName = listingType === "sale" ? "cars" : "cars_rent";
+        const tableName = 
+          listingType === "sale" ? "cars" : 
+          listingType === "rent" ? "cars_rent" : 
+          "number_plates";
         const { error } = await supabase
           .from(tableName)
           .update(formData)
@@ -469,36 +499,51 @@ export default function AdminBrowseScreen() {
             </div>
           ) : listings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
-              {listings.map((car) => (
+              {listings.map((car) => {
+                // Check if this is a number plate
+                const isNumberPlate = listingType === "plates";
+                const item = car as any;
+                
+                return (
                 <div
                   key={car.id}
                   className="bg-gray-800/90 backdrop-blur-sm border border-gray-700/80 rounded-xl overflow-hidden shadow-xl transition-all hover:shadow-indigo-900/20 hover:border-gray-600"
                 >
                   <div className="relative">
-                    {/* Car Image Gallery with Navigation Arrows */}
+                    {/* Image Gallery (Car or Number Plate) */}
                     <div className="relative aspect-square w-full overflow-hidden bg-gray-900">
                       {/* Image */}
                       <div className="w-full h-full">
-                        {car.images && car.images.length > 0 ? (
+                        {isNumberPlate ? (
+                          // Number Plate Image
                           <img
-                            src={
-                              car.images[currentImageIndexes[car.id] || 0] ||
-                              "/placeholder-car.jpg"
-                            }
-                            alt={`${car.year} ${car.make} ${car.model}`}
+                            src={item.picture || "/placeholder-plate.jpg"}
+                            alt={`${item.letter} ${item.digits}`}
                             className="w-full h-full object-cover transition-opacity duration-300"
                           />
                         ) : (
-                          <img
-                            src="/placeholder-car.jpg"
-                            alt={`${car.year} ${car.make} ${car.model}`}
-                            className="w-full h-full object-cover"
-                          />
+                          // Car Images with gallery support
+                          car.images && car.images.length > 0 ? (
+                            <img
+                              src={
+                                car.images[currentImageIndexes[car.id] || 0] ||
+                                "/placeholder-car.jpg"
+                              }
+                              alt={`${car.year} ${car.make} ${car.model}`}
+                              className="w-full h-full object-cover transition-opacity duration-300"
+                            />
+                          ) : (
+                            <img
+                              src="/placeholder-car.jpg"
+                              alt={`${car.year} ${car.make} ${car.model}`}
+                              className="w-full h-full object-cover"
+                            />
+                          )
                         )}
                       </div>
 
-                      {/* Navigation arrows - only shown if multiple images */}
-                      {car.images && car.images.length > 1 && (
+                      {/* Navigation arrows - only shown if multiple images and not number plate */}
+                      {!isNumberPlate && car.images && car.images.length > 1 && (
                         <>
                           {/* Left arrow */}
                           <button
@@ -563,8 +608,8 @@ export default function AdminBrowseScreen() {
                         </>
                       )}
 
-                      {/* Image count indicator */}
-                      {car.images && car.images.length > 1 && (
+                      {/* Image count indicator - only for cars with multiple images */}
+                      {!isNumberPlate && car.images && car.images.length > 1 && (
                         <div className="absolute bottom-3 right-3 bg-black/50 text-white px-2 py-1 rounded-md text-sm backdrop-blur-sm">
                           {(currentImageIndexes[car.id] || 0) + 1} /{" "}
                           {car.images.length}
@@ -574,15 +619,18 @@ export default function AdminBrowseScreen() {
                       {/* Title overlay with gradient */}
                       <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent p-4 flex justify-between items-start">
                         <h3 className="text-white font-bold text-lg">
-                          {car.year} {car.make} {car.model}
+                          {isNumberPlate 
+                            ? `${item.letter} ${item.digits}` 
+                            : `${car.year} ${car.make} ${car.model}`
+                          }
                         </h3>
                         <div className="text-right">
                           <p className="text-white bg-accent rounded-full px-4 font-bold text-lg">
                             ${car.price.toLocaleString()}
                           </p>
-                          {listingType === "rent" && (car as any).rental_period && (
+                          {listingType === "rent" && item.rental_period && (
                             <p className="text-white text-xs mt-1 opacity-90">
-                              per {(car as any).rental_period}
+                              per {item.rental_period}
                             </p>
                           )}
                         </div>
@@ -627,23 +675,26 @@ export default function AdminBrowseScreen() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            <EyeIcon className="h-5 w-5 text-gray-300 mr-1" />
-                            <span className="text-gray-300">
-                              {car.views || 0}
-                            </span>
+                        {/* Only show views and likes for cars, not number plates */}
+                        {!isNumberPlate && (
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center">
+                              <EyeIcon className="h-5 w-5 text-gray-300 mr-1" />
+                              <span className="text-gray-300">
+                                {car.views || 0}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <HeartIcon className="h-5 w-5 text-gray-300 mr-1" />
+                              <span className="text-gray-300">
+                                {car.likes || 0}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center">
-                            <HeartIcon className="h-5 w-5 text-gray-300 mr-1" />
-                            <span className="text-gray-300">
-                              {car.likes || 0}
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </div>
 
-                      {/* Description */}
+                      {/* Dealership Info */}
                       <p className="text-white mb-4 line-clamp-2 text-m flex items-center">
                         <img
                           src={car.dealerships?.logo || "/placeholder-logo.png"}
@@ -652,12 +703,27 @@ export default function AdminBrowseScreen() {
                         />
                         {car.dealerships?.name}
                       </p>
-                      <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
-                        {car.description || "No description available"}
-                      </p>
+
+                      {/* Description or Number Plate Details */}
+                      {isNumberPlate ? (
+                        <div className="mb-4 space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-gray-400 text-sm">Letter:</span>
+                            <span className="text-white font-semibold text-lg">{item.letter}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-gray-400 text-sm">Digits:</span>
+                            <span className="text-white font-semibold text-lg">{item.digits}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
+                          {car.description || "No description available"}
+                        </p>
+                      )}
 
                       {/* Rental Period - Only shown for rental cars */}
-                      {listingType === "rent" && (car as any).rental_period && (
+                      {listingType === "rent" && item.rental_period && (
                         <div className="mb-4 flex items-center space-x-2">
                           <div className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm border border-purple-500/30 flex items-center">
                             <svg
@@ -675,14 +741,14 @@ export default function AdminBrowseScreen() {
                               />
                             </svg>
                             <span className="capitalize font-medium">
-                              {(car as any).rental_period} Rental
+                              {item.rental_period} Rental
                             </span>
                           </div>
                         </div>
                       )}
 
-                      {/* Trim Display - Single trim only */}
-                      {(() => {
+                      {/* Trim Display - Single trim only (for cars) */}
+                      {!isNumberPlate && (() => {
                         const singleTrim = normalizeSingleTrim(car.trim);
                         return singleTrim && (
                           <div className="mb-4">
@@ -714,7 +780,10 @@ export default function AdminBrowseScreen() {
                               )
                             ) {
                               // Update status in database - use correct table based on listing type
-                              const tableName = listingType === "sale" ? "cars" : "cars_rent";
+                              const tableName = 
+                                listingType === "sale" ? "cars" : 
+                                listingType === "rent" ? "cars_rent" : 
+                                "number_plates";
                               supabase
                                 .from(tableName)
                                 .update({ status: newStatus })
@@ -792,7 +861,8 @@ export default function AdminBrowseScreen() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center my-12 p-8 bg-gray-800 rounded-lg">
@@ -861,7 +931,7 @@ export default function AdminBrowseScreen() {
               }}
               onSubmit={handleSubmitListing}
             />
-          ) : (
+          ) : listingType === "rent" ? (
             <EditRentalListingForm
               listing={selectedListing}
               onClose={() => {
@@ -870,6 +940,87 @@ export default function AdminBrowseScreen() {
               }}
               onSubmit={handleSubmitListing}
             />
+          ) : (
+            /* Number Plate Edit Modal - Simple inline form */
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full">
+                <h2 className="text-2xl font-bold text-white mb-4">Edit Number Plate</h2>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  handleSubmitListing({
+                    letter: formData.get('letter'),
+                    digits: formData.get('digits'),
+                    price: parseFloat(formData.get('price') as string),
+                    status: formData.get('status'),
+                  });
+                }}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 mb-2">Letter</label>
+                      <input
+                        type="text"
+                        name="letter"
+                        defaultValue={(selectedListing as any).letter}
+                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Digits</label>
+                      <input
+                        type="text"
+                        name="digits"
+                        defaultValue={(selectedListing as any).digits}
+                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Price</label>
+                      <input
+                        type="number"
+                        name="price"
+                        step="0.01"
+                        defaultValue={selectedListing.price}
+                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-300 mb-2">Status</label>
+                      <select
+                        name="status"
+                        defaultValue={selectedListing.status}
+                        className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="available">Available</option>
+                        <option value="pending">Pending</option>
+                        <option value="sold">Sold</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsListingModalVisible(false);
+                        setSelectedListing(null);
+                      }}
+                      className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           )
         )}
       </div>
