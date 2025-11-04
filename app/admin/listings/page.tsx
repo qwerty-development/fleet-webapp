@@ -19,6 +19,7 @@ import Navbar from "@/components/home/Navbar";
 import Link from "next/link";
 import AdminNavbar from "@/components/admin/navbar";
 import EditListingForm from "@/components/admin/EditListingForm";
+import EditRentalListingForm from "@/components/admin/EditRentalListingForm";
 
 // Define filter and sort options
 const SORT_OPTIONS = [
@@ -35,6 +36,11 @@ const STATUS_FILTERS = [
   { label: "Available", value: "available" },
   { label: "Pending", value: "pending" },
   { label: "Sold", value: "sold" },
+];
+
+const LISTING_TYPES = [
+  { label: "Cars for Sale", value: "sale" },
+  { label: "Cars for Rent", value: "rent" },
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -93,6 +99,7 @@ export default function AdminBrowseScreen() {
   const [currentImageIndexes, setCurrentImageIndexes] = useState<
     Record<string, number>
   >({});
+  const [listingType, setListingType] = useState<string>("sale"); // "sale" or "rent"
 
   const supabase = createClient();
 
@@ -111,6 +118,7 @@ export default function AdminBrowseScreen() {
     selectedDealershipId,
     currentPage,
     searchQuery,
+    listingType,
   ]);
 
   // Function to fetch dealerships from Supabase
@@ -128,36 +136,49 @@ export default function AdminBrowseScreen() {
     }
   };
 
+  // Helper function to apply filters to query
+  const applyFiltersToQuery = useCallback((query: any) => {
+    let filteredQuery = query;
+
+    // Apply dealership filter if selected
+    if (selectedDealershipId !== "all") {
+      const dealershipIdNumber = parseInt(selectedDealershipId, 10);
+      if (!isNaN(dealershipIdNumber)) {
+        filteredQuery = filteredQuery.eq("dealership_id", dealershipIdNumber);
+      } else {
+        console.error("Invalid dealership ID:", selectedDealershipId);
+      }
+    }
+
+    // Apply status filter if not "all"
+    if (filterStatus !== "all") {
+      filteredQuery = filteredQuery.eq("status", filterStatus);
+    }
+
+    // Apply search filter if query exists
+    if (searchQuery.trim()) {
+      filteredQuery = filteredQuery.or(
+        `make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,color.ilike.%${searchQuery}%`
+      );
+    }
+
+    return filteredQuery;
+  }, [selectedDealershipId, filterStatus, searchQuery]);
+
   // Function to fetch car listings with filters and pagination
   const fetchListings = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Determine which table to query based on listing type
+      const tableName = listingType === "sale" ? "cars" : "cars_rent";
+      
       let query = supabase
-        .from("cars")
+        .from(tableName)
         .select("*, dealerships(id, name, logo, location)", { count: "exact" })
         .order(sortBy, { ascending: sortOrder === "asc" });
 
-      // Apply dealership filter if selected - FIXED: Convert string to number
-      if (selectedDealershipId !== "all") {
-        const dealershipIdNumber = parseInt(selectedDealershipId, 10);
-        if (!isNaN(dealershipIdNumber)) {
-          query = query.eq("dealership_id", dealershipIdNumber);
-        } else {
-          console.error("Invalid dealership ID:", selectedDealershipId);
-        }
-      }
-
-      // Apply status filter if not "all"
-      if (filterStatus !== "all") {
-        query = query.eq("status", filterStatus);
-      }
-
-      // Apply search filter if query exists
-      if (searchQuery.trim()) {
-        query = query.or(
-          `make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,color.ilike.%${searchQuery}%`
-        );
-      }
+      // Apply all filters
+      query = applyFiltersToQuery(query);
 
       // Calculate range for pagination
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -179,10 +200,9 @@ export default function AdminBrowseScreen() {
   }, [
     sortBy,
     sortOrder,
-    selectedDealershipId,
-    filterStatus,
-    searchQuery,
     currentPage,
+    listingType,
+    applyFiltersToQuery,
     supabase,
   ]);
 
@@ -190,8 +210,9 @@ export default function AdminBrowseScreen() {
   const handleDeleteListing = useCallback((id: string) => {
     if (confirm("Are you sure you want to delete this listing?")) {
       try {
+        const tableName = listingType === "sale" ? "cars" : "cars_rent";
         supabase
-          .from("cars")
+          .from(tableName)
           .delete()
           .eq("id", id)
           .then(({ error }) => {
@@ -204,7 +225,7 @@ export default function AdminBrowseScreen() {
         alert(`Failed to delete listing: ${error.message}`);
       }
     }
-  }, []);
+  }, [listingType, fetchListings, supabase]);
 
   // Handler for editing a listing
   const handleEditListing = useCallback((listing: Car) => {
@@ -218,8 +239,9 @@ export default function AdminBrowseScreen() {
       if (!selectedListing) return;
 
       try {
+        const tableName = listingType === "sale" ? "cars" : "cars_rent";
         const { error } = await supabase
-          .from("cars")
+          .from(tableName)
           .update(formData)
           .eq("id", selectedListing.id);
 
@@ -234,7 +256,7 @@ export default function AdminBrowseScreen() {
         alert(`Failed to update listing: ${error.message}`);
       }
     },
-    [selectedListing]
+    [selectedListing, listingType, fetchListings, supabase]
   );
 
   // Handle refresh
@@ -305,10 +327,32 @@ export default function AdminBrowseScreen() {
       <div className="pt-16 lg:pt-0 lg:pl-64">
         <div className="px-4 md:px-8 py-6 max-w-7xl mx-auto pb-16">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-white mb-2">Listings</h1>
-            <p className="text-gray-400">
-              Manage all your listings, delete and change status
-            </p>
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Listings</h1>
+              <p className="text-gray-400">
+                Manage all your listings, delete and change status
+              </p>
+            </div>
+          </div>
+
+          {/* Listing Type Toggle */}
+          <div className="mb-6 bg-gray-800/60 rounded-xl p-1 inline-flex">
+            {LISTING_TYPES.map((type) => (
+              <button
+                key={type.value}
+                onClick={() => {
+                  setListingType(type.value);
+                  setCurrentPage(1); // Reset to first page when switching
+                }}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  listingType === type.value
+                    ? "bg-indigo-600 text-white shadow-lg"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
           </div>
 
           {/* Filters and Search */}
@@ -532,9 +576,16 @@ export default function AdminBrowseScreen() {
                         <h3 className="text-white font-bold text-lg">
                           {car.year} {car.make} {car.model}
                         </h3>
-                        <p className="text-white bg-accent rounded-full px-4 font-bold text-lg">
-                          ${car.price.toLocaleString()}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-white bg-accent rounded-full px-4 font-bold text-lg">
+                            ${car.price.toLocaleString()}
+                          </p>
+                          {listingType === "rent" && (car as any).rental_period && (
+                            <p className="text-white text-xs mt-1 opacity-90">
+                              per {(car as any).rental_period}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -605,6 +656,31 @@ export default function AdminBrowseScreen() {
                         {car.description || "No description available"}
                       </p>
 
+                      {/* Rental Period - Only shown for rental cars */}
+                      {listingType === "rent" && (car as any).rental_period && (
+                        <div className="mb-4 flex items-center space-x-2">
+                          <div className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm border border-purple-500/30 flex items-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                            <span className="capitalize font-medium">
+                              {(car as any).rental_period} Rental
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Trim Display - Single trim only */}
                       {(() => {
                         const singleTrim = normalizeSingleTrim(car.trim);
@@ -637,9 +713,10 @@ export default function AdminBrowseScreen() {
                                 `Change status from ${car.status} to ${newStatus}?`
                               )
                             ) {
-                              // Update status in database
+                              // Update status in database - use correct table based on listing type
+                              const tableName = listingType === "sale" ? "cars" : "cars_rent";
                               supabase
-                                .from("cars")
+                                .from(tableName)
                                 .update({ status: newStatus })
                                 .eq("id", car.id)
                                 .then(({ error }) => {
@@ -773,16 +850,27 @@ export default function AdminBrowseScreen() {
           )}
         </div>
 
-        {/* Modal for editing listing would go here */}
+        {/* Modal for editing listing - use appropriate form based on listing type */}
         {isListingModalVisible && selectedListing && (
-          <EditListingForm
-            listing={selectedListing}
-            onClose={() => {
-              setIsListingModalVisible(false);
-              setSelectedListing(null);
-            }}
-            onSubmit={handleSubmitListing}
-          />
+          listingType === "sale" ? (
+            <EditListingForm
+              listing={selectedListing}
+              onClose={() => {
+                setIsListingModalVisible(false);
+                setSelectedListing(null);
+              }}
+              onSubmit={handleSubmitListing}
+            />
+          ) : (
+            <EditRentalListingForm
+              listing={selectedListing}
+              onClose={() => {
+                setIsListingModalVisible(false);
+                setSelectedListing(null);
+              }}
+              onSubmit={handleSubmitListing}
+            />
+          )
         )}
       </div>
     </div>
