@@ -38,9 +38,21 @@ const STATUS_FILTERS = [
   { label: "Sold", value: "sold" },
 ];
 
+const BOOST_FILTERS = [
+  { label: "All Cars", value: "all" },
+  { label: "Boosted Only", value: "boosted" },
+  { label: "Non-Boosted Only", value: "non-boosted" },
+];
+
+const USER_LISTING_TYPES = [
+  { label: "User Cars", value: "user_cars" },
+  { label: "User Plates", value: "user_plates" },
+];
+
 const LISTING_TYPES = [
   { label: "Cars for Sale", value: "sale" },
   { label: "Cars for Rent", value: "rent" },
+  { label: "User Listings", value: "user" },
   { label: "Number Plates", value: "plates" },
 ];
 
@@ -101,6 +113,8 @@ export default function AdminBrowseScreen() {
     Record<string, number>
   >({});
   const [listingType, setListingType] = useState<string>("sale"); // "sale" or "rent"
+  const [filterBoost, setFilterBoost] = useState<string>("all"); // "all", "boosted", "non-boosted"
+  const [userListingType, setUserListingType] = useState<string>("user_cars"); // "user_cars" or "user_plates"
 
   const supabase = createClient();
 
@@ -120,6 +134,8 @@ export default function AdminBrowseScreen() {
     currentPage,
     searchQuery,
     listingType,
+    filterBoost,
+    userListingType,
   ]);
 
   // Function to fetch dealerships from Supabase
@@ -141,8 +157,17 @@ export default function AdminBrowseScreen() {
   const applyFiltersToQuery = useCallback((query: any) => {
     let filteredQuery = query;
 
-    // Apply dealership filter if selected
-    if (selectedDealershipId !== "all") {
+    // Apply owner type filter based on listing type
+    if (listingType === "user") {
+      // User listings: only show cars with user_id
+      filteredQuery = filteredQuery.not("user_id", "is", null);
+    } else if (listingType !== "plates") {
+      // Dealer listings (sale/rent): only show cars with dealership_id
+      filteredQuery = filteredQuery.not("dealership_id", "is", null);
+    }
+
+    // Apply dealership filter if selected (only for dealer listings)
+    if (selectedDealershipId !== "all" && listingType !== "user" && listingType !== "plates") {
       const dealershipIdNumber = parseInt(selectedDealershipId, 10);
       if (!isNaN(dealershipIdNumber)) {
         filteredQuery = filteredQuery.eq("dealership_id", dealershipIdNumber);
@@ -156,6 +181,13 @@ export default function AdminBrowseScreen() {
       filteredQuery = filteredQuery.eq("status", filterStatus);
     }
 
+    // Apply boost filter if not "all" (only for car listings, not plates)
+    if (listingType !== "plates" && filterBoost === "boosted") {
+      filteredQuery = filteredQuery.eq("is_boosted", true);
+    } else if (listingType !== "plates" && filterBoost === "non-boosted") {
+      filteredQuery = filteredQuery.eq("is_boosted", false);
+    }
+
     // Apply search filter if query exists
     if (searchQuery.trim()) {
       // Different search fields based on listing type
@@ -165,7 +197,7 @@ export default function AdminBrowseScreen() {
           `letter.ilike.%${searchQuery}%,digits.ilike.%${searchQuery}%`
         );
       } else {
-        // Search by car fields for cars (sale and rent)
+        // Search by car fields for cars (sale, rent, and user)
         filteredQuery = filteredQuery.or(
           `make.ilike.%${searchQuery}%,model.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,color.ilike.%${searchQuery}%`
         );
@@ -173,21 +205,31 @@ export default function AdminBrowseScreen() {
     }
 
     return filteredQuery;
-  }, [selectedDealershipId, filterStatus, searchQuery, listingType]);
+  }, [selectedDealershipId, filterStatus, filterBoost, searchQuery, listingType]);
 
   // Function to fetch car listings with filters and pagination
   const fetchListings = useCallback(async () => {
     setIsLoading(true);
     try {
       // Determine which table to query based on listing type
-      const tableName = 
-        listingType === "sale" ? "cars" : 
-        listingType === "rent" ? "cars_rent" : 
-        "number_plates";
+      let tableName = "";
+      let isUserListing = false;
+      
+      if (listingType === "user") {
+        // User listings - check sub-filter
+        isUserListing = true;
+        tableName = userListingType === "user_cars" ? "cars" : "number_plates";
+      } else {
+        // Dealer listings
+        tableName = 
+          listingType === "sale" ? "cars" : 
+          listingType === "rent" ? "cars_rent" : 
+          "number_plates";
+      }
       
       // Adjust sort field based on table - number_plates uses created_at instead of listed_at
       let adjustedSortBy = sortBy;
-      if (listingType === "plates") {
+      if (tableName === "number_plates") {
         if (sortBy === "listed_at") {
           adjustedSortBy = "created_at";
         } else if (sortBy === "views" || sortBy === "likes") {
@@ -196,9 +238,12 @@ export default function AdminBrowseScreen() {
         }
       }
       
+      // Build query with appropriate joins
+      let selectQuery = "*, dealerships(id, name, logo, location)";
+      
       let query = supabase
         .from(tableName)
-        .select("*, dealerships(id, name, logo, location)", { count: "exact" })
+        .select(selectQuery, { count: "exact" })
         .order(adjustedSortBy, { ascending: sortOrder === "asc" });
 
       // Apply all filters
@@ -211,6 +256,28 @@ export default function AdminBrowseScreen() {
       const { data, count, error } = await query.range(from, to);
 
       if (error) throw error;
+
+      // If user listings, fetch user data for each listing
+      if (isUserListing && data && data.length > 0) {
+        const userIds = data.map((car: any) => car.user_id).filter(Boolean);
+        if (userIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
+            .from("users")
+            .select("id, name, email")
+            .in("id", userIds);
+          
+          if (usersError) {
+            console.error("Error fetching users:", usersError);
+          }
+          
+          // Attach user data to each car/plate
+          if (usersData) {
+            data.forEach((car: any) => {
+              car.users = usersData.find((user: any) => user.id === car.user_id);
+            });
+          }
+        }
+      }
 
       setListings(data || []);
       setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
@@ -226,6 +293,7 @@ export default function AdminBrowseScreen() {
     sortOrder,
     currentPage,
     listingType,
+    userListingType,
     applyFiltersToQuery,
     supabase,
   ]);
@@ -234,10 +302,15 @@ export default function AdminBrowseScreen() {
   const handleDeleteListing = useCallback((id: string) => {
     if (confirm("Are you sure you want to delete this listing?")) {
       try {
-        const tableName = 
-          listingType === "sale" ? "cars" : 
-          listingType === "rent" ? "cars_rent" : 
-          "number_plates";
+        let tableName = "";
+        if (listingType === "user") {
+          tableName = userListingType === "user_cars" ? "cars" : "number_plates";
+        } else {
+          tableName = 
+            listingType === "sale" ? "cars" : 
+            listingType === "rent" ? "cars_rent" : 
+            "number_plates";
+        }
         supabase
           .from(tableName)
           .delete()
@@ -252,7 +325,7 @@ export default function AdminBrowseScreen() {
         alert(`Failed to delete listing: ${error.message}`);
       }
     }
-  }, [listingType, fetchListings, supabase]);
+  }, [listingType, userListingType, fetchListings, supabase]);
 
   // Handler for editing a listing
   const handleEditListing = useCallback((listing: Car) => {
@@ -266,10 +339,15 @@ export default function AdminBrowseScreen() {
       if (!selectedListing) return;
 
       try {
-        const tableName = 
-          listingType === "sale" ? "cars" : 
-          listingType === "rent" ? "cars_rent" : 
-          "number_plates";
+        let tableName = "";
+        if (listingType === "user") {
+          tableName = userListingType === "user_cars" ? "cars" : "number_plates";
+        } else {
+          tableName = 
+            listingType === "sale" ? "cars" : 
+            listingType === "rent" ? "cars_rent" : 
+            "number_plates";
+        }
         const { error } = await supabase
           .from(tableName)
           .update(formData)
@@ -286,7 +364,7 @@ export default function AdminBrowseScreen() {
         alert(`Failed to update listing: ${error.message}`);
       }
     },
-    [selectedListing, listingType, fetchListings, supabase]
+    [selectedListing, listingType, userListingType, fetchListings, supabase]
   );
 
   // Handle refresh
@@ -312,6 +390,15 @@ export default function AdminBrowseScreen() {
   const handleStatusFilterChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       setFilterStatus(e.target.value);
+      setCurrentPage(1);
+    },
+    []
+  );
+
+  // Handle boost filter change
+  const handleBoostFilterChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setFilterBoost(e.target.value);
       setCurrentPage(1);
     },
     []
@@ -417,24 +504,46 @@ export default function AdminBrowseScreen() {
               </button>
             </form>
 
-            {/* Dealership Dropdown - FIXED: Use selectedDealershipId state */}
-            <div className="w-full">
-              <select
-                className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
-                value={selectedDealershipId}
-                onChange={handleDealershipChange}
-              >
-                <option value="all">All Dealerships</option>
-                {dealerships.map((dealership) => (
-                  <option key={dealership.id} value={dealership.id.toString()}>
-                    {dealership.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Dealership Dropdown - FIXED: Use selectedDealershipId state, hide for user listings */}
+            {listingType !== "user" && listingType !== "plates" && (
+              <div className="w-full">
+                <select
+                  className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                  value={selectedDealershipId}
+                  onChange={handleDealershipChange}
+                >
+                  <option value="all">All Dealerships</option>
+                  {dealerships.map((dealership) => (
+                    <option key={dealership.id} value={dealership.id.toString()}>
+                      {dealership.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Filters Row */}
             <div className="flex flex-col sm:flex-row gap-4">
+              {/* User Listing Type Filter - Only show for user listings */}
+              {listingType === "user" && (
+                <div className="flex-1">
+                  <select
+                    className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                    value={userListingType}
+                    onChange={(e) => {
+                      setUserListingType(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    {USER_LISTING_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Status Filter */}
               <div className="flex-1">
                 <select
@@ -449,6 +558,23 @@ export default function AdminBrowseScreen() {
                   ))}
                 </select>
               </div>
+
+              {/* Boost Filter - Only show for car listings (not plates) */}
+              {listingType !== "plates" && !(listingType === "user" && userListingType === "user_plates") && (
+                <div className="flex-1">
+                  <select
+                    className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                    value={filterBoost}
+                    onChange={handleBoostFilterChange}
+                  >
+                    {BOOST_FILTERS.map((filter) => (
+                      <option key={filter.value} value={filter.value}>
+                        {filter.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Sort Options */}
               <div className="flex-1">
@@ -500,8 +626,9 @@ export default function AdminBrowseScreen() {
           ) : listings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
               {listings.map((car) => {
-                // Check if this is a number plate
-                const isNumberPlate = listingType === "plates";
+                // Check listing type
+                const isNumberPlate = (listingType === "user" && userListingType === "user_plates") || listingType === "plates";
+                const isUserListing = listingType === "user";
                 const item = car as any;
                 
                 return (
@@ -509,6 +636,30 @@ export default function AdminBrowseScreen() {
                   key={car.id}
                   className="bg-gray-800/90 backdrop-blur-sm border border-gray-700/80 rounded-xl overflow-hidden shadow-xl transition-all hover:shadow-indigo-900/20 hover:border-gray-600"
                 >
+                  {/* Boosted Banner - Only show for boosted cars */}
+                  {!isNumberPlate && (car as any).is_boosted && (
+                    <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 px-4 py-2 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 text-white mr-2 animate-pulse"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        <span className="text-white font-bold text-sm uppercase tracking-wider">
+                          🚀 Boosted Listing
+                        </span>
+                      </div>
+                      {(car as any).boost_end_date && (
+                        <span className="text-white text-xs opacity-90">
+                          Until {new Date((car as any).boost_end_date).toLocaleDateString('en-GB')}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="relative">
                     {/* Image Gallery (Car or Number Plate) */}
                     <div className="relative aspect-square w-full overflow-hidden bg-gray-900">
@@ -694,15 +845,43 @@ export default function AdminBrowseScreen() {
                         )}
                       </div>
 
-                      {/* Dealership Info */}
-                      <p className="text-white mb-4 line-clamp-2 text-m flex items-center">
-                        <img
-                          src={car.dealerships?.logo || "/placeholder-logo.png"}
-                          alt={car.dealerships?.name}
-                          className="w-9 h-9 rounded-full mr-2 object-cover"
-                        />
-                        {car.dealerships?.name}
-                      </p>
+                      {/* Dealership/User Info */}
+                      {isUserListing ? (
+                        // User Listing Info (always show for user tab)
+                        <div className="text-white mb-4 text-m flex items-center">
+                          <div className="w-9 h-9 rounded-full mr-2 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 text-white"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold line-clamp-1">
+                              {item.users?.name || "Unknown User"}
+                            </p>
+                            <p className="text-xs text-gray-400 line-clamp-1">
+                              {item.users?.email || "No email"}
+                            </p>
+                          </div>
+                          <span className="ml-2 px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs border border-purple-500/30">
+                            User
+                          </span>
+                        </div>
+                      ) : (
+                        // Dealership Info (for all dealer tabs)
+                        <p className="text-white mb-4 line-clamp-2 text-m flex items-center">
+                          <img
+                            src={car.dealerships?.logo || "/placeholder-logo.png"}
+                            alt={car.dealerships?.name}
+                            className="w-9 h-9 rounded-full mr-2 object-cover"
+                          />
+                          {car.dealerships?.name}
+                        </p>
+                      )}
 
                       {/* Description or Number Plate Details */}
                       {isNumberPlate ? (
@@ -780,10 +959,15 @@ export default function AdminBrowseScreen() {
                               )
                             ) {
                               // Update status in database - use correct table based on listing type
-                              const tableName = 
-                                listingType === "sale" ? "cars" : 
-                                listingType === "rent" ? "cars_rent" : 
-                                "number_plates";
+                              let tableName = "";
+                              if (listingType === "user") {
+                                tableName = userListingType === "user_cars" ? "cars" : "number_plates";
+                              } else {
+                                tableName = 
+                                  listingType === "sale" ? "cars" : 
+                                  listingType === "rent" ? "cars_rent" : 
+                                  "number_plates";
+                              }
                               supabase
                                 .from(tableName)
                                 .update({ status: newStatus })
@@ -877,6 +1061,7 @@ export default function AdminBrowseScreen() {
                   setFilterStatus("all");
                   setSelectedDealershipId("all");
                   setSearchQuery("");
+                  setFilterBoost("all");
                   setCurrentPage(1);
                 }}
                 className="px-6 py-3 bg-accent hover:bg-accent/80 transition-colors rounded-lg text-white font-semibold"
@@ -922,7 +1107,8 @@ export default function AdminBrowseScreen() {
 
         {/* Modal for editing listing - use appropriate form based on listing type */}
         {isListingModalVisible && selectedListing && (
-          listingType === "sale" ? (
+          (listingType === "sale" || (listingType === "user" && userListingType === "user_cars")) ? (
+            // Use regular sale form for dealer sales and user cars
             <EditListingForm
               listing={selectedListing}
               onClose={() => {
