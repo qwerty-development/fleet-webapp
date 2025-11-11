@@ -29,6 +29,8 @@ import {
   ExclamationTriangleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@heroicons/react/24/outline';
 
 ChartJS.register(
@@ -100,7 +102,7 @@ interface CreditTransaction {
   metadata: any;
   users?: {
     email: string;
-    full_name: string;
+    name: string;
   };
 }
 
@@ -136,6 +138,7 @@ export default function BoostAnalyticsPage() {
   const [dateRange, setDateRange] = useState(7);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const supabase = createClient();
 
@@ -197,7 +200,7 @@ export default function BoostAnalyticsPage() {
         const userIds = Array.from(new Set(transactionsData.map(t => t.user_id)));
         const { data: usersData } = await supabase
           .from('users')
-          .select('id, email, full_name')
+          .select('id, email, name')
           .in('id', userIds);
 
         // Map users to transactions
@@ -284,14 +287,64 @@ export default function BoostAnalyticsPage() {
     const searchLower = searchTerm.toLowerCase();
     return creditTransactions.filter(t => 
       t.users?.email.toLowerCase().includes(searchLower) ||
-      t.users?.full_name?.toLowerCase().includes(searchLower) ||
+      t.users?.name?.toLowerCase().includes(searchLower) ||
       t.description.toLowerCase().includes(searchLower)
     );
   }, [creditTransactions, searchTerm]);
 
+  // Group analytics by boost session
+  const groupedAnalytics = useMemo(() => {
+    const groups: { [key: string]: any } = {};
+    
+    filteredAnalytics.forEach(event => {
+      // Find corresponding boost history for this event
+      const boostSession = boostHistory.find(h => 
+        h.car_id === event.car_id && 
+        new Date(event.created_at) >= new Date(h.start_date) &&
+        new Date(event.created_at) <= new Date(h.end_date)
+      );
+
+      const key = boostSession 
+        ? `${event.car_id}-${boostSession.id}` 
+        : `${event.car_id}-unboosted`;
+
+      if (!groups[key]) {
+        groups[key] = {
+          id: key,
+          car_id: event.car_id,
+          car: event.cars,
+          dealership: event.dealerships,
+          boost_priority: event.boost_priority,
+          boost_session: boostSession,
+          start_date: boostSession?.start_date || event.created_at,
+          end_date: boostSession?.end_date || event.created_at,
+          impressions: 0,
+          clicks: 0,
+          calls: 0,
+          whatsapp: 0,
+          chat: 0,
+          events: []
+        };
+      }
+
+      // Aggregate counts
+      if (event.event_type === 'impression') groups[key].impressions++;
+      if (event.event_type === 'click') groups[key].clicks++;
+      if (event.event_type === 'call') groups[key].calls++;
+      if (event.event_type === 'whatsapp') groups[key].whatsapp++;
+      if (event.event_type === 'chat') groups[key].chat++;
+      
+      groups[key].events.push(event);
+    });
+
+    return Object.values(groups).sort((a, b) => 
+      new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+    );
+  }, [filteredAnalytics, boostHistory]);
+
   // Pagination
   const getCurrentData = () => {
-    const data = activeTab === 'analytics' ? filteredAnalytics : 
+    const data = activeTab === 'analytics' ? groupedAnalytics : 
                   activeTab === 'history' ? filteredHistory : 
                   filteredTransactions;
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -299,15 +352,28 @@ export default function BoostAnalyticsPage() {
   };
 
   const totalPages = useMemo(() => {
-    const data = activeTab === 'analytics' ? filteredAnalytics : 
+    const data = activeTab === 'analytics' ? groupedAnalytics : 
                   activeTab === 'history' ? filteredHistory : 
                   filteredTransactions;
     return Math.ceil(data.length / ITEMS_PER_PAGE);
-  }, [activeTab, filteredAnalytics, filteredHistory, filteredTransactions]);
+  }, [activeTab, groupedAnalytics, filteredHistory, filteredTransactions]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchTerm]);
+
+  // Toggle row expansion
+  const toggleRow = (rowId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId);
+      } else {
+        newSet.add(rowId);
+      }
+      return newSet;
+    });
+  };
 
   // Chart data
   const getEventTypeChartData = () => {
@@ -522,18 +588,6 @@ export default function BoostAnalyticsPage() {
                 </div>
               </div>
             </div>
-
-            <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-gray-400 text-sm">Total Credits Activity</p>
-                  <p className="text-white text-2xl font-semibold mt-1">{formatCurrency(stats.totalRevenue)}</p>
-                </div>
-                <div className="p-2 bg-yellow-500/20 rounded-lg">
-                  <CurrencyDollarIcon className="h-6 w-6 text-yellow-400" />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Filters */}
@@ -626,7 +680,7 @@ export default function BoostAnalyticsPage() {
                       : 'text-gray-400 hover:text-gray-300'
                   }`}
                 >
-                  Analytics Events ({filteredAnalytics.length})
+                  Boost Sessions ({groupedAnalytics.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('history')}
@@ -657,40 +711,116 @@ export default function BoostAnalyticsPage() {
                   <table className="w-full min-w-full divide-y divide-gray-700">
                     <thead className="bg-gray-700/30">
                       <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider w-12"></th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Car</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Dealership</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Event Type</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Priority</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Impressions</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Clicks</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Calls</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">WhatsApp</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Chat</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Period</th>
                       </tr>
                     </thead>
                     <tbody className="bg-gray-800/30 divide-y divide-gray-700">
-                      {getCurrentData().map((item: any) => (
-                        <tr key={item.id} className="hover:bg-gray-700/30">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                            {item.cars ? `${item.cars.year} ${item.cars.make} ${item.cars.model}` : 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {item.dealerships?.name || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              item.event_type === 'impression' ? 'bg-blue-500/20 text-blue-300' :
-                              item.event_type === 'click' ? 'bg-green-500/20 text-green-300' :
-                              item.event_type === 'call' ? 'bg-yellow-500/20 text-yellow-300' :
-                              item.event_type === 'whatsapp' ? 'bg-purple-500/20 text-purple-300' :
-                              'bg-pink-500/20 text-pink-300'
-                            }`}>
-                              {item.event_type}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                            {item.boost_priority || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {new Date(item.created_at).toLocaleString()}
-                          </td>
-                        </tr>
+                      {getCurrentData().map((group: any) => (
+                        <>
+                          <tr key={group.id} className="hover:bg-gray-700/30 cursor-pointer" onClick={() => toggleRow(group.id)}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {expandedRows.has(group.id) ? (
+                                <ChevronUpIcon className="h-5 w-5 text-gray-400" />
+                              ) : (
+                                <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
+                              {group.car ? `${group.car.year} ${group.car.make} ${group.car.model}` : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              {group.dealership?.name || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300">
+                                {group.boost_priority || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">
+                                {group.impressions}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300">
+                                {group.clicks}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-300">
+                                {group.calls}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300">
+                                {group.whatsapp}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-pink-500/20 text-pink-300">
+                                {group.chat}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                              {group.boost_session ? (
+                                <div className="text-xs">
+                                  <div>{new Date(group.start_date).toLocaleDateString()}</div>
+                                  <div className="text-gray-500">to {new Date(group.end_date).toLocaleDateString()}</div>
+                                </div>
+                              ) : (
+                                new Date(group.start_date).toLocaleDateString()
+                              )}
+                            </td>
+                          </tr>
+                          {expandedRows.has(group.id) && (
+                            <tr className="bg-gray-900/50">
+                              <td colSpan={10} className="px-6 py-4">
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-medium text-gray-300 mb-3">Event Details ({group.events.length} events)</h4>
+                                  <div className="max-h-60 overflow-y-auto">
+                                    <table className="w-full">
+                                      <thead className="bg-gray-800/50">
+                                        <tr>
+                                          <th className="px-4 py-2 text-left text-xs text-gray-400">Event Type</th>
+                                          <th className="px-4 py-2 text-left text-xs text-gray-400">Timestamp</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-700/50">
+                                        {group.events.map((event: any, idx: number) => (
+                                          <tr key={idx} className="hover:bg-gray-800/30">
+                                            <td className="px-4 py-2 text-sm">
+                                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                event.event_type === 'impression' ? 'bg-blue-500/20 text-blue-300' :
+                                                event.event_type === 'click' ? 'bg-green-500/20 text-green-300' :
+                                                event.event_type === 'call' ? 'bg-yellow-500/20 text-yellow-300' :
+                                                event.event_type === 'whatsapp' ? 'bg-purple-500/20 text-purple-300' :
+                                                'bg-pink-500/20 text-pink-300'
+                                              }`}>
+                                                {event.event_type}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-gray-400">
+                                              {new Date(event.created_at).toLocaleString()}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       ))}
                     </tbody>
                   </table>
@@ -774,7 +904,7 @@ export default function BoostAnalyticsPage() {
                         <tr key={item.id} className="hover:bg-gray-700/30">
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div>
-                              <div className="font-medium text-white">{item.users?.full_name || 'N/A'}</div>
+                              <div className="font-medium text-white">{item.users?.name || 'N/A'}</div>
                               <div className="text-gray-400 text-xs">{item.users?.email}</div>
                             </div>
                           </td>
