@@ -19,6 +19,7 @@ import {
   BellIcon,
   SparklesIcon,
   PhotoIcon,
+  RectangleGroupIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -30,6 +31,7 @@ import {
   ListBulletIcon as ListBulletIcon,
   VideoCameraIcon as VideoCameraIconSolid,
   BellIcon as BellIconSolid,
+  RectangleGroupIcon as RectangleGroupIconSolid,
 } from "@heroicons/react/24/solid";
 
 import { useAuth } from "@/utils/AuthContext";
@@ -126,6 +128,13 @@ const navItems: NavItem[] = [
     icon: PhotoIcon,
     iconActive: PhotoIcon,
     description: "Manage promotional banners",
+  },
+  {
+    name: "Ad Banners",
+    href: "/admin/ad-banners",
+    icon: RectangleGroupIcon,
+    iconActive: RectangleGroupIconSolid,
+    description: "Manage advertisement banners",
   },
   {
     name: "Celebrate",

@@ -18,6 +18,7 @@ import {
   ArrowDownIcon,
   BellIcon,
   PhotoIcon,
+  RectangleGroupIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/components/home/Navbar";
@@ -73,6 +74,13 @@ const SECTIONS = [
     description: "Manage promotional banners",
     icon: PhotoIcon,
     color: "from-cyan-500 to-blue-500",
+  },
+  {
+    id: "ad-banners",
+    name: "Ad Banners",
+    description: "Manage advertisement banners",
+    icon: RectangleGroupIcon,
+    color: "from-pink-500 to-rose-500",
   },
 ];
 
