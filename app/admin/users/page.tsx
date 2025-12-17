@@ -46,6 +46,7 @@ interface User {
   last_active?: string;
   banned_until: string | null;
   locked: boolean;
+  phone?: string;
 }
 
 interface ProcessedUser {
@@ -61,6 +62,7 @@ interface ProcessedUser {
   createdAt: number;
   banned: boolean;
   locked: boolean;
+  phone?: string;
 }
 
 interface DealershipForm {
@@ -131,7 +133,7 @@ export default function AdminUsersPage() {
   // Helper function to check if user is a guest user
   const isGuestUser = (user: any): boolean => {
     return (
-      user.id?.startsWith('guest_') || 
+      user.id?.startsWith('guest_') ||
       user.name === 'Guest User' ||
       user.email?.includes('guest') ||
       (user.user_metadata?.name && user.user_metadata.name === 'Guest User')
@@ -171,7 +173,7 @@ export default function AdminUsersPage() {
         const term = appliedSearch.replace(/%/g, '').trim();
         if (term.length > 0) {
           query = query.or(
-            `name.ilike.%${term}%,email.ilike.%${term}%,id.ilike.%${term}%`
+            `name.ilike.%${term}%,email.ilike.%${term}%,id.ilike.%${term}%,phone.ilike.%${term}%`
           );
         }
       }
@@ -229,7 +231,8 @@ export default function AdminUsersPage() {
         lastSignInAt: user.last_active ? Date.parse(user.last_active) : 0,
         createdAt: user.created_at ? Date.parse(user.created_at) : 0,
         banned: false,
-        locked: false
+        locked: false,
+        phone: user.phone
       }));
 
       setUsers(processedUsers);
@@ -284,7 +287,7 @@ export default function AdminUsersPage() {
 
         if (!dealershipError && dealership) {
           dealershipInfo = dealership;
-          
+
           // Fetch dealership cars
           const { data: cars, error: carsError } = await supabase
             .from("cars")
@@ -359,7 +362,8 @@ export default function AdminUsersPage() {
             user.firstName?.toLowerCase().includes(searchLower) ||
             user.lastName?.toLowerCase().includes(searchLower) ||
             user.email?.toLowerCase().includes(searchLower) ||
-            user.id?.toLowerCase().includes(searchLower)
+            user.id?.toLowerCase().includes(searchLower) ||
+            user.phone?.toLowerCase().includes(searchLower)
         );
       }
 
@@ -469,11 +473,11 @@ export default function AdminUsersPage() {
           setPendingAction({
             action: 'delete-dealership-and-demote',
             user: user,
-            context: { 
-              dealershipId, 
+            context: {
+              dealershipId,
               dealershipName,
               totalCars: carCount,
-              isDealershipDeletion: true 
+              isDealershipDeletion: true
             }
           });
           setConfirmActionOpen(true);
@@ -514,23 +518,23 @@ export default function AdminUsersPage() {
   // Enhanced form validation
   const validateDealershipForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!dealershipForm.name.trim()) {
       newErrors.name = "Company name is required";
     } else if (dealershipForm.name.length < 3) {
       newErrors.name = "Company name must be at least 3 characters";
     }
-    
+
     if (!dealershipForm.location.trim()) {
       newErrors.location = "Location is required";
     }
-    
+
     if (!dealershipForm.phone.trim()) {
       newErrors.phone = "Phone is required";
     } else if (!/^\d{8,}$/.test(dealershipForm.phone)) {
       newErrors.phone = "Phone must be at least 8 digits";
     }
-    
+
     if (dealershipForm.subscriptionEndDate < new Date()) {
       newErrors.subscriptionEndDate = "Subscription end date must be in the future";
     }
@@ -555,12 +559,12 @@ export default function AdminUsersPage() {
       current.map((u) =>
         u.id === selectedUser.id
           ? {
-              ...u,
-              user_metadata: {
-                ...u.user_metadata,
-                role: "dealer",
-              },
-            }
+            ...u,
+            user_metadata: {
+              ...u.user_metadata,
+              role: "dealer",
+            },
+          }
           : u
       )
     );
@@ -646,7 +650,7 @@ export default function AdminUsersPage() {
       if (currentRole === 'dealer' && newRole === 'user') {
         if (context?.isDealershipDeletion && context?.dealershipId) {
           console.log(`Deleting dealership ${context.dealershipId} and all associated records...`);
-          
+
           // Delete the dealership (cascade will handle cars and autoclips)
           const { error: deleteDealershipError } = await supabase
             .from('dealerships')
@@ -676,7 +680,7 @@ export default function AdminUsersPage() {
       // Show success message with context
       const user = users.find(u => u.id === userId);
       const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
-      
+
       if (currentRole === 'dealer' && newRole === 'user' && context?.isDealershipDeletion) {
         alert(`✅ Success!\n\n${userName} has been changed to a regular user.\n\nDealership "${context.dealershipName}" has been completely removed from the system.\n\n${context.totalCars || 0} associated cars and all related records have been automatically deleted.`);
       } else {
@@ -841,19 +845,19 @@ export default function AdminUsersPage() {
     switch (pendingAction.action) {
       case "make-admin":
         return `Are you sure you want to promote ${userName} to an admin? This will give them full access to the admin dashboard.`;
-      
+
       case "make-user":
         return `Are you sure you want to demote ${userName} to a regular user? This will remove their current privileges.`;
-      
+
       case "delete-dealership-and-demote":
         return `⚠️ CRITICAL ACTION: Complete Dealership Deletion\n\nYou are about to:\n\n🔹 Demote ${userName} from dealer to regular user\n🔹 PERMANENTLY DELETE dealership "${context.dealershipName}"\n\n\n❌ THIS ACTION CANNOT BE UNDONE!\n\nAll dealership data will be permanently lost. Are you absolutely certain you want to proceed?`;
-      
+
       case "ban-user":
         return `Are you sure you want to ban ${userName}? They will no longer be able to access the platform.`;
-      
+
       case "unban-user":
         return `Are you sure you want to unban ${userName}? This will restore their access to the platform.`;
-      
+
       default:
         return "";
     }
@@ -915,7 +919,7 @@ export default function AdminUsersPage() {
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search users by name, email, or ID..."
+                placeholder="Search users by name, email, phone, or ID..."
                 className="block w-full pl-10 pr-24 py-3 bg-gray-800/60 backdrop-blur-sm border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
               />
               {searchInput && (
@@ -947,11 +951,10 @@ export default function AdminUsersPage() {
                           : true,
                     })
                   }
-                  className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    sortConfig.field === "name"
+                  className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${sortConfig.field === "name"
                       ? "bg-indigo-600 text-white"
                       : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                  }`}
+                    }`}
                 >
                   Name
                   {sortConfig.field === "name" &&
@@ -972,11 +975,10 @@ export default function AdminUsersPage() {
                           : true,
                     })
                   }
-                  className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    sortConfig.field === "createdAt"
+                  className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${sortConfig.field === "createdAt"
                       ? "bg-indigo-600 text-white"
                       : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                  }`}
+                    }`}
                 >
                   Date Joined
                   {sortConfig.field === "createdAt" &&
@@ -997,11 +999,10 @@ export default function AdminUsersPage() {
                           : true,
                     })
                   }
-                  className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    sortConfig.field === "lastSignInAt"
+                  className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${sortConfig.field === "lastSignInAt"
                       ? "bg-indigo-600 text-white"
                       : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                  }`}
+                    }`}
                 >
                   Last Active
                   {sortConfig.field === "lastSignInAt" &&
@@ -1023,11 +1024,10 @@ export default function AdminUsersPage() {
                     status: prev.status === "active" ? "all" : "active",
                   }))
                 }
-                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filterConfig.status === "active"
+                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${filterConfig.status === "active"
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <CheckCircleIcon className="h-4 w-4 mr-1.5" />
                 Active Users
@@ -1040,11 +1040,10 @@ export default function AdminUsersPage() {
                     status: prev.status === "banned" ? "all" : "banned",
                   }))
                 }
-                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filterConfig.status === "banned"
+                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${filterConfig.status === "banned"
                     ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
                     : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <StopCircleIcon className="h-4 w-4 mr-1.5" />
                 Banned Users
@@ -1057,11 +1056,10 @@ export default function AdminUsersPage() {
                     status: prev.status === "locked" ? "all" : "locked",
                   }))
                 }
-                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filterConfig.status === "locked"
+                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${filterConfig.status === "locked"
                     ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                     : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <LockClosedIcon className="h-4 w-4 mr-1.5" />
                 Locked Users
@@ -1074,11 +1072,10 @@ export default function AdminUsersPage() {
                     role: prev.role === "dealer" ? "all" : "dealer",
                   }))
                 }
-                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filterConfig.role === "dealer"
+                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${filterConfig.role === "dealer"
                     ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                     : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <BriefcaseIcon className="h-4 w-4 mr-1.5" />
                 Dealers
@@ -1091,11 +1088,10 @@ export default function AdminUsersPage() {
                     role: prev.role === "admin" ? "all" : "admin",
                   }))
                 }
-                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filterConfig.role === "admin"
+                className={`flex items-center px-3 py-1.5 rounded-lg text-sm transition-colors ${filterConfig.role === "admin"
                     ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                     : "bg-gray-800/60 text-gray-300 hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <ShieldCheckIcon className="h-4 w-4 mr-1.5" />
                 Admins
@@ -1138,188 +1134,194 @@ export default function AdminUsersPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredUsers.map((user) => {
-                const currentRole = user.user_metadata.role || 'user';
-                return (
-                  <div
-                    key={user.id}
-                    onClick={() => handleUserClick(user)}
-                    className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="p-5">
-                      <div className="flex items-center mb-4">
-                        <img
-                          src={user.imageUrl}
-                          alt={`${user.firstName} ${user.lastName}`}
-                          className="w-12 h-12 rounded-full object-cover border border-gray-700"
-                        />
-                        <div className="ml-3 min-w-0 flex-1">
-                          <h3 className="text-white font-semibold text-lg truncate">
-                            {user.firstName} {user.lastName}
-                          </h3>
-                          <p className="text-gray-400 text-sm truncate">
-                            {user.email}
-                          </p>
+                  const currentRole = user.user_metadata.role || 'user';
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => handleUserClick(user)}
+                      className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl hover:border-gray-600 transition-all duration-300 cursor-pointer"
+                    >
+                      <div className="p-5">
+                        <div className="flex items-center mb-4">
+                          <img
+                            src={user.imageUrl}
+                            alt={`${user.firstName} ${user.lastName}`}
+                            className="w-12 h-12 rounded-full object-cover border border-gray-700"
+                          />
+                          <div className="ml-3 min-w-0 flex-1">
+                            <h3 className="text-white font-semibold text-lg truncate">
+                              {user.firstName} {user.lastName}
+                            </h3>
+                            <p className="text-gray-400 text-sm truncate">
+                              {user.email}
+                            </p>
+                            {user.phone && (
+                              <p className="text-gray-400 text-sm truncate flex items-center mt-1">
+                                <PhoneIcon className="h-3 w-3 mr-1" />
+                                {user.phone}
+                              </p>
+                            )}
+                          </div>
+                          <div
+                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                              getUserStatus(user)
+                            )}`}
+                          >
+                            {getUserStatus(user)}
+                          </div>
                         </div>
-                        <div
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                            getUserStatus(user)
-                          )}`}
-                        >
-                          {getUserStatus(user)}
-                        </div>
-                      </div>
 
-                      <div className="flex items-center justify-between text-sm mb-4">
-                        <div className="flex items-center">
-                          {user.user_metadata.role === "admin" ? (
-                            <ShieldCheckIcon className="h-4 w-4 text-purple-400 mr-1.5" />
-                          ) : user.user_metadata.role === "dealer" ? (
-                            <BriefcaseIcon className="h-4 w-4 text-blue-400 mr-1.5" />
-                          ) : (
-                            <UserIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+                        <div className="flex items-center justify-between text-sm mb-4">
+                          <div className="flex items-center">
+                            {user.user_metadata.role === "admin" ? (
+                              <ShieldCheckIcon className="h-4 w-4 text-purple-400 mr-1.5" />
+                            ) : user.user_metadata.role === "dealer" ? (
+                              <BriefcaseIcon className="h-4 w-4 text-blue-400 mr-1.5" />
+                            ) : (
+                              <UserIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+                            )}
+                            <span
+                              className={`${getRoleBadgeColor(
+                                user.user_metadata.role || "user"
+                              )} px-2 py-0.5 rounded text-xs`}
+                            >
+                              {user.user_metadata.role || "user"}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <ClockIcon className="h-4 w-4 text-gray-500 mr-1.5" />
+                            <span className="text-gray-400 text-xs">
+                              {user.lastSignInAt
+                                ? new Date(user.lastSignInAt).toLocaleDateString()
+                                : "Never"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {(user.banned || user.locked) && (
+                          <div className="mb-4 bg-rose-500/10 p-3 rounded-lg">
+                            <p className="text-rose-400 text-sm flex items-center">
+                              <ExclamationTriangleIcon className="h-4 w-4 mr-1.5" />
+                              {user.banned
+                                ? "Account is banned"
+                                : "Account is locked"}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2 w-full">
+                          {/* Role transition buttons based on current role */}
+                          {currentRole === 'user' && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSetRole(user, 'dealer');
+                                }}
+                                disabled={isActionLoading || user.banned || user.locked}
+                                className="w-full px-3 py-1.5 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isActionLoading ? (
+                                  <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                ) : (
+                                  <BriefcaseIcon className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                Make Dealer
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSetRole(user, 'admin');
+                                }}
+                                disabled={isActionLoading || user.banned || user.locked}
+                                className="w-full px-3 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isActionLoading ? (
+                                  <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                ) : (
+                                  <ShieldCheckIcon className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                Make Admin
+                              </button>
+                            </>
                           )}
-                          <span
-                            className={`${getRoleBadgeColor(
-                              user.user_metadata.role || "user"
-                            )} px-2 py-0.5 rounded text-xs`}
-                          >
-                            {user.user_metadata.role || "user"}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <ClockIcon className="h-4 w-4 text-gray-500 mr-1.5" />
-                          <span className="text-gray-400 text-xs">
-                            {user.lastSignInAt
-                              ? new Date(user.lastSignInAt).toLocaleDateString()
-                              : "Never"}
-                          </span>
-                        </div>
-                      </div>
 
-                      {(user.banned || user.locked) && (
-                        <div className="mb-4 bg-rose-500/10 p-3 rounded-lg">
-                          <p className="text-rose-400 text-sm flex items-center">
-                            <ExclamationTriangleIcon className="h-4 w-4 mr-1.5" />
-                            {user.banned
-                              ? "Account is banned"
-                              : "Account is locked"}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col gap-2 w-full">
-                        {/* Role transition buttons based on current role */}
-                        {currentRole === 'user' && (
-                          <>
+                          {currentRole === 'dealer' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSetRole(user, 'dealer');
+                                handleSetRole(user, 'user');
                               }}
                               disabled={isActionLoading || user.banned || user.locked}
-                              className="w-full px-3 py-1.5 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {isActionLoading ? (
                                 <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
                               ) : (
-                                <BriefcaseIcon className="h-3.5 w-3.5 mr-1" />
+                                <TrashIcon className="h-3.5 w-3.5 mr-1" />
                               )}
-                              Make Dealer
+                              Delete Dealership
                             </button>
+                          )}
 
+                          {currentRole === 'admin' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSetRole(user, 'admin');
+                                handleSetRole(user, 'user');
                               }}
                               disabled={isActionLoading || user.banned || user.locked}
-                              className="w-full px-3 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {isActionLoading ? (
                                 <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
                               ) : (
-                                <ShieldCheckIcon className="h-3.5 w-3.5 mr-1" />
+                                <UserIcon className="h-3.5 w-3.5 mr-1" />
                               )}
-                              Make Admin
+                              Demote to User
                             </button>
-                          </>
-                        )}
+                          )}
 
-                        {currentRole === 'dealer' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSetRole(user, 'user');
-                            }}
-                            disabled={isActionLoading || user.banned || user.locked}
-                            className="w-full px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isActionLoading ? (
-                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
-                            ) : (
-                              <TrashIcon className="h-3.5 w-3.5 mr-1" />
-                            )}
-                            Delete Dealership
-                          </button>
-                        )}
-
-                        {currentRole === 'admin' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSetRole(user, 'user');
-                            }}
-                            disabled={isActionLoading || user.banned || user.locked}
-                            className="w-full px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isActionLoading ? (
-                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
-                            ) : (
-                              <UserIcon className="h-3.5 w-3.5 mr-1" />
-                            )}
-                            Demote to User
-                          </button>
-                        )}
-
-                        {/* Ban/Unban button */}
-                        {!user.banned ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              confirmAction(user, 'ban-user');
-                            }}
-                            disabled={isActionLoading}
-                            className="w-full px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isActionLoading ? (
-                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
-                            ) : (
-                              <StopCircleIcon className="h-3.5 w-3.5 mr-1" />
-                            )}
-                            Ban User
-                          </button>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              confirmAction(user, 'unban-user');
-                            }}
-                            disabled={isActionLoading}
-                            className="w-full px-3 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isActionLoading ? (
-                              <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
-                            ) : (
-                              <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
-                            )}
-                            Unban User
-                          </button>
-                        )}
+                          {/* Ban/Unban button */}
+                          {!user.banned ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmAction(user, 'ban-user');
+                              }}
+                              disabled={isActionLoading}
+                              className="w-full px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isActionLoading ? (
+                                <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                              ) : (
+                                <StopCircleIcon className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              Ban User
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmAction(user, 'unban-user');
+                              }}
+                              disabled={isActionLoading}
+                              className="w-full px-3 py-1.5 bg-emerald-600/80 hover:bg-emerald-600 text-white rounded-lg text-xs transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isActionLoading ? (
+                                <ArrowPathIcon className="h-3.5 w-3.5 mr-1 animate-spin" />
+                              ) : (
+                                <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              Unban User
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
               </div>
 
               {/* Pagination Controls */}
@@ -1647,11 +1649,10 @@ export default function AdminUsersPage() {
                             name: e.target.value,
                           })
                         }
-                        className={`w-full px-3 py-2 bg-gray-700 border ${
-                          formErrors.name
+                        className={`w-full px-3 py-2 bg-gray-700 border ${formErrors.name
                             ? "border-rose-500"
                             : "border-gray-600"
-                        } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
                       />
                       {formErrors.name && (
                         <p className="text-rose-500 text-xs mt-1">
@@ -1679,11 +1680,10 @@ export default function AdminUsersPage() {
                               location: e.target.value,
                             })
                           }
-                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${
-                            formErrors.location
+                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${formErrors.location
                               ? "border-rose-500"
                               : "border-gray-600"
-                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                            } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
                           placeholder="Enter dealership address"
                         />
                       </div>
@@ -1713,11 +1713,10 @@ export default function AdminUsersPage() {
                               phone: e.target.value,
                             })
                           }
-                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${
-                            formErrors.phone
+                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${formErrors.phone
                               ? "border-rose-500"
                               : "border-gray-600"
-                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                            } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
                           placeholder="e.g. 12345678"
                         />
                       </div>
@@ -1748,11 +1747,10 @@ export default function AdminUsersPage() {
                             })
                           }
                           min={new Date().toISOString().split("T")[0]}
-                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${
-                            formErrors.subscriptionEndDate
+                          className={`w-full pl-10 px-3 py-2 bg-gray-700 border ${formErrors.subscriptionEndDate
                               ? "border-rose-500"
                               : "border-gray-600"
-                          } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
+                            } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white`}
                         />
                       </div>
                       {formErrors.subscriptionEndDate && (
