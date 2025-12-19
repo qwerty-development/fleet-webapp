@@ -65,6 +65,41 @@ const TrimBadge: React.FC<{ trim: string }> = ({ trim }) => (
   </span>
 );
 
+// License Plate Component
+const LicensePlate: React.FC<{ letter: string; digits: string }> = ({ letter, digits }) => {
+  // Check if letter is "P" for public/red plate
+  const isPublicPlate = (letter || "").toUpperCase() === 'P';
+  const stripColor = isPublicPlate ? 'bg-[#C41E3A]' : 'bg-[#1e4a8d]'; // Red for P, Blue for others
+
+  return (
+    <div className="w-full aspect-[3.5/1] bg-white rounded-xl flex overflow-hidden border-2 border-slate-900 shadow-md transform transition-transform hover:scale-[1.02]">
+      {/* Strip on the left with Lebanese details */}
+      <div className={`${stripColor} w-[15%] h-full flex flex-col justify-between items-center py-2 select-none`}>
+        {/* Lebanon (Arabic) */}
+        <span className="text-white text-[10px] sm:text-xs font-bold font-arabic leading-none">لبنان</span>
+
+        {/* Cedar tree symbol */}
+        <div className="w-[70%] aspect-square relative flex items-center justify-center">
+          <img
+            src="/cedar.png"
+            alt="Cedar"
+            className="w-full h-full object-contain brightness-0 invert"
+          />
+        </div>
+
+        {/* Private (Arabic) */}
+        <span className="text-white text-[8px] sm:text-[10px] font-bold font-arabic leading-none">خصوصي</span>
+      </div>
+
+      {/* Plate content - Letter and Numbers */}
+      <div className="flex-1 flex flex-row justify-center items-center gap-2 sm:gap-4 bg-white">
+        <span className="text-3xl sm:text-4xl font-bold text-slate-900 font-mono translate-y-[2px]">{letter}</span>
+        <span className="text-3xl sm:text-4xl font-bold text-slate-900 font-mono tracking-widest translate-y-[2px]">{digits}</span>
+      </div>
+    </div>
+  );
+};
+
 // Helper function to normalize trim data - only returns single trim
 const normalizeSingleTrim = (trim: any): string | null => {
   if (!trim) return null;
@@ -164,13 +199,13 @@ export default function AdminBrowseScreen() {
     if (listingType === "user") {
       // User listings: only show cars with user_id
       filteredQuery = filteredQuery.not("user_id", "is", null);
-    } else if (listingType !== "plates") {
-      // Dealer listings (sale/rent): only show cars with dealership_id
+    } else {
+      // Dealer listings (sale/rent/plates): only show items with dealership_id
       filteredQuery = filteredQuery.not("dealership_id", "is", null);
     }
 
     // Apply dealership filter if selected (only for dealer listings)
-    if (selectedDealershipId !== "all" && listingType !== "user" && listingType !== "plates") {
+    if (selectedDealershipId !== "all" && listingType !== "user") {
       const dealershipIdNumber = parseInt(selectedDealershipId, 10);
       if (!isNaN(dealershipIdNumber)) {
         filteredQuery = filteredQuery.eq("dealership_id", dealershipIdNumber);
@@ -518,7 +553,7 @@ export default function AdminBrowseScreen() {
             </form>
 
             {/* Dealership Dropdown - FIXED: Use selectedDealershipId state, hide for user listings */}
-            {listingType !== "user" && listingType !== "plates" && (
+            {listingType !== "user" && (
               <div className="w-full">
                 <select
                   className="w-full px-4 py-3 bg-gray-800 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
@@ -679,12 +714,10 @@ export default function AdminBrowseScreen() {
                         {/* Image */}
                         <div className="w-full h-full">
                           {isNumberPlate ? (
-                            // Number Plate Image
-                            <img
-                              src={item.picture || "/placeholder-plate.jpg"}
-                              alt={`${item.letter} ${item.digits}`}
-                              className="w-full h-full object-cover transition-opacity duration-300"
-                            />
+                            // Number Plate Component
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200 p-4">
+                              <LicensePlate letter={item.letter} digits={item.digits} />
+                            </div>
                           ) : (
                             // Car Images with gallery support
                             car.images && car.images.length > 0 ? (
@@ -783,10 +816,7 @@ export default function AdminBrowseScreen() {
                         {/* Title overlay with gradient */}
                         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent p-4 flex justify-between items-start">
                           <h3 className="text-white font-bold text-lg">
-                            {isNumberPlate
-                              ? `${item.letter} ${item.digits}`
-                              : `${car.year} ${car.make} ${car.model}`
-                            }
+                            {!isNumberPlate && `${car.year} ${car.make} ${car.model}`}
                           </h3>
                           <div className="text-right">
                             <p className="text-white bg-accent rounded-full px-4 font-bold text-lg">
