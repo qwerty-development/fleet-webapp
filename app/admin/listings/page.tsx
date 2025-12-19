@@ -68,13 +68,13 @@ const TrimBadge: React.FC<{ trim: string }> = ({ trim }) => (
 // Helper function to normalize trim data - only returns single trim
 const normalizeSingleTrim = (trim: any): string | null => {
   if (!trim) return null;
-  
+
   // If it's already an array, return the first valid trim
   if (Array.isArray(trim)) {
     const validTrims = trim.filter(t => typeof t === 'string' && t.trim().length > 0);
     return validTrims.length > 0 ? validTrims[0] : null;
   }
-  
+
   // If it's a string, try to parse as JSON first
   if (typeof trim === 'string') {
     try {
@@ -89,7 +89,7 @@ const normalizeSingleTrim = (trim: any): string | null => {
       return trimArray.length > 0 ? trimArray[0] : null;
     }
   }
-  
+
   return null;
 };
 
@@ -157,6 +157,9 @@ export default function AdminBrowseScreen() {
   const applyFiltersToQuery = useCallback((query: any) => {
     let filteredQuery = query;
 
+    // ALways exclude deleted listings
+    filteredQuery = filteredQuery.neq("status", "deleted");
+
     // Apply owner type filter based on listing type
     if (listingType === "user") {
       // User listings: only show cars with user_id
@@ -214,19 +217,19 @@ export default function AdminBrowseScreen() {
       // Determine which table to query based on listing type
       let tableName = "";
       let isUserListing = false;
-      
+
       if (listingType === "user") {
         // User listings - check sub-filter
         isUserListing = true;
         tableName = userListingType === "user_cars" ? "cars" : "number_plates";
       } else {
         // Dealer listings
-        tableName = 
-          listingType === "sale" ? "cars" : 
-          listingType === "rent" ? "cars_rent" : 
-          "number_plates";
+        tableName =
+          listingType === "sale" ? "cars" :
+            listingType === "rent" ? "cars_rent" :
+              "number_plates";
       }
-      
+
       // Adjust sort field based on table - number_plates uses created_at instead of listed_at
       let adjustedSortBy = sortBy;
       if (tableName === "number_plates") {
@@ -237,10 +240,10 @@ export default function AdminBrowseScreen() {
           adjustedSortBy = "created_at";
         }
       }
-      
+
       // Build query with appropriate joins
       let selectQuery = "*, dealerships(id, name, logo, location)";
-      
+
       let query = supabase
         .from(tableName)
         .select(selectQuery, { count: "exact" })
@@ -265,11 +268,11 @@ export default function AdminBrowseScreen() {
             .from("users")
             .select("id, name, email")
             .in("id", userIds);
-          
+
           if (usersError) {
             console.error("Error fetching users:", usersError);
           }
-          
+
           // Attach user data to each car/plate
           if (usersData) {
             data.forEach((car: any) => {
@@ -299,27 +302,38 @@ export default function AdminBrowseScreen() {
   ]);
 
   // Handler for deleting a listing
-  const handleDeleteListing = useCallback((id: string) => {
+  const handleDeleteListing = useCallback(async (id: string) => {
     if (confirm("Are you sure you want to delete this listing?")) {
       try {
         let tableName = "";
         if (listingType === "user") {
           tableName = userListingType === "user_cars" ? "cars" : "number_plates";
         } else {
-          tableName = 
-            listingType === "sale" ? "cars" : 
-            listingType === "rent" ? "cars_rent" : 
-            "number_plates";
+          tableName =
+            listingType === "sale" ? "cars" :
+              listingType === "rent" ? "cars_rent" :
+                "number_plates";
         }
-        supabase
+
+        console.log(`Attempting to soft delete (update status to 'deleted') from table: ${tableName}, id: ${id}`);
+
+        // Soft delete: update status to 'deleted'
+        const response = await supabase
           .from(tableName)
-          .delete()
-          .eq("id", id)
-          .then(({ error }) => {
-            if (error) throw error;
-            fetchListings();
-            alert("Listing deleted successfully");
-          });
+          .update({ status: "deleted" })
+          .eq("id", id);
+
+        console.log("Supabase soft delete response:", response);
+
+        const { error } = response;
+
+        if (error) {
+          console.error("Supabase soft delete error:", error);
+          throw error;
+        }
+
+        fetchListings();
+        alert("Listing deleted successfully");
       } catch (error: any) {
         console.error("Error deleting listing:", error);
         alert(`Failed to delete listing: ${error.message}`);
@@ -343,10 +357,10 @@ export default function AdminBrowseScreen() {
         if (listingType === "user") {
           tableName = userListingType === "user_cars" ? "cars" : "number_plates";
         } else {
-          tableName = 
-            listingType === "sale" ? "cars" : 
-            listingType === "rent" ? "cars_rent" : 
-            "number_plates";
+          tableName =
+            listingType === "sale" ? "cars" :
+              listingType === "rent" ? "cars_rent" :
+                "number_plates";
         }
         const { error } = await supabase
           .from(tableName)
@@ -461,11 +475,10 @@ export default function AdminBrowseScreen() {
                   setListingType(type.value);
                   setCurrentPage(1); // Reset to first page when switching
                 }}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  listingType === type.value
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${listingType === type.value
+                  ? "bg-indigo-600 text-white shadow-lg"
+                  : "text-gray-400 hover:text-white"
+                  }`}
               >
                 {type.label}
               </button>
@@ -630,382 +643,90 @@ export default function AdminBrowseScreen() {
                 const isNumberPlate = (listingType === "user" && userListingType === "user_plates") || listingType === "plates";
                 const isUserListing = listingType === "user";
                 const item = car as any;
-                
+
                 return (
-                <div
-                  key={car.id}
-                  className="bg-gray-800/90 backdrop-blur-sm border border-gray-700/80 rounded-xl overflow-hidden shadow-xl transition-all hover:shadow-indigo-900/20 hover:border-gray-600"
-                >
-                  {/* Boosted Banner - Only show for boosted cars */}
-                  {!isNumberPlate && (car as any).is_boosted && (
-                    <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 px-4 py-2 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-white mr-2 animate-pulse"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        <span className="text-white font-bold text-sm uppercase tracking-wider">
-                          🚀 Boosted Listing
-                        </span>
+                  <div
+                    key={car.id}
+                    className="bg-gray-800/90 backdrop-blur-sm border border-gray-700/80 rounded-xl overflow-hidden shadow-xl transition-all hover:shadow-indigo-900/20 hover:border-gray-600"
+                  >
+                    {/* Boosted Banner - Only show for boosted cars */}
+                    {!isNumberPlate && (car as any).is_boosted && (
+                      <div className="bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 px-4 py-2 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5 text-white mr-2 animate-pulse"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          <span className="text-white font-bold text-sm uppercase tracking-wider">
+                            🚀 Boosted Listing
+                          </span>
+                        </div>
+                        {(car as any).boost_end_date && (
+                          <span className="text-white text-xs opacity-90">
+                            Until {new Date((car as any).boost_end_date).toLocaleDateString('en-GB')}
+                          </span>
+                        )}
                       </div>
-                      {(car as any).boost_end_date && (
-                        <span className="text-white text-xs opacity-90">
-                          Until {new Date((car as any).boost_end_date).toLocaleDateString('en-GB')}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="relative">
-                    {/* Image Gallery (Car or Number Plate) */}
-                    <div className="relative aspect-square w-full overflow-hidden bg-gray-900">
-                      {/* Image */}
-                      <div className="w-full h-full">
-                        {isNumberPlate ? (
-                          // Number Plate Image
-                          <img
-                            src={item.picture || "/placeholder-plate.jpg"}
-                            alt={`${item.letter} ${item.digits}`}
-                            className="w-full h-full object-cover transition-opacity duration-300"
-                          />
-                        ) : (
-                          // Car Images with gallery support
-                          car.images && car.images.length > 0 ? (
+                    )}
+
+                    <div className="relative">
+                      {/* Image Gallery (Car or Number Plate) */}
+                      <div className="relative aspect-square w-full overflow-hidden bg-gray-900">
+                        {/* Image */}
+                        <div className="w-full h-full">
+                          {isNumberPlate ? (
+                            // Number Plate Image
                             <img
-                              src={
-                                car.images[currentImageIndexes[car.id] || 0] ||
-                                "/placeholder-car.jpg"
-                              }
-                              alt={`${car.year} ${car.make} ${car.model}`}
+                              src={item.picture || "/placeholder-plate.jpg"}
+                              alt={`${item.letter} ${item.digits}`}
                               className="w-full h-full object-cover transition-opacity duration-300"
                             />
                           ) : (
-                            <img
-                              src="/placeholder-car.jpg"
-                              alt={`${car.year} ${car.make} ${car.model}`}
-                              className="w-full h-full object-cover"
-                            />
-                          )
-                        )}
-                      </div>
-
-                      {/* Navigation arrows - only shown if multiple images and not number plate */}
-                      {!isNumberPlate && car.images && car.images.length > 1 && (
-                        <>
-                          {/* Left arrow */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const maxImages = car.images?.length || 1;
-                              setCurrentImageIndexes((prev) => {
-                                const currentIndex = prev[car.id] || 0;
-                                const newIndex =
-                                  (currentIndex - 1 + maxImages) % maxImages;
-                                return { ...prev, [car.id]: newIndex };
-                              });
-                            }}
-                            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 rounded-full p-2 transition-all duration-200 backdrop-blur-sm"
-                            aria-label="Previous image"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 text-white"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 19l-7-7 7-7"
+                            // Car Images with gallery support
+                            car.images && car.images.length > 0 ? (
+                              <img
+                                src={
+                                  car.images[currentImageIndexes[car.id] || 0] ||
+                                  "/placeholder-car.jpg"
+                                }
+                                alt={`${car.year} ${car.make} ${car.model}`}
+                                className="w-full h-full object-cover transition-opacity duration-300"
                               />
-                            </svg>
-                          </button>
-
-                          {/* Right arrow */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const maxImages = car.images?.length || 1;
-                              setCurrentImageIndexes((prev) => {
-                                const currentIndex = prev[car.id] || 0;
-                                const newIndex = (currentIndex + 1) % maxImages;
-                                return { ...prev, [car.id]: newIndex };
-                              });
-                            }}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 rounded-full p-2 transition-all duration-200 backdrop-blur-sm"
-                            aria-label="Next image"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 text-white"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
+                            ) : (
+                              <img
+                                src="/placeholder-car.jpg"
+                                alt={`${car.year} ${car.make} ${car.model}`}
+                                className="w-full h-full object-cover"
                               />
-                            </svg>
-                          </button>
-                        </>
-                      )}
-
-                      {/* Image count indicator - only for cars with multiple images */}
-                      {!isNumberPlate && car.images && car.images.length > 1 && (
-                        <div className="absolute bottom-3 right-3 bg-black/50 text-white px-2 py-1 rounded-md text-sm backdrop-blur-sm">
-                          {(currentImageIndexes[car.id] || 0) + 1} /{" "}
-                          {car.images.length}
-                        </div>
-                      )}
-
-                      {/* Title overlay with gradient */}
-                      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent p-4 flex justify-between items-start">
-                        <h3 className="text-white font-bold text-lg">
-                          {isNumberPlate 
-                            ? `${item.letter} ${item.digits}` 
-                            : `${car.year} ${car.make} ${car.model}`
-                          }
-                        </h3>
-                        <div className="text-right">
-                          <p className="text-white bg-accent rounded-full px-4 font-bold text-lg">
-                            ${car.price.toLocaleString()}
-                          </p>
-                          {listingType === "rent" && item.rental_period && (
-                            <p className="text-white text-xs mt-1 opacity-90">
-                              per {item.rental_period}
-                            </p>
+                            )
                           )}
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Content Area */}
-                    <div className="p-4 bg-gray-800/80 backdrop-blur-sm">
-                      {/* Status and Metrics Row */}
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center">
-                          {/* Status Tag - Different colors based on status */}
-                          <div
-                            className={`
-                          px-3 py-1 rounded-full flex items-center backdrop-blur-sm
-                          ${
-                            car.status === "available"
-                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                              : car.status === "pending"
-                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                              : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
-                          }
-                        `}
-                          >
-                            {/* Check icon instead of truck */}
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 mr-1"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            <span className="capitalize font-medium">
-                              {car.status}
-                            </span>
-                          </div>
-                        </div>
-                        {/* Only show views and likes for cars, not number plates */}
-                        {!isNumberPlate && (
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center">
-                              <EyeIcon className="h-5 w-5 text-gray-300 mr-1" />
-                              <span className="text-gray-300">
-                                {car.views || 0}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <HeartIcon className="h-5 w-5 text-gray-300 mr-1" />
-                              <span className="text-gray-300">
-                                {car.likes || 0}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Dealership/User Info */}
-                      {isUserListing ? (
-                        // User Listing Info (always show for user tab)
-                        <div className="text-white mb-4 text-m flex items-center">
-                          <div className="w-9 h-9 rounded-full mr-2 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 text-white"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-semibold line-clamp-1">
-                              {item.users?.name || "Unknown User"}
-                            </p>
-                            <p className="text-xs text-gray-400 line-clamp-1">
-                              {item.users?.email || "No email"}
-                            </p>
-                          </div>
-                          <span className="ml-2 px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs border border-purple-500/30">
-                            User
-                          </span>
-                        </div>
-                      ) : (
-                        // Dealership Info (for all dealer tabs)
-                        <p className="text-white mb-4 line-clamp-2 text-m flex items-center">
-                          <img
-                            src={car.dealerships?.logo || "/placeholder-logo.png"}
-                            alt={car.dealerships?.name}
-                            className="w-9 h-9 rounded-full mr-2 object-cover"
-                          />
-                          {car.dealerships?.name}
-                        </p>
-                      )}
-
-                      {/* Description or Number Plate Details */}
-                      {isNumberPlate ? (
-                        <div className="mb-4 space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-gray-400 text-sm">Letter:</span>
-                            <span className="text-white font-semibold text-lg">{item.letter}</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-gray-400 text-sm">Digits:</span>
-                            <span className="text-white font-semibold text-lg">{item.digits}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
-                          {car.description || "No description available"}
-                        </p>
-                      )}
-
-                      {/* Rental Period - Only shown for rental cars */}
-                      {listingType === "rent" && item.rental_period && (
-                        <div className="mb-4 flex items-center space-x-2">
-                          <div className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm border border-purple-500/30 flex items-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 mr-1"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <span className="capitalize font-medium">
-                              {item.rental_period} Rental
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Trim Display - Single trim only (for cars) */}
-                      {!isNumberPlate && (() => {
-                        const singleTrim = normalizeSingleTrim(car.trim);
-                        return singleTrim && (
-                          <div className="mb-4">
-                            <div className="flex items-center mb-2">
-                              <TagIcon className="h-4 w-4 text-gray-400 mr-1" />
-                              <span className="text-gray-400 text-sm font-medium">Trim:</span>
-                            </div>
-                            <div>
-                              <TrimBadge trim={singleTrim} />
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Action Buttons - Now with Status Change Button */}
-                      <div className="space-y-3">
-                        {/* Change Status Button - Full Width */}
-                        <button
-                          onClick={() => {
-                            const newStatus =
-                              car.status === "available"
-                                ? "pending"
-                                : "available";
-
-                            // Confirm before changing status
-                            if (
-                              confirm(
-                                `Change status from ${car.status} to ${newStatus}?`
-                              )
-                            ) {
-                              // Update status in database - use correct table based on listing type
-                              let tableName = "";
-                              if (listingType === "user") {
-                                tableName = userListingType === "user_cars" ? "cars" : "number_plates";
-                              } else {
-                                tableName = 
-                                  listingType === "sale" ? "cars" : 
-                                  listingType === "rent" ? "cars_rent" : 
-                                  "number_plates";
-                              }
-                              supabase
-                                .from(tableName)
-                                .update({ status: newStatus })
-                                .eq("id", car.id)
-                                .then(({ error }) => {
-                                  if (error) {
-                                    alert(
-                                      `Error changing status: ${error.message}`
-                                    );
-                                  } else {
-                                    fetchListings();
-                                    alert(
-                                      `Status changed to ${newStatus} successfully`
-                                    );
-                                  }
+                        {/* Navigation arrows - only shown if multiple images and not number plate */}
+                        {!isNumberPlate && car.images && car.images.length > 1 && (
+                          <>
+                            {/* Left arrow */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const maxImages = car.images?.length || 1;
+                                setCurrentImageIndexes((prev) => {
+                                  const currentIndex = prev[car.id] || 0;
+                                  const newIndex =
+                                    (currentIndex - 1 + maxImages) % maxImages;
+                                  return { ...prev, [car.id]: newIndex };
                                 });
-                            }
-                          }}
-                          className={`
-                          w-full flex items-center justify-center px-4 py-2.5 
-                          ${
-                            car.status === "sold"
-                              ? "bg-gray-700 text-gray-300 cursor-not-allowed"
-                              : car.status === "available"
-                              ? "bg-amber-600/90 hover:bg-amber-600 text-white"
-                              : "bg-emerald-600/90 hover:bg-emerald-600 text-white"
-                          } 
-                          rounded-lg transition-colors font-medium text-sm
-                        `}
-                          disabled={car.status === "sold"}
-                        >
-                          {car.status === "sold" ? (
-                            "Status Locked (Sold)"
-                          ) : (
-                            <>
+                              }}
+                              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 rounded-full p-2 transition-all duration-200 backdrop-blur-sm"
+                              aria-label="Previous image"
+                            >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4 mr-2"
+                                className="h-5 w-5 text-white"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1014,37 +735,327 @@ export default function AdminBrowseScreen() {
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2}
-                                  d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                                  d="M15 19l-7-7 7-7"
                                 />
                               </svg>
-                              {car.status === "available"
-                                ? "Mark as Pending"
-                                : "Mark as Available"}
-                            </>
-                          )}
-                        </button>
+                            </button>
 
-                        {/* Edit and Delete Buttons - Two columns */}
-                        <div className="grid grid-cols-2 gap-3">
+                            {/* Right arrow */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const maxImages = car.images?.length || 1;
+                                setCurrentImageIndexes((prev) => {
+                                  const currentIndex = prev[car.id] || 0;
+                                  const newIndex = (currentIndex + 1) % maxImages;
+                                  return { ...prev, [car.id]: newIndex };
+                                });
+                              }}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/40 hover:bg-black/60 rounded-full p-2 transition-all duration-200 backdrop-blur-sm"
+                              aria-label="Next image"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </button>
+                          </>
+                        )}
+
+                        {/* Image count indicator - only for cars with multiple images */}
+                        {!isNumberPlate && car.images && car.images.length > 1 && (
+                          <div className="absolute bottom-3 right-3 bg-black/50 text-white px-2 py-1 rounded-md text-sm backdrop-blur-sm">
+                            {(currentImageIndexes[car.id] || 0) + 1} /{" "}
+                            {car.images.length}
+                          </div>
+                        )}
+
+                        {/* Title overlay with gradient */}
+                        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent p-4 flex justify-between items-start">
+                          <h3 className="text-white font-bold text-lg">
+                            {isNumberPlate
+                              ? `${item.letter} ${item.digits}`
+                              : `${car.year} ${car.make} ${car.model}`
+                            }
+                          </h3>
+                          <div className="text-right">
+                            <p className="text-white bg-accent rounded-full px-4 font-bold text-lg">
+                              ${car.price.toLocaleString()}
+                            </p>
+                            {listingType === "rent" && item.rental_period && (
+                              <p className="text-white text-xs mt-1 opacity-90">
+                                per {item.rental_period}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Content Area */}
+                      <div className="p-4 bg-gray-800/80 backdrop-blur-sm">
+                        {/* Status and Metrics Row */}
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center">
+                            {/* Status Tag - Different colors based on status */}
+                            <div
+                              className={`
+                          px-3 py-1 rounded-full flex items-center backdrop-blur-sm
+                          ${car.status === "available"
+                                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                                  : car.status === "pending"
+                                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                                    : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                                }
+                        `}
+                            >
+                              {/* Check icon instead of truck */}
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              <span className="capitalize font-medium">
+                                {car.status}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Only show views and likes for cars, not number plates */}
+                          {!isNumberPlate && (
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center">
+                                <EyeIcon className="h-5 w-5 text-gray-300 mr-1" />
+                                <span className="text-gray-300">
+                                  {car.views || 0}
+                                </span>
+                              </div>
+                              <div className="flex items-center">
+                                <HeartIcon className="h-5 w-5 text-gray-300 mr-1" />
+                                <span className="text-gray-300">
+                                  {car.likes || 0}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Dealership/User Info */}
+                        {isUserListing ? (
+                          // User Listing Info (always show for user tab)
+                          <div className="text-white mb-4 text-m flex items-center">
+                            <div className="w-9 h-9 rounded-full mr-2 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 text-white"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold line-clamp-1">
+                                {item.users?.name || "Unknown User"}
+                              </p>
+                              <p className="text-xs text-gray-400 line-clamp-1">
+                                {item.users?.email || "No email"}
+                              </p>
+                            </div>
+                            <span className="ml-2 px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs border border-purple-500/30">
+                              User
+                            </span>
+                          </div>
+                        ) : (
+                          // Dealership Info (for all dealer tabs)
+                          <p className="text-white mb-4 line-clamp-2 text-m flex items-center">
+                            <img
+                              src={car.dealerships?.logo || "/placeholder-logo.png"}
+                              alt={car.dealerships?.name}
+                              className="w-9 h-9 rounded-full mr-2 object-cover"
+                            />
+                            {car.dealerships?.name}
+                          </p>
+                        )}
+
+                        {/* Description or Number Plate Details */}
+                        {isNumberPlate ? (
+                          <div className="mb-4 space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-400 text-sm">Letter:</span>
+                              <span className="text-white font-semibold text-lg">{item.letter}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-400 text-sm">Digits:</span>
+                              <span className="text-white font-semibold text-lg">{item.digits}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-300 mb-4 line-clamp-1 text-sm">
+                            {car.description || "No description available"}
+                          </p>
+                        )}
+
+                        {/* Rental Period - Only shown for rental cars */}
+                        {listingType === "rent" && item.rental_period && (
+                          <div className="mb-4 flex items-center space-x-2">
+                            <div className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm border border-purple-500/30 flex items-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span className="capitalize font-medium">
+                                {item.rental_period} Rental
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Trim Display - Single trim only (for cars) */}
+                        {!isNumberPlate && (() => {
+                          const singleTrim = normalizeSingleTrim(car.trim);
+                          return singleTrim && (
+                            <div className="mb-4">
+                              <div className="flex items-center mb-2">
+                                <TagIcon className="h-4 w-4 text-gray-400 mr-1" />
+                                <span className="text-gray-400 text-sm font-medium">Trim:</span>
+                              </div>
+                              <div>
+                                <TrimBadge trim={singleTrim} />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Action Buttons - Now with Status Change Button */}
+                        <div className="space-y-3">
+                          {/* Change Status Button - Full Width */}
                           <button
-                            onClick={() => handleEditListing(car)}
-                            className="flex items-center justify-center px-3 py-2 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-lg transition-colors text-sm"
+                            onClick={() => {
+                              const newStatus =
+                                car.status === "available"
+                                  ? "pending"
+                                  : "available";
+
+                              // Confirm before changing status
+                              if (
+                                confirm(
+                                  `Change status from ${car.status} to ${newStatus}?`
+                                )
+                              ) {
+                                // Update status in database - use correct table based on listing type
+                                let tableName = "";
+                                if (listingType === "user") {
+                                  tableName = userListingType === "user_cars" ? "cars" : "number_plates";
+                                } else {
+                                  tableName =
+                                    listingType === "sale" ? "cars" :
+                                      listingType === "rent" ? "cars_rent" :
+                                        "number_plates";
+                                }
+                                supabase
+                                  .from(tableName)
+                                  .update({ status: newStatus })
+                                  .eq("id", car.id)
+                                  .then(({ error }) => {
+                                    if (error) {
+                                      alert(
+                                        `Error changing status: ${error.message}`
+                                      );
+                                    } else {
+                                      fetchListings();
+                                      alert(
+                                        `Status changed to ${newStatus} successfully`
+                                      );
+                                    }
+                                  });
+                              }
+                            }}
+                            className={`
+                          w-full flex items-center justify-center px-4 py-2.5 
+                          ${car.status === "sold"
+                                ? "bg-gray-700 text-gray-300 cursor-not-allowed"
+                                : car.status === "available"
+                                  ? "bg-amber-600/90 hover:bg-amber-600 text-white"
+                                  : "bg-emerald-600/90 hover:bg-emerald-600 text-white"
+                              } 
+                          rounded-lg transition-colors font-medium text-sm
+                        `}
+                            disabled={car.status === "sold"}
                           >
-                            <PencilIcon className="h-4 w-4 mr-1.5" />
-                            Edit
+                            {car.status === "sold" ? (
+                              "Status Locked (Sold)"
+                            ) : (
+                              <>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 mr-2"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                                  />
+                                </svg>
+                                {car.status === "available"
+                                  ? "Mark as Pending"
+                                  : "Mark as Available"}
+                              </>
+                            )}
                           </button>
-                          <button
-                            onClick={() => handleDeleteListing(car.id)}
-                            className="flex items-center justify-center px-3 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg transition-colors text-sm"
-                          >
-                            <TrashIcon className="h-4 w-4 mr-1.5" />
-                            Delete
-                          </button>
+
+                          {/* Edit and Delete Buttons - Two columns */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              onClick={() => handleEditListing(car)}
+                              className="flex items-center justify-center px-3 py-2 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-lg transition-colors text-sm"
+                            >
+                              <PencilIcon className="h-4 w-4 mr-1.5" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteListing(car.id)}
+                              className="flex items-center justify-center px-3 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg transition-colors text-sm"
+                            >
+                              <TrashIcon className="h-4 w-4 mr-1.5" />
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -1077,11 +1088,10 @@ export default function AdminBrowseScreen() {
               <button
                 onClick={goToPreviousPage}
                 disabled={currentPage === 1}
-                className={`flex items-center px-4 py-2 rounded-lg text-sm shadow-sm ${
-                  currentPage === 1
-                    ? "bg-gray-700/80 text-gray-400 cursor-not-allowed"
-                    : "bg-indigo-600/90 hover:bg-indigo-600 text-white"
-                }`}
+                className={`flex items-center px-4 py-2 rounded-lg text-sm shadow-sm ${currentPage === 1
+                  ? "bg-gray-700/80 text-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600/90 hover:bg-indigo-600 text-white"
+                  }`}
               >
                 <ChevronLeftIcon className="h-4 w-4 mr-1" />
                 Previous
@@ -1092,11 +1102,10 @@ export default function AdminBrowseScreen() {
               <button
                 onClick={goToNextPage}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className={`flex items-center px-4 py-2 rounded-lg text-sm shadow-sm ${
-                  currentPage === totalPages || totalPages === 0
-                    ? "bg-gray-700/80 text-gray-400 cursor-not-allowed"
-                    : "bg-indigo-600/90 hover:bg-indigo-600 text-white"
-                }`}
+                className={`flex items-center px-4 py-2 rounded-lg text-sm shadow-sm ${currentPage === totalPages || totalPages === 0
+                  ? "bg-gray-700/80 text-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600/90 hover:bg-indigo-600 text-white"
+                  }`}
               >
                 Next
                 <ChevronRightIcon className="h-4 w-4 ml-1" />
