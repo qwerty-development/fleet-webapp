@@ -34,7 +34,7 @@ import { Fragment } from "react";
 interface User {
   role: string | undefined;
   id: string;
-  email: string;
+  email: string | null;
   name?: string;
   user_metadata?: {
     name?: string;
@@ -53,7 +53,7 @@ interface ProcessedUser {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   user_metadata: {
     role?: string;
   };
@@ -162,7 +162,8 @@ export default function AdminUsersPage() {
         .from('users')
         .select('*', { count: 'exact' })
         // Exclude guest users server-side
-        .not('email', 'ilike', '%guest%')
+        // NOTE: phone-based accounts may have NULL email; don't exclude them.
+        .or('email.is.null,email.not.ilike.%guest%')
         .neq('name', 'Guest User')
         .not('id', 'like', 'guest%')
         .order(orderColumn, { ascending: sortConfig.ascending })
@@ -186,7 +187,7 @@ export default function AdminUsersPage() {
       const baseFilter = supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
-        .not('email', 'ilike', '%guest%')
+        .or('email.is.null,email.not.ilike.%guest%')
         .neq('name', 'Guest User')
         .not('id', 'like', 'guest%');
 
@@ -199,7 +200,7 @@ export default function AdminUsersPage() {
       const { count: dealersCount, error: dealersErr } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
-        .not('email', 'ilike', '%guest%')
+        .or('email.is.null,email.not.ilike.%guest%')
         .neq('name', 'Guest User')
         .not('id', 'like', 'guest%')
         .eq('role', 'dealer');
@@ -223,7 +224,7 @@ export default function AdminUsersPage() {
         id: user.id,
         firstName: user.name?.split(' ')[0] || '',
         lastName: user.name?.split(' ').slice(1).join(' ') || '',
-        email: user.email,
+        email: user.email ?? null,
         user_metadata: {
           role: user.role || 'user'
         },

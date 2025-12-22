@@ -33,7 +33,7 @@ interface AuthContextProps {
 export interface UserProfile {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   favorite: number[];
   last_active: string;
   timezone: string;
@@ -259,14 +259,20 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange(
       // If user doesn't exist, create a new profile
       if (fetchError && fetchError.code === 'PGRST116') {
         // Extract user details from session
-        const userName = session.user.user_metadata.full_name ||
-                        session.user.user_metadata.name ||
-                        'User';
+        const userName =
+          session.user.user_metadata.full_name ||
+          session.user.user_metadata.name ||
+          (session.user.phone ? `User ${session.user.phone}` : 'User');
+
+        // IMPORTANT: For phone-based auth, `session.user.email` is often null.
+        // Storing empty-string emails will quickly violate the unique constraint
+        // (multiple users would get email = ''). Prefer NULL.
+        const userEmail = session.user.email ?? null;
 
         const newUser: Partial<UserProfile> = {
           id: session.user.id,
           name: userName,
-          email: session.user.email || '',
+          email: userEmail,
           favorite: [],
           last_active: new Date().toISOString(),
           timezone: 'UTC',
