@@ -46,7 +46,7 @@ interface User {
   last_active?: string;
   banned_until: string | null;
   locked: boolean;
-  phone?: string;
+  phone_number?: string;
 }
 
 interface ProcessedUser {
@@ -62,7 +62,7 @@ interface ProcessedUser {
   createdAt: number;
   banned: boolean;
   locked: boolean;
-  phone?: string;
+  phone_number?: string;
 }
 
 interface DealershipForm {
@@ -174,7 +174,7 @@ export default function AdminUsersPage() {
         const term = appliedSearch.replace(/%/g, '').trim();
         if (term.length > 0) {
           query = query.or(
-            `name.ilike.%${term}%,email.ilike.%${term}%,id.ilike.%${term}%,phone.ilike.%${term}%`
+            `name.ilike.%${term}%,email.ilike.%${term}%,id.ilike.%${term}%,phone_number.ilike.%${term}%`
           );
         }
       }
@@ -233,7 +233,7 @@ export default function AdminUsersPage() {
         createdAt: user.created_at ? Date.parse(user.created_at) : 0,
         banned: false,
         locked: false,
-        phone: user.phone
+        phone_number: user.phone_number
       }));
 
       setUsers(processedUsers);
@@ -364,7 +364,7 @@ export default function AdminUsersPage() {
             user.lastName?.toLowerCase().includes(searchLower) ||
             user.email?.toLowerCase().includes(searchLower) ||
             user.id?.toLowerCase().includes(searchLower) ||
-            user.phone?.toLowerCase().includes(searchLower)
+            user.phone_number?.toLowerCase().includes(searchLower)
         );
       }
 
@@ -1154,14 +1154,12 @@ export default function AdminUsersPage() {
                               {user.firstName} {user.lastName}
                             </h3>
                             <p className="text-gray-400 text-sm truncate">
-                              {user.email}
+                              {user.email || '—'}
                             </p>
-                            {user.phone && (
-                              <p className="text-gray-400 text-sm truncate flex items-center mt-1">
-                                <PhoneIcon className="h-3 w-3 mr-1" />
-                                {user.phone}
-                              </p>
-                            )}
+                            <p className="text-gray-400 text-sm truncate flex items-center mt-1">
+                              <PhoneIcon className="h-3 w-3 mr-1" />
+                              {user.phone_number || '—'}
+                            </p>
                           </div>
                           <div
                             className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
@@ -1410,6 +1408,12 @@ export default function AdminUsersPage() {
                               {selectedUser.firstName} {selectedUser.lastName}
                             </h3>
                             <p className="text-gray-400">{selectedUser.email}</p>
+                            {selectedUser.phone_number && (
+                              <p className="text-gray-400 flex items-center mt-1">
+                                <PhoneIcon className="h-4 w-4 mr-1" />
+                                {selectedUser.phone_number}
+                              </p>
+                            )}
                             <div className="flex items-center mt-1 gap-2">
                               <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(selectedUser.user_metadata.role || "user")}`}>
                                 {selectedUser.user_metadata.role || "user"}
