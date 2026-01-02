@@ -184,18 +184,19 @@ export default function AdminDashboard() {
             (sum, car) => sum + (car.likes || 0),
             0
           );
+          // Calculate average price only for available cars
           const avgPrice =
-            carsData.length > 0
+            availableCars.length > 0
               ? Math.round(
-                  carsData.reduce((sum, car) => sum + (car.price || 0), 0) /
-                    carsData.length
+                  availableCars.reduce((sum, car) => sum + (car.price || 0), 0) /
+                    availableCars.length
                 )
               : 0;
 
           setStats((prev) => ({
             ...prev,
             cars: {
-              total: carsData.length,
+              total: availableCars.length,
               available: availableCars.length,
               pending: pendingCars.length,
               sold: soldCars.length,
@@ -347,11 +348,7 @@ export default function AdminDashboard() {
                       {stats.cars.total}
                     </p>
                     <div className="flex items-center text-xs mt-1 text-gray-400">
-                      <span className="text-emerald-400 flex items-center">
-                        <ArrowUpIcon className="h-3 w-3 mr-1" />
-                        {stats.cars.total > 0 ? Math.round((stats.cars.total / (stats.cars.total + 1)) * 100) : 0}%
-                      </span>
-                      <span className="ml-2">from last month</span>
+                      <span className="text-emerald-400">Available listings</span>
                     </div>
                   </div>
                 </div>
@@ -399,7 +396,7 @@ export default function AdminDashboard() {
                     </p>
                     <div className="flex items-center text-xs mt-1 text-gray-400">
                       <span className="text-emerald-400">
-                        Based on {stats.cars.total} cars
+                        Based on {stats.cars.total} available cars
                       </span>
                     </div>
                   </div>
