@@ -139,10 +139,21 @@ export default function AdminDashboard() {
           { count: activeUsersCount, error: activeUsersError },
           { data: recentUsersData, error: recentUsersError }
         ] = await Promise.all([
-          supabase.from('users').select('id', { count: 'exact', head: true }),
+          supabase.from('users').select('id', { count: 'exact', head: true })
+            .or('email.is.null,email.not.ilike.%guest%')
+            .neq('name', 'Guest User')
+            .not('id', 'like', 'guest%'),
           supabase.from('users').select('id', { count: 'exact', head: true }).eq('is_guest', true),
-          supabase.from('users').select('id', { count: 'exact', head: true }).gte('last_active', thirtyDaysAgoISOString),
-          supabase.from('users').select('*').order('created_at', { ascending: false }).limit(5)
+          supabase.from('users').select('id', { count: 'exact', head: true })
+            .or('email.is.null,email.not.ilike.%guest%')
+            .neq('name', 'Guest User')
+            .not('id', 'like', 'guest%')
+            .gte('last_active', thirtyDaysAgoISOString),
+          supabase.from('users').select('*')
+            .or('email.is.null,email.not.ilike.%guest%')
+            .neq('name', 'Guest User')
+            .not('id', 'like', 'guest%')
+            .order('created_at', { ascending: false }).limit(5)
         ]);
 
         if (totalUsersError) throw totalUsersError;
