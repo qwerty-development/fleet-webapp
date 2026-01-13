@@ -92,6 +92,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({
     users: {
       total: 0,
+      authenticated: 0,
       guests: 0,
       active: 0,
     },
@@ -135,20 +136,29 @@ export default function AdminDashboard() {
 
         const [
           { count: totalUsersCount, error: totalUsersError },
+          { count: authenticatedUsersCount, error: authenticatedUsersError },
           { count: guestUsersCount, error: guestUsersError },
           { count: activeUsersCount, error: activeUsersError },
           { data: recentUsersData, error: recentUsersError }
         ] = await Promise.all([
+          // Total users (all including guests)
+          supabase.from('users').select('id', { count: 'exact', head: true }),
+          // Authenticated users only (excluding guests)
           supabase.from('users').select('id', { count: 'exact', head: true })
             .or('email.is.null,email.not.ilike.%guest%')
             .neq('name', 'Guest User')
             .not('id', 'like', 'guest%'),
-          supabase.from('users').select('id', { count: 'exact', head: true }).eq('is_guest', true),
+          // Guest users
+          supabase.from('users').select('id', { count: 'exact', head: true })
+            .or('id.like.guest%,email.ilike.%guest%')
+            .eq('name', 'Guest User'),
+          // Active users (authenticated users active in last 30 days)
           supabase.from('users').select('id', { count: 'exact', head: true })
             .or('email.is.null,email.not.ilike.%guest%')
             .neq('name', 'Guest User')
             .not('id', 'like', 'guest%')
             .gte('last_active', thirtyDaysAgoISOString),
+          // Recent users (authenticated only)
           supabase.from('users').select('*')
             .or('email.is.null,email.not.ilike.%guest%')
             .neq('name', 'Guest User')
@@ -157,6 +167,7 @@ export default function AdminDashboard() {
         ]);
 
         if (totalUsersError) throw totalUsersError;
+        if (authenticatedUsersError) throw authenticatedUsersError;
         if (guestUsersError) throw guestUsersError;
         if (activeUsersError) throw activeUsersError;
         if (recentUsersError) throw recentUsersError;
@@ -247,6 +258,7 @@ export default function AdminDashboard() {
           ...prev,
           users: {
             total: totalUsersCount || 0,
+            authenticated: authenticatedUsersCount || 0,
             guests: guestUsersCount || 0,
             active: activeUsersCount || 0,
           },
@@ -366,7 +378,7 @@ export default function AdminDashboard() {
 
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
-                    <p className="text-gray-400 text-sm font-medium">Users</p>
+                    <p className="text-gray-400 text-sm font-medium">Total Users</p>
                     <span className="flex items-center justify-center p-1.5 rounded-md bg-emerald-500/20 text-emerald-300">
                       <UserIcon className="h-4 w-4" />
                     </span>
@@ -375,19 +387,25 @@ export default function AdminDashboard() {
                     <p className="text-white text-2xl font-semibold">
                       {stats.users.total}
                     </p>
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-gray-400">
-                        <span className="text-emerald-400">
-                          {stats.users.active}
-                        </span>{" "}
-                        active users
-                      </span>
-                      <span className="text-gray-400">
-                        <span className="text-amber-400">
+                    <div className="flex flex-col gap-1 text-xs mt-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Authenticated:</span>
+                        <span className="text-emerald-400 font-medium">
+                          {stats.users.authenticated}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Guests:</span>
+                        <span className="text-amber-400 font-medium">
                           {stats.users.guests}
-                        </span>{" "}
-                        guests
-                      </span>
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Active (30d):</span>
+                        <span className="text-blue-400 font-medium">
+                          {stats.users.active}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
