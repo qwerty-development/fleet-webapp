@@ -108,7 +108,9 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(24);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalAllUsersCount, setTotalAllUsersCount] = useState(0);
   const [totalUsersCount, setTotalUsersCount] = useState(0);
+  const [totalGuestUsersCount, setTotalGuestUsersCount] = useState(0);
   const [totalDealersCount, setTotalDealersCount] = useState(0);
   const [totalActiveCount, setTotalActiveCount] = useState(0);
 
@@ -183,37 +185,51 @@ export default function AdminUsersPage() {
       if (error) throw error;
       setTotalCount(count || 0);
 
-      // Fetch global counters (independent of pagination and search), excluding guests
-      const baseFilter = supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .or('email.is.null,email.not.ilike.%guest%')
-        .neq('name', 'Guest User')
-        .not('id', 'like', 'guest%');
-
-      const [{ count: allCount, error: allErr }] = await Promise.all([
-        baseFilter,
-      ]);
-      if (allErr) throw allErr;
-      setTotalUsersCount(allCount || 0);
-
-      const { count: dealersCount, error: dealersErr } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .or('email.is.null,email.not.ilike.%guest%')
-        .neq('name', 'Guest User')
-        .not('id', 'like', 'guest%')
-        .eq('role', 'dealer');
-      if (dealersErr) throw dealersErr;
-      setTotalDealersCount(dealersCount || 0);
-
-      // Active count: match dashboard logic (users active in last 30 days)
+      // Fetch global counters (independent of pagination and search)
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { count: activeCount, error: activeErr } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .gte('last_active', thirtyDaysAgo);
+
+      const [
+        { count: allUsersIncludingGuestsCount, error: allUsersErr },
+        { count: authenticatedUsersCount, error: authenticatedErr },
+        { count: guestUsersCount, error: guestErr },
+        { count: dealersCount, error: dealersErr },
+        { count: activeCount, error: activeErr }
+      ] = await Promise.all([
+        // Total all users including guests
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        // Authenticated users only (excluding guests)
+        supabase.from('users').select('id', { count: 'exact', head: true })
+          .or('email.is.null,email.not.ilike.%guest%')
+          .neq('name', 'Guest User')
+          .not('id', 'like', 'guest%'),
+        // Guest users only
+        supabase.from('users').select('id', { count: 'exact', head: true })
+          .or('id.like.guest%,email.ilike.%guest%')
+          .eq('name', 'Guest User'),
+        // Dealers (authenticated only)
+        supabase.from('users').select('id', { count: 'exact', head: true })
+          .or('email.is.null,email.not.ilike.%guest%')
+          .neq('name', 'Guest User')
+          .not('id', 'like', 'guest%')
+          .eq('role', 'dealer'),
+        // Active users (authenticated only, active in last 30 days)
+        supabase.from('users').select('id', { count: 'exact', head: true })
+          .or('email.is.null,email.not.ilike.%guest%')
+          .neq('name', 'Guest User')
+          .not('id', 'like', 'guest%')
+          .gte('last_active', thirtyDaysAgo)
+      ]);
+
+      if (allUsersErr) throw allUsersErr;
+      if (authenticatedErr) throw authenticatedErr;
+      if (guestErr) throw guestErr;
+      if (dealersErr) throw dealersErr;
       if (activeErr) throw activeErr;
+
+      setTotalAllUsersCount(allUsersIncludingGuestsCount || 0);
+      setTotalUsersCount(authenticatedUsersCount || 0);
+      setTotalGuestUsersCount(guestUsersCount || 0);
+      setTotalDealersCount(dealersCount || 0);
       setTotalActiveCount(activeCount || 0);
 
       // Filter out guest users and process the remaining users
@@ -889,23 +905,33 @@ export default function AdminUsersPage() {
               <h1 className="text-3xl mb-2 font-bold text-white">
                 User Management
               </h1>
-              <p className="text-gray-400">Manage and monitor user accounts (excluding guest users)</p>
+              <p className="text-gray-400">Manage and monitor user accounts</p>
             </div>
 
-            <div className="mt-4 md:mt-0 flex items-center gap-2">
+            <div className="mt-4 md:mt-0 flex items-center gap-2 flex-wrap">
               <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
-                <span className="font-semibold text-white">{totalUsersCount}</span>{" "}
-                total users
+                <span className="font-semibold text-white">{totalAllUsersCount}</span>{" "}
+                total
               </div>
 
-              <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
-                <span className="font-semibold text-white">{totalDealersCount}</span>{" "}
-                dealers
+              <div className="bg-emerald-800/40 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm border border-emerald-700/30">
+                <span className="font-semibold text-emerald-300">{totalUsersCount}</span>{" "}
+                <span className="text-emerald-200">authenticated</span>
               </div>
 
-              <div className="bg-gray-800/60 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm text-gray-300">
-                <span className="font-semibold text-white">{totalActiveCount}</span>{" "}
-                active
+              <div className="bg-amber-800/40 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm border border-amber-700/30">
+                <span className="font-semibold text-amber-300">{totalGuestUsersCount}</span>{" "}
+                <span className="text-amber-200">guests</span>
+              </div>
+
+              <div className="bg-blue-800/40 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm border border-blue-700/30">
+                <span className="font-semibold text-blue-300">{totalDealersCount}</span>{" "}
+                <span className="text-blue-200">dealers</span>
+              </div>
+
+              <div className="bg-purple-800/40 backdrop-blur-sm rounded-lg px-3 py-1.5 text-sm border border-purple-700/30">
+                <span className="font-semibold text-purple-300">{totalActiveCount}</span>{" "}
+                <span className="text-purple-200">active (30d)</span>
               </div>
             </div>
           </div>
