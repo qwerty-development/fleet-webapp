@@ -378,9 +378,9 @@ export default function AdminUsersPage() {
           (user) =>
             user.firstName?.toLowerCase().includes(searchLower) ||
             user.lastName?.toLowerCase().includes(searchLower) ||
-            user.email?.toLowerCase().includes(searchLower) ||
+            (user.email && user.email.toLowerCase().includes(searchLower)) ||
             user.id?.toLowerCase().includes(searchLower) ||
-            user.phone_number?.toLowerCase().includes(searchLower)
+            (user.phone_number && user.phone_number.toLowerCase().includes(searchLower))
         );
       }
 
@@ -392,7 +392,10 @@ export default function AdminUsersPage() {
             `${b.firstName} ${b.lastName}`
           );
         } else if (sort.field === "email") {
-          compareResult = a.email.localeCompare(b.email);
+          // Handle null emails for phone-only users
+          const emailA = a.email || '';
+          const emailB = b.email || '';
+          compareResult = emailA.localeCompare(emailB);
         } else if (sort.field === "createdAt") {
           compareResult = a.createdAt - b.createdAt;
         } else if (sort.field === "lastSignInAt") {
