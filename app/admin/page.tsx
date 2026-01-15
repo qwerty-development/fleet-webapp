@@ -19,6 +19,7 @@ import {
   BellIcon,
   PhotoIcon,
   RectangleGroupIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/components/home/Navbar";
@@ -34,10 +35,10 @@ const SECTIONS = [
     color: "from-indigo-500 to-blue-500",
   },
   {
-    id: "add-car",
-    name: "Add Car",
-    description: "Add a new car listing",
-    icon: ShoppingBagIcon,
+    id: "add-listing",
+    name: "Add Listing",
+    description: "Create a new car, rental, or plate listing",
+    icon: PlusIcon,
     color: "from-indigo-500 to-blue-500",
   },
   {

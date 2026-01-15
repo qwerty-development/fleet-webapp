@@ -20,6 +20,7 @@ import {
   SparklesIcon,
   PhotoIcon,
   RectangleGroupIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import {
   HomeIcon as HomeIconSolid,
@@ -65,11 +66,11 @@ const navItems: NavItem[] = [
     description: "Manage car listings",
   },
   {
-    name: "Add Car",
-    href: "/admin/add-car",
-    icon: CarIcon,
-    iconActive: CarIcon,
-    description: "Add a new car listing",
+    name: "Add Listing",
+    href: "/admin/add-listing",
+    icon: PlusIcon, // Start using PlusIcon since it's generic
+    iconActive: PlusIcon,
+    description: "Create a new car, rental, or plate listing",
   },
   {
     name: "AutoClip Review",
