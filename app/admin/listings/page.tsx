@@ -824,7 +824,10 @@ export default function AdminBrowseScreen() {
                             </p>
                             {listingType === "rent" && item.rental_period && (
                               <p className="text-white text-xs mt-1 opacity-90">
-                                per {item.rental_period}
+                                per {item.rental_period === 'daily' ? 'day' : 
+                                     item.rental_period === 'weekly' ? 'week' : 
+                                     item.rental_period === 'monthly' ? 'month' : 
+                                     item.rental_period}
                               </p>
                             )}
                           </div>
