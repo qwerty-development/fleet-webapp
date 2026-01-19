@@ -281,9 +281,15 @@ export default function AdminDashboard() {
       filteredRentals = rentals.filter((r) => r.dealership_id);
       filteredPlates = plates.filter((p) => p.dealership_id);
     } else if (filter === "user") {
-      filteredCars = cars.filter((c) => !c.dealership_id);
+      // For user listings, ensure dealership_id is null AND user_id is present
+      filteredCars = cars.filter((c) => !c.dealership_id && c.user_id);
       filteredRentals = rentals.filter((r) => !r.dealership_id);
-      filteredPlates = plates.filter((p) => !p.dealership_id);
+      filteredPlates = plates.filter((p) => !p.dealership_id && p.user_id);
+    } else {
+      // For "all", we still want to filter out ghost records (no dealer AND no user)
+      // to ensure consistency (Dealer + User = All)
+      // Cars and Rentals were verified to be clean, but Plates have ghost records
+      filteredPlates = plates.filter((p) => p.dealership_id || p.user_id);
     }
 
     // Process cars data
@@ -664,47 +670,51 @@ export default function AdminDashboard() {
               </div>
 
               {/* Rentals by Status */}
-              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  Rental Inventory Status
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
-                    <div className="flex items-center mb-2">
-                      <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
-                      <h4 className="text-white font-medium">Available</h4>
+              {filter !== "user" && (
+                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Rental Inventory Status
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
+                      <div className="flex items-center mb-2">
+                        <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
+                        <h4 className="text-white font-medium">Available</h4>
+                      </div>
+                      <p className="text-3xl text-emerald-400 font-bold">
+                        {stats.rentals.available}
+                      </p>
+                      <p className="text-gray-400 text-sm mt-1">
+                        Ready for rent
+                      </p>
                     </div>
-                    <p className="text-3xl text-emerald-400 font-bold">
-                      {stats.rentals.available}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">Ready for rent</p>
-                  </div>
 
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
-                    <div className="flex items-center mb-2">
-                      <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
-                      <h4 className="text-white font-medium">Pending</h4>
+                    <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
+                      <div className="flex items-center mb-2">
+                        <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
+                        <h4 className="text-white font-medium">Pending</h4>
+                      </div>
+                      <p className="text-3xl text-amber-400 font-bold">
+                        {stats.rentals.pending}
+                      </p>
+                      <p className="text-gray-400 text-sm mt-1">In process</p>
                     </div>
-                    <p className="text-3xl text-amber-400 font-bold">
-                      {stats.rentals.pending}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">In process</p>
-                  </div>
 
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
-                    <div className="flex items-center mb-2">
-                      <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
-                      <h4 className="text-white font-medium">Rented/Sold</h4>
+                    <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
+                      <div className="flex items-center mb-2">
+                        <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
+                        <h4 className="text-white font-medium">Rented/Sold</h4>
+                      </div>
+                      <p className="text-3xl text-rose-400 font-bold">
+                        {stats.rentals.sold}
+                      </p>
+                      <p className="text-gray-400 text-sm mt-1">
+                        Completed transactions
+                      </p>
                     </div>
-                    <p className="text-3xl text-rose-400 font-bold">
-                      {stats.rentals.sold}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      Completed transactions
-                    </p>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Plates by Status */}
               <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
