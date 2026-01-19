@@ -97,6 +97,13 @@ export default function AdminDashboard() {
       guests: 0,
       active: 0,
     },
+    // UPDATED: Added listings stats
+    listings: {
+      total: 0,
+      cars: 0,
+      rentals: 0,
+      plates: 0,
+    },
     cars: {
       total: 0,
       available: 0,
@@ -105,8 +112,18 @@ export default function AdminDashboard() {
       totalViews: 0,
       totalLikes: 0,
       avgPrice: 0,
+    },    rentals: {
+      total: 0,
+      available: 0,
+      pending: 0,
+      sold: 0,
     },
-    // UPDATED: Added notifications stats
+    plates: {
+      total: 0,
+      available: 0,
+      pending: 0,
+      sold: 0,
+    },    // UPDATED: Added notifications stats
     notifications: {
       sent_today: 0,
       total_sent: 0,
@@ -127,9 +144,44 @@ export default function AdminDashboard() {
         // Fetch cars data
         const { data: carsData, error: carsError } = await supabase
           .from("cars")
-          .select("*");
+          .select("*")
+          .neq("status", "deleted");
 
         if (carsError) throw carsError;
+
+        // UPDATED: Fetch rentals and plates data for status breakdown
+        const [
+          { data: rentalsData, error: rentalsError },
+          { data: platesData, error: platesError },
+        ] = await Promise.all([
+          supabase
+            .from("cars_rent")
+            .select("status")
+            .neq("status", "deleted"),
+          supabase
+            .from("number_plates")
+            .select("status")
+            .neq("status", "deleted"),
+        ]);
+
+        if (rentalsError) throw rentalsError;
+        if (platesError) throw platesError;
+
+        // Process rentals data
+        const rentalsAvailable =
+          rentalsData?.filter((r) => r.status === "available").length || 0;
+        const rentalsPending =
+          rentalsData?.filter((r) => r.status === "pending").length || 0;
+        const rentalsSold =
+          rentalsData?.filter((r) => r.status === "sold").length || 0;
+
+        // Process plates data
+        const platesAvailable =
+          platesData?.filter((p) => p.status === "available").length || 0;
+        const platesPending =
+          platesData?.filter((p) => p.status === "pending").length || 0;
+        const platesSold =
+          platesData?.filter((p) => p.status === "sold").length || 0;
 
         // Users counts (server-side counts avoid 1000-row cap)
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -218,6 +270,13 @@ export default function AdminDashboard() {
 
           setStats((prev) => ({
             ...prev,
+            listings: {
+              total:
+                availableCars.length + rentalsAvailable + platesAvailable,
+              cars: availableCars.length,
+              rentals: rentalsAvailable,
+              plates: platesAvailable,
+            },
             cars: {
               total: availableCars.length,
               available: availableCars.length,
@@ -226,6 +285,18 @@ export default function AdminDashboard() {
               totalViews,
               totalLikes,
               avgPrice,
+            },
+            rentals: {
+              total: rentalsData?.length || 0,
+              available: rentalsAvailable,
+              pending: rentalsPending,
+              sold: rentalsSold,
+            },
+            plates: {
+              total: platesData?.length || 0,
+              available: platesAvailable,
+              pending: platesPending,
+              sold: platesSold,
             },
             // UPDATED: Set notifications stats
             notifications: {
@@ -361,7 +432,7 @@ export default function AdminDashboard() {
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <div className="flex justify-between items-start">
                     <p className="text-gray-400 text-sm font-medium">
-                      Total Cars
+                      All Listings
                     </p>
                     <span className="flex items-center justify-center p-1.5 rounded-md bg-indigo-500/20 text-indigo-300">
                       <ShoppingBagIcon className="h-4 w-4" />
@@ -369,10 +440,27 @@ export default function AdminDashboard() {
                   </div>
                   <div className="mt-2">
                     <p className="text-white text-2xl font-semibold">
-                      {stats.cars.total}
+                      {stats.listings.total}
                     </p>
-                    <div className="flex items-center text-xs mt-1 text-gray-400">
-                      <span className="text-emerald-400">Available listings</span>
+                    <div className="flex flex-col gap-1 text-xs mt-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Cars:</span>
+                        <span className="text-emerald-400 font-medium">
+                          {stats.listings.cars}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Rentals:</span>
+                        <span className="text-amber-400 font-medium">
+                          {stats.listings.rentals}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Plates:</span>
+                        <span className="text-blue-400 font-medium">
+                          {stats.listings.plates}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -505,6 +593,92 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-3xl text-rose-400 font-bold">
                       {stats.cars.sold}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Completed sales
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rentals by Status */}
+              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Rental Inventory Status
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
+                      <h4 className="text-white font-medium">Available</h4>
+                    </div>
+                    <p className="text-3xl text-emerald-400 font-bold">
+                      {stats.rentals.available}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">Ready for rent</p>
+                  </div>
+
+                  <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
+                    <div className="flex items-center mb-2">
+                      <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
+                      <h4 className="text-white font-medium">Pending</h4>
+                    </div>
+                    <p className="text-3xl text-amber-400 font-bold">
+                      {stats.rentals.pending}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">In process</p>
+                  </div>
+
+                  <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
+                    <div className="flex items-center mb-2">
+                      <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
+                      <h4 className="text-white font-medium">Rented/Sold</h4>
+                    </div>
+                    <p className="text-3xl text-rose-400 font-bold">
+                      {stats.rentals.sold}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Completed transactions
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Plates by Status */}
+              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Plate Inventory Status
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
+                    <div className="flex items-center mb-2">
+                      <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
+                      <h4 className="text-white font-medium">Available</h4>
+                    </div>
+                    <p className="text-3xl text-emerald-400 font-bold">
+                      {stats.plates.available}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">Ready for sale</p>
+                  </div>
+
+                  <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
+                    <div className="flex items-center mb-2">
+                      <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
+                      <h4 className="text-white font-medium">Pending</h4>
+                    </div>
+                    <p className="text-3xl text-amber-400 font-bold">
+                      {stats.plates.pending}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">In process</p>
+                  </div>
+
+                  <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
+                    <div className="flex items-center mb-2">
+                      <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
+                      <h4 className="text-white font-medium">Sold</h4>
+                    </div>
+                    <p className="text-3xl text-rose-400 font-bold">
+                      {stats.plates.sold}
                     </p>
                     <p className="text-gray-400 text-sm mt-1">
                       Completed sales
