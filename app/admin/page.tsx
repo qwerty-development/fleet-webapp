@@ -135,6 +135,16 @@ export default function AdminDashboard() {
   const [recentListings, setRecentListings] = useState<any[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'dealer' | 'user'>('all');
+  const [rawData, setRawData] = useState<{
+    cars: any[];
+    rentals: any[];
+    plates: any[];
+  }>({
+    cars: [],
+    rentals: [],
+    plates: [],
+  });
 
   // Fetch dashboard data from Supabase
   useEffect(() => {
@@ -156,32 +166,22 @@ export default function AdminDashboard() {
         ] = await Promise.all([
           supabase
             .from("cars_rent")
-            .select("status")
+            .select("status, dealership_id")
             .neq("status", "deleted"),
           supabase
             .from("number_plates")
-            .select("status")
+            .select("status, dealership_id, user_id")
             .neq("status", "deleted"),
         ]);
 
         if (rentalsError) throw rentalsError;
         if (platesError) throw platesError;
 
-        // Process rentals data
-        const rentalsAvailable =
-          rentalsData?.filter((r) => r.status === "available").length || 0;
-        const rentalsPending =
-          rentalsData?.filter((r) => r.status === "pending").length || 0;
-        const rentalsSold =
-          rentalsData?.filter((r) => r.status === "sold").length || 0;
-
-        // Process plates data
-        const platesAvailable =
-          platesData?.filter((p) => p.status === "available").length || 0;
-        const platesPending =
-          platesData?.filter((p) => p.status === "pending").length || 0;
-        const platesSold =
-          platesData?.filter((p) => p.status === "sold").length || 0;
+        setRawData({
+          cars: carsData || [],
+          rentals: rentalsData || [],
+          plates: platesData || [],
+        });
 
         // Users counts (server-side counts avoid 1000-row cap)
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -241,91 +241,6 @@ export default function AdminDashboard() {
           supabase.from('dealerships').select('id', { count: 'exact' }).gte('subscription_end_date', new Date().toISOString().split('T')[0])
         ]);
 
-        // Process cars data
-        if (carsData) {
-          const availableCars = carsData.filter(
-            (car) => car.status === "available"
-          );
-          const pendingCars = carsData.filter(
-            (car) => car.status === "pending"
-          );
-          const soldCars = carsData.filter((car) => car.status === "sold");
-
-          const totalViews = carsData.reduce(
-            (sum, car) => sum + (car.views || 0),
-            0
-          );
-          const totalLikes = carsData.reduce(
-            (sum, car) => sum + (car.likes || 0),
-            0
-          );
-          // Calculate average price only for available cars
-          const avgPrice =
-            availableCars.length > 0
-              ? Math.round(
-                  availableCars.reduce((sum, car) => sum + (car.price || 0), 0) /
-                    availableCars.length
-                )
-              : 0;
-
-          setStats((prev) => ({
-            ...prev,
-            listings: {
-              total:
-                availableCars.length + rentalsAvailable + platesAvailable,
-              cars: availableCars.length,
-              rentals: rentalsAvailable,
-              plates: platesAvailable,
-            },
-            cars: {
-              total: availableCars.length,
-              available: availableCars.length,
-              pending: pendingCars.length,
-              sold: soldCars.length,
-              totalViews,
-              totalLikes,
-              avgPrice,
-            },
-            rentals: {
-              total: rentalsData?.length || 0,
-              available: rentalsAvailable,
-              pending: rentalsPending,
-              sold: rentalsSold,
-            },
-            plates: {
-              total: platesData?.length || 0,
-              available: platesAvailable,
-              pending: platesPending,
-              sold: platesSold,
-            },
-            // UPDATED: Set notifications stats
-            notifications: {
-              sent_today: sentTodayCount || 0,
-              total_sent: totalSentCount || 0,
-              active_dealerships: activeDealershipsCount || 0,
-            },
-          }));
-
-          // Sort cars by views to get the most popular ones
-          const sortedByViews = [...carsData]
-            .sort((a, b) => (b.views || 0) - (a.views || 0))
-            .slice(0, 5);
-
-          setPopularCars(sortedByViews);
-
-          // Sort cars by listing date to get the most recent ones
-          const sortedByDate = [...carsData]
-            .sort(
-              (a, b) =>
-                new Date(b.listed_at || 0).getTime() -
-                new Date(a.listed_at || 0).getTime()
-            )
-            .slice(0, 5);
-
-          setRecentListings(sortedByDate);
-        }
-
-        // Users stats from counts, recent users limited query
         setStats((prev) => ({
           ...prev,
           users: {
@@ -334,9 +249,15 @@ export default function AdminDashboard() {
             guests: guestUsersCount || 0,
             active: activeUsersCount || 0,
           },
+          notifications: {
+              sent_today: sentTodayCount || 0,
+              total_sent: totalSentCount || 0,
+              active_dealerships: activeDealershipsCount || 0,
+            },
         }));
 
         setRecentUsers(recentUsersData || []);
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -346,6 +267,113 @@ export default function AdminDashboard() {
 
     fetchDashboardData();
   }, []);
+
+  // Process data based on filter
+  useEffect(() => {
+    const { cars, rentals, plates } = rawData;
+
+    let filteredCars = cars;
+    let filteredRentals = rentals;
+    let filteredPlates = plates;
+
+    if (filter === "dealer") {
+      filteredCars = cars.filter((c) => c.dealership_id);
+      filteredRentals = rentals.filter((r) => r.dealership_id);
+      filteredPlates = plates.filter((p) => p.dealership_id);
+    } else if (filter === "user") {
+      filteredCars = cars.filter((c) => !c.dealership_id);
+      filteredRentals = rentals.filter((r) => !r.dealership_id);
+      filteredPlates = plates.filter((p) => !p.dealership_id);
+    }
+
+    // Process cars data
+    const availableCars = filteredCars.filter(
+      (car) => car.status === "available"
+    );
+    const pendingCars = filteredCars.filter((car) => car.status === "pending");
+    const soldCars = filteredCars.filter((car) => car.status === "sold");
+
+    const totalViews = filteredCars.reduce(
+      (sum, car) => sum + (car.views || 0),
+      0
+    );
+    const totalLikes = filteredCars.reduce(
+      (sum, car) => sum + (car.likes || 0),
+      0
+    );
+    // Calculate average price only for available cars
+    const avgPrice =
+      availableCars.length > 0
+        ? Math.round(
+            availableCars.reduce((sum, car) => sum + (car.price || 0), 0) /
+              availableCars.length
+          )
+        : 0;
+
+    // Process rentals data
+    const rentalsAvailable =
+      filteredRentals.filter((r) => r.status === "available").length || 0;
+    const rentalsPending =
+      filteredRentals.filter((r) => r.status === "pending").length || 0;
+    const rentalsSold =
+      filteredRentals.filter((r) => r.status === "sold").length || 0;
+
+    // Process plates data
+    const platesAvailable =
+      filteredPlates.filter((p) => p.status === "available").length || 0;
+    const platesPending =
+      filteredPlates.filter((p) => p.status === "pending").length || 0;
+    const platesSold = filteredPlates.filter((p) => p.status === "sold").length || 0;
+
+    setStats((prev) => ({
+      ...prev,
+      listings: {
+        total: availableCars.length + rentalsAvailable + platesAvailable,
+        cars: availableCars.length,
+        rentals: rentalsAvailable,
+        plates: platesAvailable,
+      },
+      cars: {
+        total: availableCars.length,
+        available: availableCars.length,
+        pending: pendingCars.length,
+        sold: soldCars.length,
+        totalViews,
+        totalLikes,
+        avgPrice,
+      },
+      rentals: {
+        total: filteredRentals.length,
+        available: rentalsAvailable,
+        pending: rentalsPending,
+        sold: rentalsSold,
+      },
+      plates: {
+        total: filteredPlates.length,
+        available: platesAvailable,
+        pending: platesPending,
+        sold: platesSold,
+      },
+    }));
+
+    // Sort cars by views to get the most popular ones
+    const sortedByViews = [...filteredCars]
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 5);
+
+    setPopularCars(sortedByViews);
+
+    // Sort cars by listing date to get the most recent ones
+    const sortedByDate = [...filteredCars]
+      .sort(
+        (a, b) =>
+          new Date(b.listed_at || 0).getTime() -
+          new Date(a.listed_at || 0).getTime()
+      )
+      .slice(0, 5);
+
+    setRecentListings(sortedByDate);
+  }, [rawData, filter]);
 
   const navigateToSection = (sectionId: string) => {
     router.push(`/admin/${sectionId}`);
@@ -419,6 +447,40 @@ export default function AdminDashboard() {
               Manage your platform, monitor activity, and make data-driven
               decisions
             </p>
+          </div>
+
+          {/* Filter Controls */}
+          <div className="flex space-x-2 mb-6">
+            <button
+              onClick={() => setFilter("all")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === "all"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"
+              }`}
+            >
+              All Listings
+            </button>
+            <button
+              onClick={() => setFilter("dealer")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === "dealer"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"
+              }`}
+            >
+              Dealer Listings
+            </button>
+            <button
+              onClick={() => setFilter("user")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === "user"
+                  ? "bg-indigo-500 text-white"
+                  : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"
+              }`}
+            >
+              User Listings
+            </button>
           </div>
 
           {isLoading ? (
