@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Car } from "@/types";
 import { 
   XMarkIcon, 
@@ -8,8 +8,10 @@ import {
   PhotoIcon,
   ExclamationTriangleIcon,
   PlusIcon,
-  TagIcon
+  TagIcon,
+  ArrowUpTrayIcon
 } from "@heroicons/react/24/outline";
+import { createClient } from "@/utils/supabase/client";
 
 interface EditListingFormProps {
   listing: Car;
@@ -327,6 +329,13 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<number | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  
+  // File input ref for image upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Supabase client
+  const supabase = createClient();
 
   // Track if images have been modified
   useEffect(() => {
@@ -405,6 +414,63 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
     setShowDeleteConfirmation(null);
   };
 
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const dealershipId = listing.dealership_id;
+    if (!dealershipId) {
+      alert("Cannot upload images: No dealership associated with this listing");
+      return;
+    }
+    
+    setIsUploadingImage(true);
+    
+    try {
+      const files = Array.from(e.target.files);
+      const uploadPromises = files.map(async (file) => {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`File ${file.name} is not an image`);
+        }
+        
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`File ${file.name} exceeds 10MB limit`);
+        }
+        
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${dealershipId}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('cars')
+          .upload(filePath, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage
+          .from('cars')
+          .getPublicUrl(filePath);
+        
+        return urlData.publicUrl;
+      });
+      
+      const newImageUrls = await Promise.all(uploadPromises);
+      setImages(prev => [...prev, ...newImageUrls]);
+      
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      console.error("Error uploading images:", error);
+      alert(`Failed to upload images: ${error.message}`);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   // Validate form before submission
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -473,21 +539,59 @@ const EditListingForm: React.FC<EditListingFormProps> = ({
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-white">Image Management</h3>
-              {imagesModified && (
-                <button
-                  type="button"
-                  onClick={resetImages}
-                  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded-md text-sm transition-colors"
-                >
-                  Reset Images
-                </button>
-              )}
+              <div className="flex items-center space-x-2">
+                {imagesModified && (
+                  <button
+                    type="button"
+                    onClick={resetImages}
+                    className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded-md text-sm transition-colors"
+                  >
+                    Reset Images
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Add Image Button and Hidden File Input */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                multiple
+                className="hidden"
+                id="image-upload"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {isUploadingImage ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+                    Add Images
+                  </>
+                )}
+              </button>
+              <span className="text-gray-400 text-sm">Supports JPG, PNG, WebP (Max 10MB each)</span>
             </div>
 
             {images.length === 0 ? (
               <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
                 <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-400">No images available for this listing</p>
+                <p className="text-gray-500 text-sm mt-1">Click "Add Images" above to upload</p>
               </div>
             ) : (
               <div className="space-y-3">
