@@ -17,10 +17,9 @@ export async function POST(request: NextRequest) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
     
-    const { data: { session } } = await supabase.auth.getSession();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (userError || !user || !session) {
+    if (userError || !user) {
       console.error("Authentication failed:", userError);
       return createResponse(false, "Unauthorized: Valid session required", 401);
     }

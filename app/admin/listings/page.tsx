@@ -12,9 +12,16 @@ import {
   TruckIcon,
   XMarkIcon,
   TagIcon,
+  ArrowsRightLeftIcon,
+  BuildingOffice2Icon,
+  UsersIcon,
+  MagnifyingGlassIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { Car, Dealership } from "@/types";
 import Navbar from "@/components/home/Navbar";
+import { useDebounce } from "../add-listing/useDebounce";
 
 import Link from "next/link";
 import AdminNavbar from "@/components/admin/navbar";
@@ -57,6 +64,13 @@ const LISTING_TYPES = [
 ];
 
 const ITEMS_PER_PAGE = 10;
+
+interface ListingUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone_number?: string | null;
+}
 
 // Trim Badge Component - Non-editable for display in listing cards
 const TrimBadge: React.FC<{ trim: string }> = ({ trim }) => (
@@ -151,6 +165,19 @@ export default function AdminBrowseScreen() {
   const [filterBoost, setFilterBoost] = useState<string>("all"); // "all", "boosted", "non-boosted"
   const [userListingType, setUserListingType] = useState<string>("user_cars"); // "user_cars" or "user_plates"
 
+  const [isTransferModalVisible, setIsTransferModalVisible] = useState<boolean>(false);
+  const [transferListing, setTransferListing] = useState<Car | null>(null);
+  const [transferOwnerType, setTransferOwnerType] = useState<"dealership" | "user">("dealership");
+  const [transferDealershipId, setTransferDealershipId] = useState<string>("");
+  const [transferUserId, setTransferUserId] = useState<string>("");
+  const [transferUserSearch, setTransferUserSearch] = useState<string>("");
+  const debouncedTransferUserSearch = useDebounce(transferUserSearch, 400);
+  const [transferUsers, setTransferUsers] = useState<ListingUser[]>([]);
+  const [isLoadingTransferUsers, setIsLoadingTransferUsers] = useState<boolean>(false);
+  const [transferUserSearchError, setTransferUserSearchError] = useState<string>("");
+  const [isTransferring, setIsTransferring] = useState<boolean>(false);
+  const [transferFeedback, setTransferFeedback] = useState<{ type: "error" | "success"; message: string } | null>(null);
+
   const supabase = createClient();
 
   // Fetch dealerships on component mount
@@ -173,6 +200,13 @@ export default function AdminBrowseScreen() {
     userListingType,
   ]);
 
+  useEffect(() => {
+    if (listingType === "rent" && transferOwnerType === "user") {
+      setTransferOwnerType("dealership");
+      setTransferUserId("");
+    }
+  }, [listingType, transferOwnerType]);
+
   // Function to fetch dealerships from Supabase
   const fetchDealerships = async () => {
     try {
@@ -187,6 +221,72 @@ export default function AdminBrowseScreen() {
       setIsLoading(false);
     }
   };
+
+  const getListingTableName = useCallback(() => {
+    if (listingType === "user") {
+      return userListingType === "user_cars" ? "cars" : "number_plates";
+    }
+
+    return listingType === "sale" ? "cars" : listingType === "rent" ? "cars_rent" : "number_plates";
+  }, [listingType, userListingType]);
+
+  const handleOpenTransferModal = useCallback(
+    (listing: Car) => {
+      setTransferListing(listing);
+      setIsTransferModalVisible(true);
+      setTransferFeedback(null);
+      setTransferUserId("");
+      setTransferDealershipId("");
+      setTransferOwnerType(listingType === "rent" ? "dealership" : "dealership");
+      setTransferUserSearch("");
+      setTransferUsers([]);
+    },
+    [listingType]
+  );
+
+  const handleCloseTransferModal = useCallback(() => {
+    setIsTransferModalVisible(false);
+    setTransferListing(null);
+    setTransferFeedback(null);
+    setTransferUserId("");
+    setTransferDealershipId("");
+  }, []);
+
+  const fetchTransferUsers = useCallback(async (query: string) => {
+    setIsLoadingTransferUsers(true);
+    setTransferUserSearchError("");
+
+    try {
+      const params = new URLSearchParams();
+      const trimmedQuery = query.trim();
+
+      if (trimmedQuery) {
+        params.set("q", trimmedQuery);
+      }
+      params.set("limit", "50");
+      params.set("offset", "0");
+
+      const response = await fetch(`/api/admin/users?${params.toString()}`);
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.error || "Failed to fetch users");
+      }
+
+      const payload = await response.json();
+      setTransferUsers(payload.data || []);
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      setTransferUserSearchError(error.message || "Failed to load users");
+      setTransferUsers([]);
+    } finally {
+      setIsLoadingTransferUsers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isTransferModalVisible || transferOwnerType !== "user") return;
+    fetchTransferUsers(debouncedTransferUserSearch);
+  }, [isTransferModalVisible, transferOwnerType, debouncedTransferUserSearch, fetchTransferUsers]);
 
   // Helper function to apply filters to query
   const applyFiltersToQuery = useCallback((query: any) => {
@@ -228,8 +328,12 @@ export default function AdminBrowseScreen() {
 
     // Apply search filter if query exists
     if (searchQuery.trim()) {
+      const isNumberPlateListing =
+        listingType === "plates" ||
+        (listingType === "user" && userListingType === "user_plates");
+
       // Different search fields based on listing type
-      if (listingType === "plates") {
+      if (isNumberPlateListing) {
         // Search by letter and digits for number plates
         filteredQuery = filteredQuery.or(
           `letter.ilike.%${searchQuery}%,digits.ilike.%${searchQuery}%`
@@ -243,7 +347,7 @@ export default function AdminBrowseScreen() {
     }
 
     return filteredQuery;
-  }, [selectedDealershipId, filterStatus, filterBoost, searchQuery, listingType]);
+  }, [selectedDealershipId, filterStatus, filterBoost, searchQuery, listingType, userListingType]);
 
   // Function to fetch car listings with filters and pagination
   const fetchListings = useCallback(async () => {
@@ -340,15 +444,7 @@ export default function AdminBrowseScreen() {
   const handleDeleteListing = useCallback(async (id: string) => {
     if (confirm("Are you sure you want to delete this listing?")) {
       try {
-        let tableName = "";
-        if (listingType === "user") {
-          tableName = userListingType === "user_cars" ? "cars" : "number_plates";
-        } else {
-          tableName =
-            listingType === "sale" ? "cars" :
-              listingType === "rent" ? "cars_rent" :
-                "number_plates";
-        }
+        const tableName = getListingTableName();
 
         console.log(`Attempting to soft delete (update status to 'deleted') from table: ${tableName}, id: ${id}`);
 
@@ -374,7 +470,7 @@ export default function AdminBrowseScreen() {
         alert(`Failed to delete listing: ${error.message}`);
       }
     }
-  }, [listingType, userListingType, fetchListings, supabase]);
+  }, [getListingTableName, fetchListings, supabase]);
 
   // Handler for editing a listing
   const handleEditListing = useCallback((listing: Car) => {
@@ -388,15 +484,7 @@ export default function AdminBrowseScreen() {
       if (!selectedListing) return;
 
       try {
-        let tableName = "";
-        if (listingType === "user") {
-          tableName = userListingType === "user_cars" ? "cars" : "number_plates";
-        } else {
-          tableName =
-            listingType === "sale" ? "cars" :
-              listingType === "rent" ? "cars_rent" :
-                "number_plates";
-        }
+        const tableName = getListingTableName();
         const { error } = await supabase
           .from(tableName)
           .update(formData)
@@ -413,8 +501,87 @@ export default function AdminBrowseScreen() {
         alert(`Failed to update listing: ${error.message}`);
       }
     },
-    [selectedListing, listingType, userListingType, fetchListings, supabase]
+    [selectedListing, getListingTableName, fetchListings, supabase]
   );
+
+  const handleTransferOwnership = useCallback(async () => {
+    if (!transferListing) {
+      setTransferFeedback({ type: "error", message: "Select a listing to transfer." });
+      return;
+    }
+
+    const tableName = getListingTableName();
+
+    if (tableName === "cars_rent" && transferOwnerType === "user") {
+      setTransferFeedback({ type: "error", message: "Rental listings can only belong to dealerships." });
+      return;
+    }
+
+    let updatePayload: Record<string, any> = {};
+
+    if (transferOwnerType === "dealership") {
+      const dealershipId = Number(transferDealershipId);
+      if (Number.isNaN(dealershipId)) {
+        setTransferFeedback({ type: "error", message: "Select a valid dealership." });
+        return;
+      }
+
+      if ((transferListing as any).dealership_id === dealershipId) {
+        setTransferFeedback({ type: "error", message: "Listing already belongs to this dealership." });
+        return;
+      }
+
+      updatePayload = {
+        dealership_id: dealershipId,
+        ...(tableName !== "cars_rent" ? { user_id: null } : {}),
+      };
+    } else {
+      if (!transferUserId) {
+        setTransferFeedback({ type: "error", message: "Select a valid user." });
+        return;
+      }
+
+      if ((transferListing as any).user_id === transferUserId) {
+        setTransferFeedback({ type: "error", message: "Listing already belongs to this user." });
+        return;
+      }
+
+      updatePayload = {
+        dealership_id: null,
+        user_id: transferUserId,
+      };
+    }
+
+    try {
+      setIsTransferring(true);
+      const { error } = await supabase
+        .from(tableName)
+        .update(updatePayload)
+        .eq("id", transferListing.id);
+
+      if (error) throw error;
+
+      setTransferFeedback({ type: "success", message: "Ownership transferred successfully." });
+      fetchListings();
+      setTimeout(() => {
+        handleCloseTransferModal();
+      }, 600);
+    } catch (error: any) {
+      console.error("Error transferring ownership:", error);
+      setTransferFeedback({ type: "error", message: error.message || "Transfer failed." });
+    } finally {
+      setIsTransferring(false);
+    }
+  }, [
+    transferListing,
+    transferOwnerType,
+    transferDealershipId,
+    transferUserId,
+    getListingTableName,
+    supabase,
+    fetchListings,
+    handleCloseTransferModal,
+  ]);
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
@@ -1068,14 +1235,21 @@ export default function AdminBrowseScreen() {
                             )}
                           </button>
 
-                          {/* Edit and Delete Buttons - Two columns */}
-                          <div className="grid grid-cols-2 gap-3">
+                          {/* Edit, Transfer, and Delete Buttons */}
+                          <div className="grid grid-cols-3 gap-3">
                             <button
                               onClick={() => handleEditListing(car)}
                               className="flex items-center justify-center px-3 py-2 bg-indigo-600/90 hover:bg-indigo-600 text-white rounded-lg transition-colors text-sm"
                             >
                               <PencilIcon className="h-4 w-4 mr-1.5" />
                               Edit
+                            </button>
+                            <button
+                              onClick={() => handleOpenTransferModal(car)}
+                              className="flex items-center justify-center px-3 py-2 bg-slate-600/90 hover:bg-slate-600 text-white rounded-lg transition-colors text-sm"
+                            >
+                              <ArrowsRightLeftIcon className="h-4 w-4 mr-1.5" />
+                              Transfer
                             </button>
                             <button
                               onClick={() => handleDeleteListing(car.id)}
@@ -1146,6 +1320,180 @@ export default function AdminBrowseScreen() {
             </div>
           )}
         </div>
+
+        {isTransferModalVisible && transferListing && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-xl border border-gray-800 w-full max-w-2xl shadow-xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Transfer Ownership</h2>
+                  <p className="text-sm text-gray-400">Move this listing to a new owner without changing status.</p>
+                </div>
+                <button
+                  onClick={handleCloseTransferModal}
+                  className="text-gray-400 hover:text-white"
+                  aria-label="Close"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="px-6 py-5 space-y-5">
+                {transferFeedback && (
+                  <div
+                    className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm ${
+                      transferFeedback.type === "error"
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-200"
+                        : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                    }`}
+                  >
+                    {transferFeedback.type === "error" ? (
+                      <ExclamationTriangleIcon className="h-5 w-5 mt-0.5" />
+                    ) : (
+                      <CheckCircleIcon className="h-5 w-5 mt-0.5" />
+                    )}
+                    <span>{transferFeedback.message}</span>
+                  </div>
+                )}
+
+                <div className="bg-gray-950/40 rounded-lg border border-gray-800 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Listing</p>
+                  <p className="text-white font-medium mt-1">
+                    {(listingType === "user" && userListingType === "user_plates") || listingType === "plates"
+                      ? `Plate ${(transferListing as any).letter || ""}${(transferListing as any).digits || ""}`
+                      : `${(transferListing as any).year || ""} ${(transferListing as any).make || ""} ${(transferListing as any).model || ""}`}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Status: {transferListing.status || "unknown"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Current Owner</p>
+                  {listingType === "user" ? (
+                    <p className="text-sm text-gray-200 mt-1">
+                      User: {(transferListing as any).users?.name || (transferListing as any).users?.email || "Unknown User"}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-200 mt-1">
+                      Dealership: {(transferListing as any).dealerships?.name || "Unknown Dealership"}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-300 mb-2 block">Target Owner Type</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTransferOwnerType("dealership")}
+                        className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 ${
+                          transferOwnerType === "dealership"
+                            ? "border-indigo-500 bg-indigo-500/20 text-indigo-100"
+                            : "border-gray-700 text-gray-400 hover:text-white"
+                        }`}
+                      >
+                        <BuildingOffice2Icon className="h-4 w-4" />
+                        Dealership
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTransferOwnerType("user")}
+                        disabled={listingType === "rent"}
+                        className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 ${
+                          transferOwnerType === "user"
+                            ? "border-indigo-500 bg-indigo-500/20 text-indigo-100"
+                            : "border-gray-700 text-gray-400 hover:text-white"
+                        } ${listingType === "rent" ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        <UsersIcon className="h-4 w-4" />
+                        User
+                      </button>
+                    </div>
+                    {listingType === "rent" && (
+                      <p className="text-xs text-gray-500 mt-2">Rental listings can only belong to dealerships.</p>
+                    )}
+                  </div>
+
+                  {transferOwnerType === "dealership" ? (
+                    <div>
+                      <label className="text-sm text-gray-300 mb-2 block">Dealership</label>
+                      <select
+                        value={transferDealershipId}
+                        onChange={(event) => setTransferDealershipId(event.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">Select dealership</option>
+                        {dealerships.map((dealership) => (
+                          <option key={dealership.id} value={dealership.id.toString()}>
+                            {dealership.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-sm text-gray-300 mb-2 block">User</label>
+                      <div className="relative">
+                        <MagnifyingGlassIcon className="h-4 w-4 text-gray-500 absolute left-3 top-2.5" />
+                        <input
+                          value={transferUserSearch}
+                          onChange={(event) => setTransferUserSearch(event.target.value)}
+                          placeholder="Search by name, email, phone"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                      {transferUserSearchError && (
+                        <p className="text-xs text-rose-400 mt-2">{transferUserSearchError}</p>
+                      )}
+                      <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-800">
+                        {isLoadingTransferUsers ? (
+                          <div className="p-3 text-sm text-gray-400">Loading users...</div>
+                        ) : transferUsers.length === 0 ? (
+                          <div className="p-3 text-sm text-gray-500">No users found.</div>
+                        ) : (
+                          transferUsers.map((user) => (
+                            <button
+                              type="button"
+                              key={user.id}
+                              onClick={() => setTransferUserId(user.id)}
+                              className={`w-full text-left px-3 py-2 text-sm border-b border-gray-800 last:border-b-0 hover:bg-gray-800/70 ${
+                                transferUserId === user.id ? "bg-indigo-500/20 text-indigo-100" : "text-gray-300"
+                              }`}
+                            >
+                              <p className="font-medium">{user.name || user.email || "User"}</p>
+                              <p className="text-xs text-gray-500">
+                                {user.email || "No email"}
+                                {user.phone_number ? ` • ${user.phone_number}` : ""}
+                              </p>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-800 flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCloseTransferModal}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTransferOwnership}
+                  disabled={isTransferring}
+                  className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-60"
+                >
+                  {isTransferring ? "Transferring..." : "Confirm Transfer"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal for editing listing - use appropriate form based on listing type */}
         {isListingModalVisible && selectedListing && (

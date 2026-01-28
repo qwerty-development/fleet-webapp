@@ -8,10 +8,10 @@ export async function POST(request: NextRequest) {
     // Get auth session from cookies
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     // Check if user is authenticated
-    if (!session || !session.user) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a unique filename with timestamp
-    const userId = session.user.id;
+    const userId = user.id;
     const timestamp = Date.now();
     const fileExt = file.name.split('.').pop();
     const fileName = `avatar-${userId}-${timestamp}.${fileExt}`;

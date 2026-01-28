@@ -114,11 +114,11 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Check for auth session
-  const { data: { session } } = await supabase.auth.getSession();
+  // Check authenticated user (avoids unverified session data)
+  const { data: { user } } = await supabase.auth.getUser();
 
   // Special case: Direct redirect from signin page with next parameter if already authenticated
-  if (pathname === '/auth/signin' && session) {
+  if (pathname === '/auth/signin' && user) {
     // If there's a 'next' parameter, redirect there
     const nextPath = request.nextUrl.searchParams.get('next') || '/home';
     console.log(`Middleware: Redirecting authenticated user from signin to ${nextPath}`);
@@ -170,7 +170,7 @@ export async function middleware(request: NextRequest) {
   );
 
   // Handle protected routes
-  if (isProtectedRoute && !session && !isGuestMode) {
+  if (isProtectedRoute && !user && !isGuestMode) {
     // Redirect to sign in page
     const redirectUrl = new URL('/auth/signin', request.url);
     redirectUrl.searchParams.set('next', pathname);
@@ -179,7 +179,7 @@ export async function middleware(request: NextRequest) {
 
   // Handle admin routes
   if (isAdminRoute) {
-    if (!session) {
+    if (!user) {
       // If not authenticated at all, redirect to sign in
       const redirectUrl = new URL('/auth/signin', request.url);
       redirectUrl.searchParams.set('next', pathname);
@@ -190,12 +190,12 @@ export async function middleware(request: NextRequest) {
     const { data: userData, error } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     // Verify admin role
     if (error || userData?.role !== 'admin') {
-      console.log('User is not authorized to access admin routes:', session.user.id);
+      console.log('User is not authorized to access admin routes:', user.id);
       // Redirect to home page if not admin
       return NextResponse.redirect(new URL('/home', request.url));
     }
@@ -203,7 +203,7 @@ export async function middleware(request: NextRequest) {
 
   // Handle dealer routes
   if (isDealerRoute) {
-    if (!session) {
+    if (!user) {
       // If not authenticated at all, redirect to sign in
       const redirectUrl = new URL('/auth/signin', request.url);
       redirectUrl.searchParams.set('next', pathname);
@@ -214,12 +214,12 @@ export async function middleware(request: NextRequest) {
     const { data: userData, error } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     // Verify dealer role
     if (error || userData?.role !== 'dealer') {
-      console.log('User is not authorized to access dealer routes:', session.user.id);
+      console.log('User is not authorized to access dealer routes:', user.id);
       // Redirect to home page if not dealer
       return NextResponse.redirect(new URL('/home', request.url));
     }
@@ -228,7 +228,7 @@ export async function middleware(request: NextRequest) {
   // Handle auth routes - redirect to home if already authenticated
   // CRITICAL FIX 3: Explicitly exclude the callback URL with more precise check
   const isAuthRoute = pathname.startsWith('/auth');
-  if (isAuthRoute && session && pathname !== '/auth/callback') {
+  if (isAuthRoute && user && pathname !== '/auth/callback') {
     return NextResponse.redirect(new URL('/home', request.url));
   }
 
