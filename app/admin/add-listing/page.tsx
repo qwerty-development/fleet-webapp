@@ -24,161 +24,30 @@ import {
 } from '@heroicons/react/24/outline';
 import { createClient } from '@/utils/supabase/client';
 import AdminNavbar from '@/components/admin/navbar';
+import {
+  VEHICLE_COLORS,
+  CATEGORIES,
+  FUEL_TYPES,
+  TRANSMISSIONS,
+  DRIVE_TRAINS,
+  CONDITIONS,
+  SOURCE_OPTIONS,
+  RENTAL_PERIODS,
+  PLATE_STATUSES,
+  VEHICLE_FEATURES,
+} from './constants';
+import type {
+  ListingType,
+  OwnerType,
+  Dealership,
+  User,
+  CarFormData,
+  PlateFormData,
+  UploadedImage,
+  FormErrors,
+} from './types';
+import { useDebounce } from './useDebounce';
 
-/**
- * Type Definitions
- */
-type ListingType = 'sale' | 'rent' | 'plates';
-type OwnerType = 'dealership' | 'user';
-
-interface Dealership {
-  id: string;
-  name: string;
-  location: string;
-  phone: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface CarFormData {
-  dealership_id: string;
-  user_id: string;
-  make: string;
-  model: string;
-  trim: string;
-  year: string;
-  price: string;
-  color: string;
-  category: string;
-  fuel_type: string;
-  source: string;
-  description: string;
-  mileage: string;
-  transmission: string;
-  drivetrain: string;
-  condition: string;
-  features: string[];
-  bought_price: string;
-  date_bought: string;
-  seller_name: string;
-  rental_period: string;
-}
-
-interface PlateFormData {
-  letter: string;
-  digits: string;
-  price: string;
-  status: string;
-}
-
-interface UploadedImage {
-  id: string;
-  url: string;
-  file: File;
-  name: string;
-}
-
-interface FormErrors {
-  [key: string]: string;
-}
-
-const VEHICLE_COLORS = [
-  { name: 'Black', value: 'Black', hex: '#000000' },
-  { name: 'White', value: 'White', hex: '#FFFFFF' },
-  { name: 'Silver', value: 'Silver', hex: '#C0C0C0' },
-  { name: 'Gray', value: 'Gray', hex: '#808080' },
-  { name: 'Red', value: 'Red', hex: '#FF0000' },
-  { name: 'Blue', value: 'Blue', hex: '#0000FF' },
-  { name: 'Brown', value: 'Brown', hex: '#A52A2A' },
-  { name: 'Green', value: 'Green', hex: '#008000' },
-  { name: 'Beige', value: 'Beige', hex: '#F5F5DC' },
-  { name: 'Orange', value: 'Orange', hex: '#FFA500' },
-  { name: 'Gold', value: 'Gold', hex: '#FFD700' },
-  { name: 'Yellow', value: 'Yellow', hex: '#FFFF00' },
-  { name: 'Purple', value: 'Purple', hex: '#800080' },
-];
-
-const CATEGORIES = [
-  { value: 'Sedan', label: 'Sedan', icon: '🚗' },
-  { value: 'SUV', label: 'SUV', icon: '🚙' },
-  { value: 'Truck', label: 'Truck', icon: '🛻' },
-  { value: 'Coupe', label: 'Coupe', icon: '🏎️' },
-  { value: 'Convertible', label: 'Convertible', icon: '😎' },
-  { value: 'Hatchback', label: 'Hatchback', icon: '🚘' },
-  { value: 'Wagon', label: 'Wagon', icon: '🚐' },
-];
-
-const FUEL_TYPES = [
-  { value: 'Benzine', label: 'Benzine', icon: '⛽' },
-  { value: 'Diesel', label: 'Diesel', icon: '🛢️' },
-  { value: 'Hybrid', label: 'Hybrid', icon: '🔋' },
-  { value: 'Electric', label: 'Electric', icon: '⚡' },
-  { value: 'plugin-hybrid', label: 'Plug-in Hybrid', icon: '🔌' },
-];
-
-const TRANSMISSIONS = [
-  { value: 'Automatic', label: 'Automatic', icon: '⚙️' },
-  { value: 'Manual', label: 'Manual', icon: '🎛️' },
-];
-
-const DRIVE_TRAINS = [
-  { value: 'FWD', label: 'FWD', icon: '↘️' },
-  { value: 'RWD', label: 'RWD', icon: '↗️' },
-  { value: 'AWD', label: 'AWD', icon: '🔼' },
-  { value: '4WD', label: '4WD', icon: '🔄' },
-];
-
-const CONDITIONS = [
-  { value: 'New', label: 'New', icon: '✨' },
-  { value: 'Used', label: 'Used', icon: '👍' },
-];
-const SOURCE_OPTIONS = [
-  { value: 'Company', label: 'Company Source', icon: '🏢' },
-  { value: 'GCC', label: 'GCC', icon: '🌴' },
-  { value: 'USA', label: 'USA', icon: '🇺🇸' },
-  { value: 'Canada', label: 'Canada', icon: '🇨🇦' },
-  { value: 'China', label: 'China', icon: '🇨🇳' },
-  { value: 'Europe', label: 'Europe', icon: '🇪🇺' },
-];
-
-const RENTAL_PERIODS = [
-  { value: 'daily', label: 'Daily', icon: '📅' },
-  { value: 'weekly', label: 'Weekly', icon: '🗓️' },
-  { value: 'monthly', label: 'Monthly', icon: '📆' },
-];
-
-const PLATE_STATUSES = [
-  { value: 'available', label: 'Available', icon: '✅' },
-  { value: 'pending', label: 'Pending', icon: '⏳' },
-  { value: 'sold', label: 'Sold', icon: '🔒' },
-];
-
-const VEHICLE_FEATURES = [
-  { id: 'heated_seats', label: 'Heated Seats', category: 'comfort' },
-  { id: 'keyless_entry', label: 'Keyless Entry', category: 'convenience' },
-  { id: 'keyless_start', label: 'Keyless Start', category: 'convenience' },
-  { id: 'power_mirrors', label: 'Power Mirrors', category: 'convenience' },
-  { id: 'power_steering', label: 'Power Steering', category: 'convenience' },
-  { id: 'power_windows', label: 'Power Windows', category: 'convenience' },
-  { id: 'backup_camera', label: 'Backup Camera', category: 'safety' },
-  { id: 'bluetooth', label: 'Bluetooth', category: 'technology' },
-  { id: 'cruise_control', label: 'Cruise Control', category: 'convenience' },
-  { id: 'navigation', label: 'Navigation System', category: 'technology' },
-  { id: 'sunroof', label: 'Sunroof', category: 'comfort' },
-  { id: 'leather_seats', label: 'Leather Seats', category: 'comfort' },
-  { id: 'third_row_seats', label: 'Third Row Seats', category: 'space' },
-  { id: 'parking_sensors', label: 'Parking Sensors', category: 'safety' },
-  { id: 'lane_assist', label: 'Lane Departure Warning', category: 'safety' },
-  { id: 'blind_spot', label: 'Blind Spot Monitoring', category: 'safety' },
-  { id: 'apple_carplay', label: 'Apple CarPlay', category: 'technology' },
-  { id: 'android_auto', label: 'Android Auto', category: 'technology' },
-  { id: 'premium_audio', label: 'Premium Audio', category: 'technology' },
-  { id: 'remote_start', label: 'Remote Start', category: 'convenience' },
-];
 
 
 
@@ -565,6 +434,8 @@ export default function AdminAddListing() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [userSearchError, setUserSearchError] = useState('');
+  const debouncedUserSearch = useDebounce(userSearch, 400);
 
   // Dynamic make / model data
   const [makes, setMakes] = useState<string[]>([]);
@@ -606,44 +477,43 @@ export default function AdminAddListing() {
   }, [supabase]);
 
   /**
-   * Fetch users when owner type is 'user'
+   * Fetch users with server-side search (name/email/phone)
    */
-  useEffect(() => {
-    if (ownerType === 'user' && users.length === 0) {
-      async function fetchUsers() {
-        setIsLoadingUsers(true);
-        try {
-          // Fetch first 100 users for initial display
-          // Implementation note: For production with many users, implement server-side search
-          const { data, error } = await supabase
-            .from('users')
-            .select('id, name, email')
-            .limit(100)
-            .order('name');
+  const fetchUsers = useCallback(async (query: string) => {
+    setIsLoadingUsers(true);
+    setUserSearchError('');
 
-          if (error) throw error;
-          setUsers(data || []);
-        } catch (error) {
-          console.error('Error fetching users:', error);
-        } finally {
-          setIsLoadingUsers(false);
-        }
+    try {
+      const params = new URLSearchParams();
+      const trimmedQuery = query.trim();
+
+      if (trimmedQuery) {
+        params.set('q', trimmedQuery);
       }
-      fetchUsers();
-    }
-  }, [ownerType, supabase, users.length]);
+      params.set('limit', '50');
+      params.set('offset', '0');
 
-  /**
-   * Search users (Simple client-side filtering for now, can be upgraded to server-side)
-   */
-  const filteredUsers = useMemo(() => {
-    if (!userSearch) return users;
-    const lowerSearch = userSearch.toLowerCase();
-    return users.filter(user => 
-      (user.name?.toLowerCase() || '').includes(lowerSearch) || 
-      (user.email?.toLowerCase() || '').includes(lowerSearch)
-    );
-  }, [users, userSearch]);
+      const response = await fetch(`/api/admin/users?${params.toString()}`);
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.error || 'Failed to fetch users');
+      }
+
+      const payload = await response.json();
+      setUsers(payload.data || []);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      setUserSearchError(error.message || 'Failed to load users');
+      setUsers([]);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (ownerType !== 'user') return;
+    fetchUsers(debouncedUserSearch);
+  }, [ownerType, debouncedUserSearch, fetchUsers]);
 
   /**
    * Fetch available vehicle makes from DB on mount
@@ -1219,12 +1089,51 @@ export default function AdminAddListing() {
                       <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                       <input 
                         type="text"
-                        placeholder="Search users..."
+                        placeholder="Search by name, email, or phone..."
                         value={userSearch}
                         onChange={(e) => setUserSearch(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 mb-2"
                       />
                     </div>
+
+                    {userSearchError && (
+                      <div className="text-sm text-red-400 flex items-center">
+                        <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                        {userSearchError}
+                      </div>
+                    )}
+
+                    {!userSearchError && (
+                      <div className="text-xs text-gray-500">
+                        {isLoadingUsers
+                          ? 'Searching users...'
+                          : userSearch.trim()
+                          ? `Found ${users.length} user${users.length === 1 ? '' : 's'}`
+                          : 'Start typing to search users'}
+                      </div>
+                    )}
+
+                    {Boolean(userSearch.trim()) && !isLoadingUsers && users.length > 0 && (
+                      <div className="max-h-48 overflow-y-auto border border-gray-700 rounded-lg bg-gray-900/60">
+                        {users.map(user => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => handleInputChange('user_id', user.id)}
+                            className={`w-full text-left px-3 py-2 border-b border-gray-800 hover:bg-gray-800/70 transition-colors ${
+                              formData.user_id === user.id ? 'bg-indigo-600/20 text-indigo-200' : 'text-gray-200'
+                            }`}
+                          >
+                            <div className="text-sm font-medium">
+                              {user.name || 'Unnamed User'}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {user.email || user.phone_number || 'No contact info'}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     
                     <select
                       value={formData.user_id}
@@ -1235,9 +1144,16 @@ export default function AdminAddListing() {
                       <option value="">
                         {isLoadingUsers ? 'Loading users...' : 'Select a user...'}
                       </option>
-                      {filteredUsers.map(user => (
+                      {!isLoadingUsers && users.length === 0 && !userSearchError && (
+                        <option value="" disabled>
+                          No users found
+                        </option>
+                      )}
+                      {users.map(user => (
                         <option key={user.id} value={user.id}>
-                          {user.name} ({user.email})
+                          {user.name || 'Unnamed User'}
+                          {user.email ? ` (${user.email})` : ''}
+                          {user.phone_number ? ` • ${user.phone_number}` : ''}
                         </option>
                       ))}
                     </select>
