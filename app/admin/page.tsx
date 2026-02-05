@@ -296,112 +296,52 @@ export default function AdminDashboard() {
 
   // Process data based on filter
   useEffect(() => {
-    // For "All" filter, we already have the stats from RPC
-    if (filter === "all") {
-      return; // Stats already set from RPC
-    }
-
-    // For dealer/user filters, we need to fetch the full data
     async function fetchFilteredData() {
       try {
-        const { data: carsData } = await supabase
-          .from("cars")
-          .select("*")
-          .neq("status", "deleted");
+        // Use RPC with filter parameter to get accurate stats
+        const { data: dashboardStats, error: statsError } = await supabase
+          .rpc('get_admin_dashboard_stats', { filter_type: filter });
 
-        const { data: rentalsData } = await supabase
-          .from("cars_rent")
-          .select("status, dealership_id")
-          .neq("status", "deleted");
+        if (statsError) throw statsError;
 
-        const { data: platesData } = await supabase
-          .from("number_plates")
-          .select("status, dealership_id, user_id")
-          .neq("status", "deleted");
-
-        const cars = carsData || [];
-        const rentals = rentalsData || [];
-        const plates = platesData || [];
-
-        let filteredCars = cars;
-        let filteredRentals = rentals;
-        let filteredPlates = plates;
-
-        if (filter === "dealer") {
-          filteredCars = cars.filter((c) => c.dealership_id);
-          filteredRentals = rentals.filter((r) => r.dealership_id);
-          filteredPlates = plates.filter((p) => p.dealership_id);
-        } else if (filter === "user") {
-          filteredCars = cars.filter((c) => !c.dealership_id && c.user_id);
-          filteredRentals = rentals.filter((r) => !r.dealership_id);
-          filteredPlates = plates.filter((p) => !p.dealership_id && p.user_id);
-        }
-
-        // Process cars data
-        const availableCars = filteredCars.filter((car) => car.status === "available");
-        const pendingCars = filteredCars.filter((car) => car.status === "pending");
-        const soldCars = filteredCars.filter((car) => car.status === "sold");
-
-        const totalViews = filteredCars.reduce((sum, car) => sum + (car.views || 0), 0);
-        const totalLikes = filteredCars.reduce((sum, car) => sum + (car.likes || 0), 0);
-        const avgPrice = availableCars.length > 0
-          ? Math.round(availableCars.reduce((sum, car) => sum + (car.price || 0), 0) / availableCars.length)
-          : 0;
-
-        // Process rentals data
-        const rentalsAvailable = filteredRentals.filter((r) => r.status === "available").length || 0;
-        const rentalsPending = filteredRentals.filter((r) => r.status === "pending").length || 0;
-        const rentalsSold = filteredRentals.filter((r) => r.status === "sold").length || 0;
-
-        // Process plates data
-        const platesAvailable = filteredPlates.filter((p) => p.status === "available").length || 0;
-        const platesPending = filteredPlates.filter((p) => p.status === "pending").length || 0;
-        const platesSold = filteredPlates.filter((p) => p.status === "sold").length || 0;
+        const carsStats = dashboardStats?.cars || {};
+        const rentalsStats = dashboardStats?.rentals || {};
+        const platesStats = dashboardStats?.plates || {};
 
         setStats((prev) => ({
           ...prev,
           listings: {
-            total: filteredCars.length + filteredRentals.length + filteredPlates.length,
-            cars: filteredCars.length,
-            rentals: filteredRentals.length,
-            plates: filteredPlates.length,
+            total: (carsStats.total || 0) + (rentalsStats.total || 0) + (platesStats.total || 0),
+            cars: carsStats.total || 0,
+            rentals: rentalsStats.total || 0,
+            plates: platesStats.total || 0,
           },
           cars: {
-            total: filteredCars.length,
-            available: availableCars.length,
-            pending: pendingCars.length,
-            sold: soldCars.length,
-            totalViews,
-            totalLikes,
-            avgPrice,
+            total: carsStats.total || 0,
+            available: carsStats.available || 0,
+            pending: carsStats.pending || 0,
+            sold: carsStats.sold || 0,
+            totalViews: carsStats.total_views || 0,
+            totalLikes: carsStats.total_likes || 0,
+            avgPrice: carsStats.avg_price || 0,
           },
           rentals: {
-            total: filteredRentals.length,
-            available: rentalsAvailable,
-            pending: rentalsPending,
-            sold: rentalsSold,
+            total: rentalsStats.total || 0,
+            available: rentalsStats.available || 0,
+            pending: rentalsStats.pending || 0,
+            sold: rentalsStats.sold || 0,
           },
           plates: {
-            total: filteredPlates.length,
-            available: platesAvailable,
-            pending: platesPending,
-            sold: platesSold,
+            total: platesStats.total || 0,
+            available: platesStats.available || 0,
+            pending: platesStats.pending || 0,
+            sold: platesStats.sold || 0,
           },
         }));
 
-        // Sort cars by views to get the most popular ones
-        const sortedByViews = [...filteredCars]
-          .sort((a, b) => (b.views || 0) - (a.views || 0))
-          .slice(0, 5);
-
-        setPopularCars(sortedByViews);
-
-        // Sort cars by listing date to get the most recent ones
-        const sortedByDate = [...filteredCars]
-          .sort((a, b) => new Date(b.listed_at || 0).getTime() - new Date(a.listed_at || 0).getTime())
-          .slice(0, 5);
-
-        setRecentListings(sortedByDate);
+        // Set popular and recent listings from RPC
+        setPopularCars(carsStats.popular_cars || []);
+        setRecentListings(carsStats.recent_listings || []);
       } catch (error) {
         console.error("Error fetching filtered data:", error);
       }
