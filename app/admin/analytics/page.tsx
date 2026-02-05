@@ -656,7 +656,7 @@ export default function AdminAnalyticsDashboard() {
               </div>
 
               {/* Top Listings by Type */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">Top Cars for Sale</h3>
                   <div className="space-y-3">
@@ -686,7 +686,7 @@ export default function AdminAnalyticsDashboard() {
                     {(!analytics.top_rentals || analytics.top_rentals.length === 0) && <p className="text-gray-500 text-center py-4">No rental listings yet</p>}
                   </div>
                 </div>
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
+                {/* <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">Top Number Plates</h3>
                   <div className="space-y-3">
                     {analytics.top_plates?.slice(0, 5).map((plate, idx) => (
@@ -700,7 +700,7 @@ export default function AdminAnalyticsDashboard() {
                     ))}
                     {(!analytics.top_plates || analytics.top_plates.length === 0) && <p className="text-gray-500 text-center py-4">No plates yet</p>}
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {/* Geographic Distribution */}
