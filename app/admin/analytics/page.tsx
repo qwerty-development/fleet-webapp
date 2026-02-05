@@ -180,7 +180,8 @@ export default function AdminAnalyticsDashboard() {
       // Fetch all required data from Supabase
       const { data: carsData, error: carsError } = await supabase
         .from("cars")
-        .select("*, dealership:dealerships(id, name, location)");
+        .select("*, dealership:dealerships(id, name, location)")
+        .neq("status", "deleted");
 
       if (carsError) throw carsError;
 

@@ -24,6 +24,16 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/components/home/Navbar";
 import AdminNavbar from "@/components/admin/navbar";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Doughnut } from "react-chartjs-2";
+
+// Register ChartJS components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 // Dashboard sections - UPDATED: Added Notifications section
 const SECTIONS = [
@@ -334,13 +344,13 @@ export default function AdminDashboard() {
     setStats((prev) => ({
       ...prev,
       listings: {
-        total: availableCars.length + rentalsAvailable + platesAvailable,
-        cars: availableCars.length,
-        rentals: rentalsAvailable,
-        plates: platesAvailable,
+        total: filteredCars.length + filteredRentals.length + filteredPlates.length,
+        cars: filteredCars.length,
+        rentals: filteredRentals.length,
+        plates: filteredPlates.length,
       },
       cars: {
-        total: availableCars.length,
+        total: filteredCars.length,
         available: availableCars.length,
         pending: pendingCars.length,
         sold: soldCars.length,
@@ -626,135 +636,132 @@ export default function AdminDashboard() {
               
               </div>
 
-              {/* Cars by Status */}
-              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  Car Inventory Status
+              {/* Overall Inventory Status - Donut Chart */}
+              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 shadow-sm mb-8">
+                <h3 className="text-lg font-semibold text-white mb-6">
+                  Overall Inventory Status
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
-                    <div className="flex items-center mb-2">
-                      <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
-                      <h4 className="text-white font-medium">Available</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  {/* Donut Chart */}
+                  <div className="flex justify-center">
+                    <div className="w-72 h-72">
+                      <Doughnut
+                        data={{
+                          labels: ["Available", "Sold", "Pending"],
+                          datasets: [
+                            {
+                              label: "Listings",
+                              data: [
+                                stats.cars.available + stats.rentals.available + stats.plates.available,
+                                stats.cars.sold + stats.rentals.sold + stats.plates.sold,
+                                stats.cars.pending + stats.rentals.pending + stats.plates.pending,
+                              ],
+                              backgroundColor: [
+                                "rgba(16, 185, 129, 0.8)", // Emerald for available
+                                "rgba(59, 130, 246, 0.8)", // Blue for sold
+                                "rgba(245, 158, 11, 0.8)", // Amber for pending
+                              ],
+                              borderColor: [
+                                "rgba(16, 185, 129, 1)",
+                                "rgba(59, 130, 246, 1)",
+                                "rgba(245, 158, 11, 1)",
+                              ],
+                              borderWidth: 2,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: true,
+                          plugins: {
+                            legend: {
+                              position: "bottom",
+                              labels: {
+                                color: "#9CA3AF",
+                                font: {
+                                  size: 14,
+                                },
+                                padding: 15,
+                              },
+                            },
+                            tooltip: {
+                              backgroundColor: "rgba(17, 24, 39, 0.95)",
+                              titleColor: "#fff",
+                              bodyColor: "#fff",
+                              borderColor: "#374151",
+                              borderWidth: 1,
+                              padding: 12,
+                              callbacks: {
+                                label: function (context) {
+                                  const label = context.label || "";
+                                  const value = context.parsed || 0;
+                                  const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                  const percentage = ((value / total) * 100).toFixed(1);
+                                  return `${label}: ${value} (${percentage}%)`;
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
                     </div>
-                    <p className="text-3xl text-emerald-400 font-bold">
-                      {stats.cars.available}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">Ready for sale</p>
                   </div>
 
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
-                    <div className="flex items-center mb-2">
-                      <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
-                      <h4 className="text-white font-medium">Pending</h4>
-                    </div>
-                    <p className="text-3xl text-amber-400 font-bold">
-                      {stats.cars.pending}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">In process</p>
-                  </div>
+                  {/* Breakdown by Type */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-white font-medium mb-3">Breakdown by Listing Type</h4>
+                      <div className="space-y-3">
+                        {/* Cars */}
+                        <div className="bg-gray-900/60 rounded-lg p-4 border border-gray-700/50">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-300 font-medium">🚗 Cars for Sale</span>
+                            <span className="text-white font-bold">{stats.cars.total}</span>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-emerald-400">{stats.cars.available} available</span>
+                            <span className="text-blue-400">{stats.cars.sold} sold</span>
+                            <span className="text-amber-400">{stats.cars.pending} pending</span>
+                          </div>
+                        </div>
 
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
-                    <div className="flex items-center mb-2">
-                      <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
-                      <h4 className="text-white font-medium">Sold</h4>
-                    </div>
-                    <p className="text-3xl text-rose-400 font-bold">
-                      {stats.cars.sold}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      Completed sales
-                    </p>
-                  </div>
-                </div>
-              </div>
+                        {/* Rentals */}
+                        <div className="bg-gray-900/60 rounded-lg p-4 border border-gray-700/50">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-300 font-medium">🚙 Rental Cars</span>
+                            <span className="text-white font-bold">{stats.rentals.total}</span>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-emerald-400">{stats.rentals.available} available</span>
+                            <span className="text-blue-400">{stats.rentals.sold} rented</span>
+                            <span className="text-amber-400">{stats.rentals.pending} pending</span>
+                          </div>
+                        </div>
 
-              {/* Rentals by Status */}
-              {filter !== "user" && (
-                <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
-                  <h3 className="text-lg font-semibold text-white mb-4">
-                    Rental Inventory Status
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
-                      <div className="flex items-center mb-2">
-                        <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
-                        <h4 className="text-white font-medium">Available</h4>
+                        {/* Number Plates */}
+                        <div className="bg-gray-900/60 rounded-lg p-4 border border-gray-700/50">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-300 font-medium">🔢 Number Plates</span>
+                            <span className="text-white font-bold">{stats.plates.total}</span>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-emerald-400">{stats.plates.available} available</span>
+                            <span className="text-blue-400">{stats.plates.sold} sold</span>
+                            <span className="text-amber-400">{stats.plates.pending} pending</span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-3xl text-emerald-400 font-bold">
-                        {stats.rentals.available}
-                      </p>
-                      <p className="text-gray-400 text-sm mt-1">
-                        Ready for rent
-                      </p>
                     </div>
 
-                    <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
-                      <div className="flex items-center mb-2">
-                        <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
-                        <h4 className="text-white font-medium">Pending</h4>
+                    {/* Summary Stats */}
+                    <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-lg p-4 border border-indigo-500/30">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-300 font-medium">Total Active Listings</span>
+                        <span className="text-2xl font-bold text-indigo-400">
+                          {stats.cars.available + stats.rentals.available + stats.plates.available}
+                        </span>
                       </div>
-                      <p className="text-3xl text-amber-400 font-bold">
-                        {stats.rentals.pending}
-                      </p>
-                      <p className="text-gray-400 text-sm mt-1">In process</p>
                     </div>
-
-                    <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
-                      <div className="flex items-center mb-2">
-                        <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
-                        <h4 className="text-white font-medium">Rented/Sold</h4>
-                      </div>
-                      <p className="text-3xl text-rose-400 font-bold">
-                        {stats.rentals.sold}
-                      </p>
-                      <p className="text-gray-400 text-sm mt-1">
-                        Completed transactions
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Plates by Status */}
-              <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  Plate Inventory Status
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-emerald-500/20">
-                    <div className="flex items-center mb-2">
-                      <CheckCircleIcon className="h-5 w-5 text-emerald-400 mr-2" />
-                      <h4 className="text-white font-medium">Available</h4>
-                    </div>
-                    <p className="text-3xl text-emerald-400 font-bold">
-                      {stats.plates.available}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">Ready for sale</p>
-                  </div>
-
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-amber-500/20">
-                    <div className="flex items-center mb-2">
-                      <ClockIcon className="h-5 w-5 text-amber-400 mr-2" />
-                      <h4 className="text-white font-medium">Pending</h4>
-                    </div>
-                    <p className="text-3xl text-amber-400 font-bold">
-                      {stats.plates.pending}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">In process</p>
-                  </div>
-
-                  <div className="bg-gray-900/60 rounded-lg p-4 border border-rose-500/20">
-                    <div className="flex items-center mb-2">
-                      <BanknotesIcon className="h-5 w-5 text-rose-400 mr-2" />
-                      <h4 className="text-white font-medium">Sold</h4>
-                    </div>
-                    <p className="text-3xl text-rose-400 font-bold">
-                      {stats.plates.sold}
-                    </p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      Completed sales
-                    </p>
                   </div>
                 </div>
               </div>
