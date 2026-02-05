@@ -559,11 +559,33 @@ export default function AdminAnalyticsDashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">Listing Type Distribution</h3>
-                  <div className="h-72">{chartData && <Doughnut data={chartData.listingTypeDistribution} options={pieChartOptions} />}</div>
+                  <div className="h-72">
+                    {chartData && chartData.listingTypeDistribution.labels.length > 0 ? (
+                      <Doughnut data={chartData.listingTypeDistribution} options={pieChartOptions} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        <div className="text-center">
+                          <p>No data available</p>
+                          <p className="text-xs mt-1">Run the migration in db/migrations/fix_analytics_charts.sql</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">New Listings Trend</h3>
-                  <div className="h-72">{chartData && <Bar data={chartData.listingsTrend} options={stackedBarOptions} />}</div>
+                  <div className="h-72">
+                    {chartData && chartData.listingsTrend.labels.length > 0 ? (
+                      <Bar data={chartData.listingsTrend} options={stackedBarOptions} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        <div className="text-center">
+                          <p>No data available</p>
+                          <p className="text-xs mt-1">Run the migration in db/migrations/fix_analytics_charts.sql</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -575,7 +597,18 @@ export default function AdminAnalyticsDashboard() {
                 </div>
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">User Growth</h3>
-                  <div className="h-72">{chartData && <Line data={chartData.userGrowth} options={chartOptions} />}</div>
+                  <div className="h-72">
+                    {chartData && chartData.userGrowth.labels.length > 0 ? (
+                      <Line data={chartData.userGrowth} options={chartOptions} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        <div className="text-center">
+                          <p>No data available</p>
+                          <p className="text-xs mt-1">Run the migration in db/migrations/fix_analytics_charts.sql</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -599,7 +632,18 @@ export default function AdminAnalyticsDashboard() {
               <div className="mb-8">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">Price Distribution</h3>
-                  <div className="h-72">{chartData && <Bar data={chartData.priceDistribution} options={chartOptions} />}</div>
+                  <div className="h-72">
+                    {chartData && chartData.priceDistribution.labels.length > 0 ? (
+                      <Bar data={chartData.priceDistribution} options={chartOptions} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        <div className="text-center">
+                          <p>No data available</p>
+                          <p className="text-xs mt-1">Run the migration in db/migrations/fix_analytics_charts.sql</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -663,7 +707,18 @@ export default function AdminAnalyticsDashboard() {
               <div className="mb-8">
                 <div className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-xl p-5 shadow-sm">
                   <h3 className="text-lg font-semibold text-white mb-4">Geographic Distribution</h3>
-                  <div className="h-80">{chartData && <Bar data={chartData.geographicalData} options={chartOptions} />}</div>
+                  <div className="h-80">
+                    {chartData && chartData.geographicalData.labels.length > 0 ? (
+                      <Bar data={chartData.geographicalData} options={chartOptions} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        <div className="text-center">
+                          <p>No data available</p>
+                          <p className="text-xs mt-1">Run the migration in db/migrations/fix_analytics_charts.sql</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
