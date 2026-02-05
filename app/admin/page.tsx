@@ -161,36 +161,22 @@ export default function AdminDashboard() {
     async function fetchDashboardData() {
       setIsLoading(true);
       try {
-        // Fetch cars data
-        const { data: carsData, error: carsError } = await supabase
-          .from("cars")
-          .select("*")
-          .neq("status", "deleted");
+        // Use RPC function to get all stats efficiently (bypasses 1000 row limit)
+        const { data: dashboardStats, error: statsError } = await supabase
+          .rpc('get_admin_dashboard_stats');
 
-        if (carsError) throw carsError;
+        if (statsError) throw statsError;
 
-        // UPDATED: Fetch rentals and plates data for status breakdown
-        const [
-          { data: rentalsData, error: rentalsError },
-          { data: platesData, error: platesError },
-        ] = await Promise.all([
-          supabase
-            .from("cars_rent")
-            .select("status, dealership_id")
-            .neq("status", "deleted"),
-          supabase
-            .from("number_plates")
-            .select("status, dealership_id, user_id")
-            .neq("status", "deleted"),
-        ]);
+        // Extract data from RPC response
+        const carsStats = dashboardStats?.cars || {};
+        const rentalsStats = dashboardStats?.rentals || {};
+        const platesStats = dashboardStats?.plates || {};
 
-        if (rentalsError) throw rentalsError;
-        if (platesError) throw platesError;
-
+        // Set raw data for filtering
         setRawData({
-          cars: carsData || [],
-          rentals: rentalsData || [],
-          plates: platesData || [],
+          cars: carsStats.popular_cars || [],
+          rentals: [],
+          plates: [],
         });
 
         // Users counts (server-side counts avoid 1000-row cap)
@@ -253,6 +239,33 @@ export default function AdminDashboard() {
 
         setStats((prev) => ({
           ...prev,
+          listings: {
+            total: (carsStats.total || 0) + (rentalsStats.total || 0) + (platesStats.total || 0),
+            cars: carsStats.total || 0,
+            rentals: rentalsStats.total || 0,
+            plates: platesStats.total || 0,
+          },
+          cars: {
+            total: carsStats.total || 0,
+            available: carsStats.available || 0,
+            pending: carsStats.pending || 0,
+            sold: carsStats.sold || 0,
+            totalViews: carsStats.total_views || 0,
+            totalLikes: carsStats.total_likes || 0,
+            avgPrice: carsStats.avg_price || 0,
+          },
+          rentals: {
+            total: rentalsStats.total || 0,
+            available: rentalsStats.available || 0,
+            pending: rentalsStats.pending || 0,
+            sold: rentalsStats.sold || 0,
+          },
+          plates: {
+            total: platesStats.total || 0,
+            available: platesStats.available || 0,
+            pending: platesStats.pending || 0,
+            sold: platesStats.sold || 0,
+          },
           users: {
             total: totalUsersCount || 0,
             authenticated: authenticatedUsersCount || 0,
@@ -266,6 +279,9 @@ export default function AdminDashboard() {
             },
         }));
 
+        // Set popular and recent listings from RPC
+        setPopularCars(carsStats.popular_cars || []);
+        setRecentListings(carsStats.recent_listings || []);
         setRecentUsers(recentUsersData || []);
 
       } catch (error) {
@@ -280,116 +296,119 @@ export default function AdminDashboard() {
 
   // Process data based on filter
   useEffect(() => {
-    const { cars, rentals, plates } = rawData;
-
-    let filteredCars = cars;
-    let filteredRentals = rentals;
-    let filteredPlates = plates;
-
-    if (filter === "dealer") {
-      filteredCars = cars.filter((c) => c.dealership_id);
-      filteredRentals = rentals.filter((r) => r.dealership_id);
-      filteredPlates = plates.filter((p) => p.dealership_id);
-    } else if (filter === "user") {
-      // For user listings, ensure dealership_id is null AND user_id is present
-      filteredCars = cars.filter((c) => !c.dealership_id && c.user_id);
-      filteredRentals = rentals.filter((r) => !r.dealership_id);
-      filteredPlates = plates.filter((p) => !p.dealership_id && p.user_id);
-    } else {
-      // For "all", we still want to filter out ghost records (no dealer AND no user)
-      // to ensure consistency (Dealer + User = All)
-      // Cars and Rentals were verified to be clean, but Plates have ghost records
-      filteredPlates = plates.filter((p) => p.dealership_id || p.user_id);
+    // For "All" filter, we already have the stats from RPC
+    if (filter === "all") {
+      return; // Stats already set from RPC
     }
 
-    // Process cars data
-    const availableCars = filteredCars.filter(
-      (car) => car.status === "available"
-    );
-    const pendingCars = filteredCars.filter((car) => car.status === "pending");
-    const soldCars = filteredCars.filter((car) => car.status === "sold");
+    // For dealer/user filters, we need to fetch the full data
+    async function fetchFilteredData() {
+      try {
+        const { data: carsData } = await supabase
+          .from("cars")
+          .select("*")
+          .neq("status", "deleted");
 
-    const totalViews = filteredCars.reduce(
-      (sum, car) => sum + (car.views || 0),
-      0
-    );
-    const totalLikes = filteredCars.reduce(
-      (sum, car) => sum + (car.likes || 0),
-      0
-    );
-    // Calculate average price only for available cars
-    const avgPrice =
-      availableCars.length > 0
-        ? Math.round(
-            availableCars.reduce((sum, car) => sum + (car.price || 0), 0) /
-              availableCars.length
-          )
-        : 0;
+        const { data: rentalsData } = await supabase
+          .from("cars_rent")
+          .select("status, dealership_id")
+          .neq("status", "deleted");
 
-    // Process rentals data
-    const rentalsAvailable =
-      filteredRentals.filter((r) => r.status === "available").length || 0;
-    const rentalsPending =
-      filteredRentals.filter((r) => r.status === "pending").length || 0;
-    const rentalsSold =
-      filteredRentals.filter((r) => r.status === "sold").length || 0;
+        const { data: platesData } = await supabase
+          .from("number_plates")
+          .select("status, dealership_id, user_id")
+          .neq("status", "deleted");
 
-    // Process plates data
-    const platesAvailable =
-      filteredPlates.filter((p) => p.status === "available").length || 0;
-    const platesPending =
-      filteredPlates.filter((p) => p.status === "pending").length || 0;
-    const platesSold = filteredPlates.filter((p) => p.status === "sold").length || 0;
+        const cars = carsData || [];
+        const rentals = rentalsData || [];
+        const plates = platesData || [];
 
-    setStats((prev) => ({
-      ...prev,
-      listings: {
-        total: filteredCars.length + filteredRentals.length + filteredPlates.length,
-        cars: filteredCars.length,
-        rentals: filteredRentals.length,
-        plates: filteredPlates.length,
-      },
-      cars: {
-        total: filteredCars.length,
-        available: availableCars.length,
-        pending: pendingCars.length,
-        sold: soldCars.length,
-        totalViews,
-        totalLikes,
-        avgPrice,
-      },
-      rentals: {
-        total: filteredRentals.length,
-        available: rentalsAvailable,
-        pending: rentalsPending,
-        sold: rentalsSold,
-      },
-      plates: {
-        total: filteredPlates.length,
-        available: platesAvailable,
-        pending: platesPending,
-        sold: platesSold,
-      },
-    }));
+        let filteredCars = cars;
+        let filteredRentals = rentals;
+        let filteredPlates = plates;
 
-    // Sort cars by views to get the most popular ones
-    const sortedByViews = [...filteredCars]
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
-      .slice(0, 5);
+        if (filter === "dealer") {
+          filteredCars = cars.filter((c) => c.dealership_id);
+          filteredRentals = rentals.filter((r) => r.dealership_id);
+          filteredPlates = plates.filter((p) => p.dealership_id);
+        } else if (filter === "user") {
+          filteredCars = cars.filter((c) => !c.dealership_id && c.user_id);
+          filteredRentals = rentals.filter((r) => !r.dealership_id);
+          filteredPlates = plates.filter((p) => !p.dealership_id && p.user_id);
+        }
 
-    setPopularCars(sortedByViews);
+        // Process cars data
+        const availableCars = filteredCars.filter((car) => car.status === "available");
+        const pendingCars = filteredCars.filter((car) => car.status === "pending");
+        const soldCars = filteredCars.filter((car) => car.status === "sold");
 
-    // Sort cars by listing date to get the most recent ones
-    const sortedByDate = [...filteredCars]
-      .sort(
-        (a, b) =>
-          new Date(b.listed_at || 0).getTime() -
-          new Date(a.listed_at || 0).getTime()
-      )
-      .slice(0, 5);
+        const totalViews = filteredCars.reduce((sum, car) => sum + (car.views || 0), 0);
+        const totalLikes = filteredCars.reduce((sum, car) => sum + (car.likes || 0), 0);
+        const avgPrice = availableCars.length > 0
+          ? Math.round(availableCars.reduce((sum, car) => sum + (car.price || 0), 0) / availableCars.length)
+          : 0;
 
-    setRecentListings(sortedByDate);
-  }, [rawData, filter]);
+        // Process rentals data
+        const rentalsAvailable = filteredRentals.filter((r) => r.status === "available").length || 0;
+        const rentalsPending = filteredRentals.filter((r) => r.status === "pending").length || 0;
+        const rentalsSold = filteredRentals.filter((r) => r.status === "sold").length || 0;
+
+        // Process plates data
+        const platesAvailable = filteredPlates.filter((p) => p.status === "available").length || 0;
+        const platesPending = filteredPlates.filter((p) => p.status === "pending").length || 0;
+        const platesSold = filteredPlates.filter((p) => p.status === "sold").length || 0;
+
+        setStats((prev) => ({
+          ...prev,
+          listings: {
+            total: filteredCars.length + filteredRentals.length + filteredPlates.length,
+            cars: filteredCars.length,
+            rentals: filteredRentals.length,
+            plates: filteredPlates.length,
+          },
+          cars: {
+            total: filteredCars.length,
+            available: availableCars.length,
+            pending: pendingCars.length,
+            sold: soldCars.length,
+            totalViews,
+            totalLikes,
+            avgPrice,
+          },
+          rentals: {
+            total: filteredRentals.length,
+            available: rentalsAvailable,
+            pending: rentalsPending,
+            sold: rentalsSold,
+          },
+          plates: {
+            total: filteredPlates.length,
+            available: platesAvailable,
+            pending: platesPending,
+            sold: platesSold,
+          },
+        }));
+
+        // Sort cars by views to get the most popular ones
+        const sortedByViews = [...filteredCars]
+          .sort((a, b) => (b.views || 0) - (a.views || 0))
+          .slice(0, 5);
+
+        setPopularCars(sortedByViews);
+
+        // Sort cars by listing date to get the most recent ones
+        const sortedByDate = [...filteredCars]
+          .sort((a, b) => new Date(b.listed_at || 0).getTime() - new Date(a.listed_at || 0).getTime())
+          .slice(0, 5);
+
+        setRecentListings(sortedByDate);
+      } catch (error) {
+        console.error("Error fetching filtered data:", error);
+      }
+    }
+
+    fetchFilteredData();
+  }, [filter]);
 
   const navigateToSection = (sectionId: string) => {
     router.push(`/admin/${sectionId}`);
