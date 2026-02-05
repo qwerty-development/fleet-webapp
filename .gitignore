@@ -43,4 +43,4 @@ next-env.d.ts
 .codacy/codacy.yaml
 .github/instructions/codacy.instructions.md
 
-db/create_admin_dashboard_stats_rpc.sql
+db/create_admin_analytics_v2_rpc.sql
