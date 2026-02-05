@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { useAuth } from "@/utils/AuthContext";
 import { useGuestUser } from "@/utils/GuestUserContext";
 import Hero from "@/components/Landing Page/Hero";
 // Critical sections load immediately
-import BentoGrid from "@/components/Landing Page/BentoGrid";
 import Navbar from "@/components/home/Navbar";
 import MarqueeLogos from "@/components/Landing Page/MarqueeLogos";
 import DealerDetails from "@/components/Landing Page/DealerDetails";
@@ -141,45 +141,46 @@ export default function Home() {
         className="min-h-screen relative overflow-hidden"
         style={{ visibility: showSplash ? "hidden" : "visible" }}
       >
-        {/* Animated Background */}
+        {/* Modern Animated Background */}
         <div className="fixed inset-0 w-full h-full -z-10">
           <div
-            className="absolute inset-0 bg-background"
-            style={{
-              background:
-                "linear-gradient(to bottom, #111111, #1a1a1a, #222222)",
-            }}
+            className="absolute inset-0 bg-gradient-to-b from-slate-950 via-black to-slate-950"
           />
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-40"
             style={{
               backgroundSize: "200% 200%",
               backgroundImage:
-                "radial-gradient(circle at 30% 30%, rgba(213,80,4,0.4) 0%, transparent 30%), radial-gradient(circle at 70% 60%, rgba(213,80,4,0.3) 0%, transparent 40%)",
+                "radial-gradient(circle at 20% 30%, rgba(213,80,4,0.5) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(213,80,4,0.3) 0%, transparent 50%)",
             }}
           />
           <div className="absolute inset-0">
-            {[...Array(20)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full bg-accent/20"
-                style={{
-                  width: `${Math.random() * 40 + 10}px`,
-                  height: `${Math.random() * 40 + 10}px`,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  opacity: Math.random() * 0.3 + 0.1,
-                  filter: "blur(8px)",
-                }}
-              />
-            ))}
+            {[...Array(15)].map((_, i) => {
+              const size = Math.random() * 50 + 15;
+              const left = Math.random() * 100;
+              const top = Math.random() * 100;
+              return (
+                <div
+                  key={i}
+                  className="absolute rounded-full bg-accent/15"
+                  style={{
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    left: `${left}%`,
+                    top: `${top}%`,
+                    opacity: Math.random() * 0.4 + 0.1,
+                    filter: "blur(12px)",
+                  }}
+                />
+              );
+            })}
           </div>
           <div
-            className="absolute inset-0 opacity-10"
+            className="absolute inset-0 opacity-5"
             style={{
               backgroundImage:
-                "linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
-              backgroundSize: "40px 40px",
+                "linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)",
+              backgroundSize: "60px 60px",
               backgroundPosition: `0px ${scrollY * 0.1}px`,
             }}
           />
@@ -194,19 +195,15 @@ export default function Home() {
           <section>
             <Hero />
           </section>
-          <section className="bg-gray-100">
-            <BentoGrid />
-          </section>
 
           {/* Content Sections */}
-          <div className="relative bg-gray-100 flex flex-col justify-center items-center z-30">
+          <div className="relative bg-gradient-to-b from-white via-gray-50 to-white flex flex-col justify-center items-center z-30">
             <AppShowcase />
             <div className="w-[98%]">
               <DealerDetails />
             </div>
 
             {/* <AboutSection /> */}
-            <MarqueeLogos />
             <ContactSection />
             <Footer />
           </div>

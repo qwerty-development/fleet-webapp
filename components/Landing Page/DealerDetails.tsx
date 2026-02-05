@@ -18,7 +18,7 @@ const DealerDetails: React.FC = () => {
             className="flex flex-col space-y-6 md:w-1/2"
           >
             <motion.span
-              className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20 w-fit"
+              className="inline-block text-accent font-bold mb-3 px-5 py-2 rounded-full bg-accent/20 border-2 border-accent/40 w-fit uppercase tracking-wider text-sm backdrop-blur-sm"
               initial={{ opacity: 0, scale: 0.8 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
@@ -27,19 +27,19 @@ const DealerDetails: React.FC = () => {
               For Dealerships
             </motion.span>
 
-            <h2 className="text-4xl md:text-5xl text-white lg:text-6xl font-bold">
-              Dealer's {""}
-              <span className="text-accent font-bold bg-black/10 rounded-md p-1">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white font-black leading-tight">
+              Dealer's{" "}
+              <span className="bg-gradient-to-r from-accent to-accent-light bg-clip-text text-transparent">
                 Haven
               </span>
             </h2>
 
-            <h3 className="text-xl md:text-2xl text-white/85 leading-relaxed">
+            <h3 className="text-xl md:text-2xl lg:text-3xl text-white/90 leading-relaxed font-semibold mt-4">
               Streamline your inventory management and connect with potential
               buyers through our comprehensive dealership platform.
             </h3>
 
-            <p className="text-white/70 text-lg">
+            <p className="text-white/80 text-lg md:text-xl font-medium mt-4">
               Our platform offers powerful tools for dealerships to showcase
               their inventory, manage listings, and track analytics - all in one
               place.
@@ -53,7 +53,7 @@ const DealerDetails: React.FC = () => {
               >
                 <Link
                   href="/dealerships"
-                  className="bg-accent hover:bg-accent/90 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 inline-flex items-center"
+                  className="bg-gradient-to-r from-accent to-accent-light hover:from-accent-dark hover:to-accent text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 inline-flex items-center shadow-xl hover:shadow-2xl transform hover:scale-105 uppercase tracking-wide text-sm"
                 >
                   Join Our Network
                   <svg
@@ -78,7 +78,7 @@ const DealerDetails: React.FC = () => {
               >
                 <Link
                   href="/features"
-                  className="border border-white/20 hover:border-accent/50 text-white/90 hover:text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 inline-flex items-center"
+                  className="border-2 border-white/30 hover:border-accent/60 text-white hover:text-accent font-bold py-4 px-8 rounded-2xl transition-all duration-300 inline-flex items-center backdrop-blur-sm bg-white/10 hover:bg-white/20 uppercase tracking-wide text-sm"
                 >
                   Learn More
                 </Link>
@@ -165,22 +165,22 @@ const DealerDetails: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="flex flex-col items-center text-center p-6 rounded-xl bg-black/20 border border-white/10 hover:border-accent/30 hover:bg-black/30 transition-all duration-300 shadow-lg hover:shadow-accent/5 z-[9999]"
+              className="flex flex-col items-center text-center p-8 rounded-2xl bg-white/10 backdrop-blur-xl border-2 border-white/20 hover:border-accent/50 hover:bg-white/15 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-accent/20 z-[9999] transform hover:-translate-y-1"
             >
-              <div className="bg-accent/20 p-4 rounded-full mb-4 border border-accent/30">
+              <div className="bg-gradient-to-br from-accent/30 to-accent-light/30 p-5 rounded-2xl mb-5 border-2 border-accent/40 shadow-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 text-accent"
+                  className="h-10 w-10 text-accent"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-2xl font-black text-white mb-3">
                 Expanded Reach
               </h3>
-              <p className="text-white/70">
+              <p className="text-white/80 font-medium">
                 Connect with thousands of potential buyers actively searching
                 for vehicles in your area.
               </p>
@@ -191,12 +191,12 @@ const DealerDetails: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="flex flex-col items-center text-center p-6 rounded-xl bg-black/20 border border-white/10 hover:border-accent/30 hover:bg-black/30 transition-all duration-300 shadow-lg hover:shadow-accent/5 z-[9999]"
+              className="flex flex-col items-center text-center p-8 rounded-2xl bg-white/10 backdrop-blur-xl border-2 border-white/20 hover:border-accent/50 hover:bg-white/15 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-accent/20 z-[9999] transform hover:-translate-y-1"
             >
-              <div className="bg-accent/20 p-4 rounded-full mb-4 border border-accent/30">
+              <div className="bg-gradient-to-br from-accent/30 to-accent-light/30 p-5 rounded-2xl mb-5 border-2 border-accent/40 shadow-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 text-accent"
+                  className="h-10 w-10 text-accent"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -207,10 +207,10 @@ const DealerDetails: React.FC = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-2xl font-black text-white mb-3">
                 Powerful Analytics
               </h3>
-              <p className="text-white/70">
+              <p className="text-white/80 font-medium">
                 Gain insights into customer behavior and optimize your inventory
                 with our detailed analytics.
               </p>
@@ -221,12 +221,12 @@ const DealerDetails: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="flex flex-col items-center text-center p-6 rounded-xl bg-black/20 border border-white/10 hover:border-accent/30 hover:bg-black/30 transition-all duration-300 shadow-lg hover:shadow-accent/5 z-[9999]"
+              className="flex flex-col items-center text-center p-8 rounded-2xl bg-white/10 backdrop-blur-xl border-2 border-white/20 hover:border-accent/50 hover:bg-white/15 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-accent/20 z-[9999] transform hover:-translate-y-1"
             >
-              <div className="bg-accent/20 p-4 rounded-full mb-4 border border-accent/30">
+              <div className="bg-gradient-to-br from-accent/30 to-accent-light/30 p-5 rounded-2xl mb-5 border-2 border-accent/40 shadow-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 text-accent"
+                  className="h-10 w-10 text-accent"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -237,10 +237,10 @@ const DealerDetails: React.FC = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h3 className="text-2xl font-black text-white mb-3">
                 Streamlined Management
               </h3>
-              <p className="text-white/70">
+              <p className="text-white/80 font-medium">
                 Easily manage your inventory, update listings, and respond to
                 inquiries all in one place.
               </p>

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AdjustmentsHorizontalIcon,
   ChevronDownIcon,
@@ -11,9 +12,16 @@ import {
   GlobeAltIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
+  SwatchIcon,
+  ClockIcon,
+  SparklesIcon,
+  TruckIcon,
 } from "@heroicons/react/24/outline";
 import { FilterState } from "@/types";
 import { createClient } from "@/utils/supabase/client";
+import Image from "next/image";
+import CarCard from "./CarCard";
+import MarqueeLogos from "./MarqueeLogos";
 
 // Define constants for filter options
 export const SORT_OPTIONS = {
@@ -90,6 +98,11 @@ export default function Hero() {
   const [models, setModels] = useState<string[]>([]);
   const [isLoadingMakes, setIsLoadingMakes] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [randomCars, setRandomCars] = useState<any[]>([]);
+  const [loadingRandomCars, setLoadingRandomCars] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -151,6 +164,98 @@ export default function Hero() {
 
     fetchModels();
   }, [filters.make]);
+
+  // Fetch all banners for display
+  useEffect(() => {
+    const fetchBanners = async () => {
+      setLoadingBanners(true);
+      try {
+        const { data, error } = await supabase
+          .from("banners")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setBanners(data);
+        } else {
+          setBanners([]);
+        }
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+      } finally {
+        setLoadingBanners(false);
+      }
+    };
+
+    fetchBanners();
+  }, []);
+
+  // Auto-rotate banners every 5 seconds
+  useEffect(() => {
+    if (banners.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [banners.length]);
+
+  // Fetch 10 random cars from 10 different dealerships
+  useEffect(() => {
+    const fetchRandomCars = async () => {
+      setLoadingRandomCars(true);
+      try {
+        // First, get 10 random dealership IDs
+        const { data: dealerships, error: dealerError } = await supabase
+          .from("dealerships")
+          .select("id")
+          .limit(100);
+
+        if (dealerError) throw dealerError;
+
+        if (!dealerships || dealerships.length === 0) {
+          setRandomCars([]);
+          setLoadingRandomCars(false);
+          return;
+        }
+
+        // Shuffle and pick 10 random dealership IDs
+        const shuffledDealerships = dealerships.sort(() => 0.5 - Math.random());
+        const selectedDealershipIds = shuffledDealerships
+          .slice(0, 10)
+          .map((d) => d.id);
+
+        // Fetch one random car from each dealership
+        const carPromises = selectedDealershipIds.map(async (dealershipId) => {
+          const { data, error } = await supabase
+            .from("cars")
+            .select("*, dealerships (name, logo, phone, location, latitude, longitude)")
+            .eq("dealership_id", dealershipId)
+            .eq("status", "available")
+            .limit(1);
+
+          if (error || !data || data.length === 0) return null;
+
+          // Get a random car from this dealership if there are multiple
+          const randomIndex = Math.floor(Math.random() * data.length);
+          return data[randomIndex];
+        });
+
+        const cars = await Promise.all(carPromises);
+        const validCars = cars.filter((car) => car !== null);
+        setRandomCars(validCars);
+      } catch (error) {
+        console.error("Error fetching random cars:", error);
+      } finally {
+        setLoadingRandomCars(false);
+      }
+    };
+
+    fetchRandomCars();
+  }, []);
 
   // Handle search query change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,205 +377,264 @@ export default function Hero() {
   }, [openDropdown]);
 
   return (
-    <div className="relative bg-gray-100">
-      {/* Top Section - 60% viewport height with background image */}
-      <div className="relative h-[60vh] lg:h-[70vh] overflow-visible">
-        {/* Background Image */}    
+    <div className="relative bg-white">
+      {/* Hero Section - 3/8 viewport height with image, starts after navbar */}
+      <div className="relative h-[37.5vh] overflow-hidden" style={{ marginTop: '64px' }}>
+        {/* Hero Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('/hero-fleet.jpg')",
-            backgroundPosition: "center 20%",
+            backgroundImage: "url('/hero-nw.png')",
+            backgroundPosition: "center center",
+            backgroundSize: "cover",
           }}
         />
-        {/* Enhanced gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black/70" />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/15" />
-
-        {/* Hero Text Content - Left Aligned */}
-        <div className="absolute inset-0 flex items-center px-8 sm:px-12 lg:px-16 xl:px-20">
-          <div className="text-white max-w-4xl">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <h1 className=" text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-4 lg:mb-6 bg-gradient-to-r text-white bg-clip-text text-transparent leading-tight">
-                Find Your <br className="hidden md:block" />{" "}
-                <span className="text-accent">
-                  Perfect Car
-                </span>
-              </h1>
-              <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-blue-100 font-light leading-relaxed">
-                Discover thousands of quality vehicles{" "}
-                <br className="hidden md:block" /> from trusted dealers
-              </p>
-            </motion.div>
-          </div>
+        {/* Dark overlay layer */}
+        <div className="absolute inset-0 bg-black/30" />
+        
+        {/* Content Overlay */}
+        <div className="relative h-full flex flex-col justify-center items-center px-6 sm:px-8 lg:px-12 z-10">
+          {/* Main Heading */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-6"
+          >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2 sm:mb-3 drop-shadow-lg px-4">
+              Find Your Perfect Car
+            </h1>
+            <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto drop-shadow-md px-4">
+              Browse, Buy, Sell - All in one place
+            </p>
+          </motion.div>
         </div>
+      </div>
 
-        {/* Floating Search Bar - positioned at bottom of top section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-          className="absolute bottom-0 left-0 right-0 z-30" // motion.div is positioned at the bottom of the parent
-        >
-          {/* Inner div to handle the static translateY */}
-          <div className="transform translate-y-1/2">
-            {" "}
-            {/* This div applies the desired offset */}
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-0 shadow-2xl border border-white/30 hover:shadow-3xl transition-shadow duration-300">
+      {/* Content Section Below Hero - Search bar on top */}
+      <div className="relative -mt-8 sm:-mt-12 pb-8 sm:pb-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
+          {/* Search Bar - Positioned on top of next section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mb-8"
+          >
+            <div className="max-w-4xl mx-auto">
+              <form onSubmit={handleSearch} className="bg-white border-2 border-gray-200 rounded-lg shadow-xl hover:shadow-2xl transition-shadow duration-300">
                 <div className="relative flex items-center">
-                  <MagnifyingGlassIcon className="absolute left-4 sm:left-6 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
-
+                  <MagnifyingGlassIcon className="absolute left-4 sm:left-5 h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={handleInputChange}
-                    onKeyPress={(e) => e.key === "Enter" && handleSearch(e)}
                     placeholder="Search by make, model, or keyword..."
-                    className="flex-1 py-4 sm:py-5 lg:py-6 pl-12 sm:pl-16 pr-20 sm:pr-32 bg-transparent border-none text-gray-800 placeholder-gray-500 focus:outline-none text-base sm:text-lg lg:text-xl font-medium"
+                    className="flex-1 py-4 sm:py-5 pl-12 sm:pl-14 pr-24 sm:pr-32 bg-transparent border-none text-gray-900 placeholder-gray-500 focus:outline-none text-base sm:text-lg"
                   />
-
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={handleClear}
-                      className="absolute right-16 sm:right-32 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                      className="absolute right-20 sm:right-24 text-gray-400 hover:text-gray-600 transition-colors p-2"
+                      aria-label="Clear search"
                     >
-                      <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                   )}
-
                   <button
-                    onClick={handleSearch}
-                    className="absolute right-2 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 bg-gradient-to-r from-[#D55004] to-[#FF6B1A] hover:from-[#B8450A] hover:to-[#D55004] text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+                    type="submit"
+                    className="absolute right-2 sm:right-3 px-4 sm:px-8 py-2.5 sm:py-3 bg-accent hover:bg-accent-dark text-white font-semibold rounded-lg transition-colors duration-200 text-sm sm:text-base"
                   >
-                    <span className="hidden sm:inline">Search</span>
-                    <MagnifyingGlassIcon className="h-5 w-5 sm:hidden" />
+                    Search
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
 
-      {/* Bottom Section - fit content with top padding instead of fixed height */}
-      <div className="relative pt-24 min-h-[40vh]  bg-gradient-to-b bg-gray-200 shadow-xl rounded-b-[60px] md:rounded-b-[200px] overflow-visible">
-        {/* Filter Section */}
-        <div className="flex items-center justify-center pb-8 px-4 sm:px-6 lg:px-8">
+          {/* Quick Filter Chips - With Icons */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-            className="max-w-6xl mx-auto w-full relative z-20"
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-wrap justify-center gap-3 mb-12"
           >
-            {/* Filter Card */}
-            <div className="bg-white/85 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white hover:shadow-3xl transition-all duration-300 overflow-visible">
-              {/* Responsive Filter Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-                {/* Make */}
-                <div className="space-y-2">
-                  <CustomSelect
-                    id="make"
-                    options={makes.map((make) => ({
-                      value: make,
-                      label: make,
-                    }))}
-                    value={filters.make[0] || ""}
-                    onChange={handleMakeChange}
-                    placeholder="Any Make"
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                    isLoading={isLoadingMakes}
-                  />
-                </div>
+            {[
+              { 
+                label: "New", 
+                query: "condition=new",
+                icon: <SparklesIcon className="h-4 w-4" />
+              },
+              { 
+                label: "Used", 
+                query: "condition=used",
+                icon: <ClockIcon className="h-4 w-4" />
+              },
+              { 
+                label: "Under $50k", 
+                query: "maxPrice=50000",
+                icon: <CurrencyDollarIcon className="h-4 w-4" />
+              },
+              { 
+                label: "Red", 
+                query: "color=Red",
+                icon: <SwatchIcon className="h-4 w-4" />
+              },
+              { 
+                label: "Low Mileage", 
+                query: "maxMileage=50000",
+                icon: <ClockIcon className="h-4 w-4" />
+              },
+              { 
+                label: "SUVs", 
+                query: "category=SUV",
+                icon: <TruckIcon className="h-4 w-4" />
+              },
+              { 
+                label: "Electric", 
+                query: "fuel=Electric",
+                icon: <SparklesIcon className="h-4 w-4" />
+              },
+              { 
+                label: "Hybrids", 
+                query: "fuel=Hybrid",
+                icon: <Cog6ToothIcon className="h-4 w-4" />
+              },
+            ].map((chip, idx) => (
+              <Link
+                key={idx}
+                href={`/home?${chip.query}`}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-accent hover:text-white text-gray-700 font-medium rounded-full transition-all duration-200 text-sm"
+              >
+                {chip.icon}
+                <span>{chip.label}</span>
+              </Link>
+            ))}
+          </motion.div>
 
-                {/* Model */}
-                <div className="space-y-2">
-                  <CustomSelect
-                    id="model"
-                    options={models.map((model) => ({
-                      value: model,
-                      label: model,
-                    }))}
-                    value={filters.model[0] || ""}
-                    onChange={handleModelChange}
-                    placeholder="Any Model"
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                    isLoading={isLoadingModels}
-                    disabled={filters.make.length === 0}
-                  />
-                </div>
+          {/* Single Banner Component - Text Left, Image Right */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mb-12"
+          >
+            {loadingBanners ? (
+              <div className="flex justify-center py-12">
+                <div className="text-gray-400">Loading banner...</div>
+              </div>
+            ) : banners.length > 0 ? (
+              <div className="relative overflow-hidden rounded-xl shadow-2xl hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] transition-all duration-300 bg-white">
+                <div className="grid grid-cols-1 lg:grid-cols-2">
+                  {/* Text Content - Left */}
+                  <div className="bg-gray-900 p-4 sm:p-6 lg:p-8 flex flex-col justify-center space-y-3 sm:space-y-4 aspect-[2/1]">
+                    <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                      <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight px-2 sm:px-0">
+                        Stay up to date with all the{" "}
+                        <span className="text-white">dealership drops</span>
+                      </h2>
+                      <p className="text-sm sm:text-base text-gray-300 leading-relaxed px-2 sm:px-0">
+                        Get notified about the latest vehicles, exclusive deals, and special offers from our network of verified dealerships. Never miss out on your dream car.
+                      </p>
+                    </div>
+                    {banners[currentBannerIndex]?.redirect_to && (
+                      <div className="px-2 sm:px-0">
+                        <Link
+                          href={banners[currentBannerIndex].redirect_to}
+                          className="inline-block px-5 sm:px-6 py-2 sm:py-2.5 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-200 text-xs sm:text-sm"
+                        >
+                          Explore Now
+                        </Link>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Model Year */}
-                <div className="space-y-2">
-                  <CustomSelect
-                    id="modelYear"
-                    options={MODEL_YEARS}
-                    value={
-                      filters.yearRange[0] === filters.yearRange[1] &&
-                      filters.yearRange[0] !== 1900
-                        ? filters.yearRange[0].toString()
-                        : ""
-                    }
-                    onChange={handleModelYearChange}
-                    placeholder="Any Year"
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                  />
-                </div>
-
-                {/* Price Range */}
-                <div className="space-y-2">
-                  <CustomSelect
-                    id="priceRange"
-                    options={PRICE_RANGES.map((range) => ({
-                      value: `${range.value[0]}-${range.value[1]}`,
-                      label: range.label,
-                      priceRange: range.value,
-                    }))}
-                    value={`${filters.priceRange[0]}-${filters.priceRange[1]}`}
-                    onChange={(value: string, option?: SelectOption) => {
-                      if (option?.priceRange) {
-                        selectPriceRange(
-                          option.priceRange[0],
-                          option.priceRange[1]
-                        );
-                      }
-                    }}
-                    placeholder="Any Price"
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                  />
+                  {/* Banner Image - Right */}
+                  <div className="relative w-full aspect-[2/1]">
+                    <Image
+                      key={currentBannerIndex}
+                      src={banners[currentBannerIndex].image_url}
+                      alt="Banner"
+                      fill
+                      className="object-cover transition-opacity duration-500"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="text-center py-12 text-gray-400">
+                No banners available at the moment
+              </div>
+            )}
+          </motion.div>
 
-              {/* Action Buttons */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.4 }}
-                className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-8"
-              >
-                <button
-                  onClick={handleResetFilters}
-                  className="px-6 sm:px-8 lg:px-10 py-3 sm:py-4 bg-white/90 hover:bg-white text-gray-700 font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl border border-gray-200 hover:border-gray-300 backdrop-blur-sm text-sm sm:text-base"
-                >
-                  Reset Filters
-                </button>
-                <button
-                  onClick={handleSearch}
-                  className="px-8 sm:px-10 lg:px-12 py-3 sm:py-4 bg-gradient-to-r from-[#D55004] to-[#FF6B1A] hover:from-[#B8450A] hover:to-[#D55004] text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
-                >
-                  View Results
-                </button>
-              </motion.div>
-            </div>
+          {/* Random Cars from Different Dealerships - Horizontal Scroll */}
+          {randomCars.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mb-12"
+            >
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-4 sm:mb-6 px-4 text-center">
+                Featured from Our Dealerships
+              </h2>
+              {loadingRandomCars ? (
+                <div className="flex justify-center py-12">
+                  <div className="text-gray-400">Loading cars...</div>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto pb-4 scrollbar-hide -mx-4 sm:mx-0">
+                    <div className="flex gap-3 sm:gap-4 md:gap-6 px-4" style={{ width: 'max-content' }}>
+                      {randomCars.map((car) => (
+                        <div
+                          key={car.id}
+                          className="flex-shrink-0 w-[260px] xs:w-[280px] sm:w-[300px] md:w-[320px] lg:w-[360px]"
+                        >
+                          <CarCard car={car} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <style jsx global>{`
+                    .scrollbar-hide::-webkit-scrollbar {
+                      display: none;
+                    }
+                    .scrollbar-hide {
+                      -ms-overflow-style: none;
+                      scrollbar-width: none;
+                    }
+                  `}</style>
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {/* Marquee Logos - Compact */}
+          {randomCars.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="mb-12"
+            >
+              <MarqueeLogos />
+            </motion.div>
+          )}
+
+          {/* Value Proposition */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="text-center"
+          >
+            <p className="text-gray-500 text-sm">
+              Zero fluff, just solid advice • Verified dealers • No fees
+            </p>
           </motion.div>
         </div>
       </div>
@@ -524,7 +688,7 @@ const CustomSelect = ({
       <button
         onClick={handleToggle}
         disabled={disabled || isLoading}
-        className={`w-full px-4 py-3 sm:py-4 bg-gray-50/80 hover:bg-white text-gray-900 border border-gray-200/60 hover:border-[#D55004] rounded-xl sm:rounded-2xl transition-all duration-200 flex items-center justify-between focus:outline-none focus:border-[#D55004] focus:ring-2 focus:ring-[#D55004]/20 backdrop-blur-sm shadow-sm hover:shadow-md text-sm sm:text-base ${
+        className={`w-full px-4 py-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 hover:border-gray-300 rounded-lg transition-colors duration-200 flex items-center justify-between focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-sm font-normal ${
           disabled || isLoading
             ? "opacity-50 cursor-not-allowed"
             : "cursor-pointer"
@@ -553,11 +717,7 @@ const CustomSelect = ({
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
-          className="absolute z-[9999] w-full mt-2 bg-white/95 backdrop-blur-xl border border-gray-200/60 rounded-xl sm:rounded-2xl shadow-2xl max-h-60 overflow-y-auto"
-          style={{
-            boxShadow:
-              "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)",
-          }}
+          className="absolute z-[9999] w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
         >
           {options.map(
             (
@@ -586,9 +746,9 @@ const CustomSelect = ({
                   e.stopPropagation();
                   handleSelect(option.value, option);
                 }}
-                className={`w-full px-4 py-3 sm:py-4 text-left hover:bg-gray-50/80 transition-all duration-150 border-b border-gray-100/60 last:border-b-0 text-sm sm:text-base ${
+                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100 last:border-b-0 text-sm font-normal ${
                   value === option.value
-                    ? "bg-gradient-to-r from-[#D55004]/10 to-[#FF6B1A]/10 text-[#D55004] font-semibold"
+                    ? "bg-accent/5 text-accent font-medium"
                     : "text-gray-700 hover:text-gray-900"
                 }`}
               >

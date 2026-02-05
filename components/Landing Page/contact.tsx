@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 
 export default function ContactSection() {
   return (
-    <section id="contact" className="py-20 relative">
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-black via-accent to-black"></div>
+    <section id="contact" className="py-24 relative bg-gradient-to-b from-gray-50 to-white">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent"></div>
 
       <div className="container mx-auto px-4">
         <motion.div
@@ -13,13 +13,21 @@ export default function ContactSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="max-w-3xl mx-auto  rounded-2xl p-8 border border-gray-800"
+          className="max-w-4xl mx-auto rounded-3xl p-10 md:p-12 border-2 border-gray-200 bg-white/80 backdrop-blur-xl shadow-2xl"
         >
-          <div className="text-center mb-8">
-            <h2 className="text-4xl text-black font-bold mb-4">
-              Get in <span className="text-accent">Touch</span>
+          <div className="text-center mb-10">
+            <motion.span
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-block text-accent font-bold mb-3 px-5 py-2 rounded-full bg-accent/10 border-2 border-accent/30 uppercase tracking-wider text-sm"
+            >
+              Contact Us
+            </motion.span>
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-gray-900 font-black mb-6 text-center">
+              Get in <span className="bg-gradient-to-r from-accent to-accent-light bg-clip-text text-transparent">Touch</span>
             </h2>
-            <p className="text-black/80">
+            <p className="text-gray-600 text-lg font-medium max-w-2xl mx-auto">
               Interested in implementing Fleet for your dealership? Have
               questions about our platform? We're here to help.
             </p>
@@ -30,28 +38,28 @@ export default function ContactSection() {
               <div>
                 <label
                   htmlFor="name"
-                  className="block text-sm font-medium text-gray-400 mb-2"
+                  className="block text-sm font-bold text-gray-700 mb-2"
                 >
                   Name
                 </label>
                 <input
                   type="text"
                   id="name"
-                  className="w-full bg-white/80 border border-neutral-500/70 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                  className="w-full bg-white border-2 border-gray-200 rounded-xl px-5 py-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-300 font-medium"
                   placeholder="Your name"
                 />
               </div>
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-gray-400 mb-2"
+                  className="block text-sm font-bold text-gray-700 mb-2"
                 >
                   Email
                 </label>
                 <input
                   type="email"
                   id="email"
-                  className="w-full bg-white/80 border border-neutral-500/70 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                  className="w-full bg-white border-2 border-gray-200 rounded-xl px-5 py-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-300 font-medium"
                   placeholder="your.email@example.com"
                 />
               </div>
@@ -60,14 +68,14 @@ export default function ContactSection() {
             <div>
               <label
                 htmlFor="subject"
-                className="block text-sm font-medium text-gray-400 mb-2"
+                className="block text-sm font-bold text-gray-700 mb-2"
               >
                 Subject
               </label>
               <input
                 type="text"
                 id="subject"
-                className="w-full bg-white/80 border border-neutral-500/70 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                className="w-full bg-white border-2 border-gray-200 rounded-xl px-5 py-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-300 font-medium"
                 placeholder="How can we help you?"
               />
             </div>
@@ -75,33 +83,33 @@ export default function ContactSection() {
             <div>
               <label
                 htmlFor="message"
-                className="block text-sm font-medium text-gray-400 mb-2"
+                className="block text-sm font-bold text-gray-700 mb-2"
               >
                 Message
               </label>
               <textarea
                 id="message"
                 rows={5}
-                className="w-full bg-white/80 border border-neutral-500/70 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                className="w-full bg-white border-2 border-gray-200 rounded-xl px-5 py-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all duration-300 font-medium resize-none"
                 placeholder="Your message..."
               ></textarea>
             </div>
 
             <div className="text-center">
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 type="button"
-                className="bg-accent hover:bg-accent-dark text-white px-8 py-4 rounded-lg font-bold transition-colors duration-300"
+                className="bg-gradient-to-r from-accent to-accent-light hover:from-accent-dark hover:to-accent text-white px-10 py-5 rounded-2xl font-bold transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-accent/50 uppercase tracking-wide"
               >
                 Send Message
               </motion.button>
             </div>
           </form>
 
-          <div className="mt-12 text-black grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="mt-16 text-gray-900 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="w-12 h-12 rounded-full bg-white/80 border border-accent flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-accent-light/20 border-2 border-accent/30 flex items-center justify-center mx-auto mb-5 shadow-lg">
                 <svg
                   className="w-6 h-6 text-accent"
                   fill="none"
@@ -117,14 +125,14 @@ export default function ContactSection() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Email</h3>
-              <p className="text-gray-400">info@fleetapp.com</p>
+              <h3 className="text-xl font-black mb-2">Email</h3>
+              <p className="text-gray-600 font-semibold">info@fleetapp.com</p>
             </div>
 
             <div>
-              <div className="w-12 h-12 rounded-full bg-white/80 border border-accent flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-accent-light/20 border-2 border-accent/30 flex items-center justify-center mx-auto mb-5 shadow-lg">
                 <svg
-                  className="w-6 h-6 text-accent"
+                  className="w-7 h-7 text-accent"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -138,14 +146,14 @@ export default function ContactSection() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Phone</h3>
-              <p className="text-gray-400">+961 76875575</p>
+              <h3 className="text-xl font-black mb-2">Phone</h3>
+              <p className="text-gray-600 font-semibold">+961 76875575</p>
             </div>
 
             <div>
-              <div className="w-12 h-12 rounded-full bg-white/80 border border-accent flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-accent-light/20 border-2 border-accent/30 flex items-center justify-center mx-auto mb-5 shadow-lg">
                 <svg
-                  className="w-6 h-6 text-accent"
+                  className="w-7 h-7 text-accent"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -165,8 +173,8 @@ export default function ContactSection() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Location</h3>
-              <p className="text-gray-400">Beirut, Lebanon</p>
+              <h3 className="text-xl font-black mb-2">Location</h3>
+              <p className="text-gray-600 font-semibold">Beirut, Lebanon</p>
             </div>
           </div>
         </motion.div>

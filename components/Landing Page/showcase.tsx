@@ -137,20 +137,18 @@ export default function AppShowcase() {
   };
 
   const indicatorVariants = {
-    inactive: { scale: 1, backgroundColor: "rgba(255, 255, 255, 0.3)" },
-    active: { scale: 1.2, backgroundColor: "#FF6A00" },
+    inactive: { scale: 1, backgroundColor: "rgba(0, 0, 0, 0.2)" },
+    active: { scale: 1.3, backgroundColor: "#D55004" },
   };
 
   return (
     <section
       id="app"
-      className="py-12 bg-gradient-to-b py-24 w-full relative text-white overflow-hidden"
+      className="py-24 bg-gradient-to-b from-gray-50 via-white to-gray-50 w-full relative overflow-hidden"
     >
-      <div className="absolute inset-0 -z-10 opacity-30">
-
-
+      <div className="absolute inset-0 -z-10 opacity-40">
         <motion.div
-          className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-gradient-to-r from-accent to-accent-light opacity-20 blur-3xl"
+          className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-gradient-to-r from-accent/30 to-accent-light/30 blur-3xl"
           animate={{
             x: [0, 100, 50, 200, 0],
             y: [0, 150, 50, 100, 0],
@@ -159,7 +157,7 @@ export default function AppShowcase() {
           transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
-          className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 opacity-20 blur-3xl"
+          className="absolute -bottom-20 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-blue-600/30 to-purple-600/30 blur-3xl"
           animate={{
             x: [0, -100, -50, -200, 0],
             y: [0, -150, -50, -100, 0],
@@ -175,6 +173,7 @@ export default function AppShowcase() {
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
+        {/* Revolutionizing Car Shopping Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -183,7 +182,7 @@ export default function AppShowcase() {
           className="mb-16 text-center"
         >
           <motion.span
-            className="inline-block text-accent font-semibold mb-2 px-4 py-1.5 rounded-full bg-accent/20 border border-accent/20"
+            className="inline-block text-accent font-bold mb-2 sm:mb-3 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full bg-accent/10 border-2 border-accent/30 backdrop-blur-sm uppercase tracking-wider text-xs sm:text-sm"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
@@ -191,23 +190,13 @@ export default function AppShowcase() {
           >
             Designed for Everyone
           </motion.span>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold mt-10 mb-6">
-            <span className="text-accent font-bold bg-black/10 rounded-md p-1">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-gray-900 font-black mt-4 sm:mt-6 mb-4 sm:mb-6 px-4">
+            <span className="bg-gradient-to-r from-accent to-accent-light bg-clip-text text-transparent">
               Revolutionizing
             </span>{" "}
-            {/* <span className="relative">
-              Revolutionizing
-              <motion.span
-                className="absolute -bottom-2 left-0 w-full h-1 bg-accent"
-                initial={{ width: 0 }}
-                whileInView={{ width: "100%" }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: 0.5 }}
-              />
-            </span>{" "} */}
-            <span className="text-black-dark">Car Shopping</span>
+            <span className="text-gray-900">Car Shopping</span>
           </h2>
-          <p className="text-xl text-black-light max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto font-medium px-4">
             Fleet connects car buyers with trusted dealerships through an
             intuitive platform designed to make vehicle shopping seamless and
             enjoyable.
@@ -231,12 +220,12 @@ export default function AppShowcase() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
-                className="inline-flex items-center gap-3 bg-white backdrop-blur-sm px-6 py-3 rounded-full border border-white/10"
+                className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-xl px-8 py-4 rounded-full border-2 border-gray-200 shadow-lg"
               >
-                <div className="p-2 rounded-lg bg-accent/15 text-accent">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-accent/20 to-accent-light/20 text-accent">
                   {features[activeIndex].icon}
                 </div>
-                <h3 className="font-bold text-black-light text-xl">
+                <h3 className="font-black text-gray-900 text-xl">
                   {features[activeIndex].title}
                 </h3>
               </motion.div>
@@ -249,7 +238,7 @@ export default function AppShowcase() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
-                className="mt-4 text-lg text-black/50 max-w-2xl mx-auto"
+                className="mt-5 text-lg text-gray-600 max-w-2xl mx-auto font-medium"
               >
                 {features[activeIndex].description}
               </motion.p>
@@ -271,15 +260,15 @@ export default function AppShowcase() {
             <div className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 flex justify-between px-4 md:px-16 z-30 pointer-events-none">
               <button
                 onClick={handlePrev}
-                className="p-3 md:p-4 rounded-full bg-accent/90 text-white shadow-lg pointer-events-auto transform transition-transform hover:scale-110 border border-white/20"
+                className="p-4 md:p-5 rounded-full bg-gradient-to-r from-accent to-accent-light text-white shadow-xl pointer-events-auto transform transition-all duration-300 hover:scale-110 hover:shadow-2xl border-2 border-white/30"
               >
-                <ChevronLeftIcon className="w-6 h-6" />
+                <ChevronLeftIcon className="w-6 h-6 md:w-7 md:h-7" />
               </button>
               <button
                 onClick={handleNext}
-                className="p-3 md:p-4 rounded-full bg-accent/90 text-white shadow-lg pointer-events-auto transform transition-transform hover:scale-110 border border-white/20"
+                className="p-4 md:p-5 rounded-full bg-gradient-to-r from-accent to-accent-light text-white shadow-xl pointer-events-auto transform transition-all duration-300 hover:scale-110 hover:shadow-2xl border-2 border-white/30"
               >
-                <ChevronRightIcon className="w-6 h-6" />
+                <ChevronRightIcon className="w-6 h-6 md:w-7 md:h-7" />
               </button>
             </div>
 
