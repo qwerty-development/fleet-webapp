@@ -196,7 +196,7 @@ export default function AdminAnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsDataV2 | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y" | "all">("30d");
+  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y" | "all">("1y");
 
   // Convert time range to days
   const getTimeRangeDays = useCallback((range: typeof timeRange): number => {
@@ -238,6 +238,15 @@ export default function AdminAnalyticsDashboard() {
   const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
   const formatPercent = (value: number) => (value * 100).toFixed(1) + "%";
   const formatNumber = (num: number) => new Intl.NumberFormat("en-US").format(num);
+
+  // Helper to format chart dates
+  const formatChartDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (timeRange === "7d" || timeRange === "30d") {
+      return date.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+    }
+    return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  };
 
   // Export to Excel
   const exportToExcel = useCallback(() => {
@@ -309,7 +318,7 @@ export default function AdminAnalyticsDashboard() {
         }],
       },
       listingsTrend: {
-        labels: analytics.listings_trend?.map((item) => new Date(item.month).toLocaleDateString("en-US", { month: "short", year: "2-digit" })) || [],
+        labels: analytics.listings_trend?.map((item) => formatChartDate(item.month)) || [],
         datasets: [
           { label: "Cars for Sale", data: analytics.listings_trend?.map((item) => item.cars_sale) || [], backgroundColor: CHART_COLORS.primary, stack: "stack1" },
           { label: "Cars for Rent", data: analytics.listings_trend?.map((item) => item.cars_rent) || [], backgroundColor: CHART_COLORS.teal, stack: "stack1" },
@@ -317,14 +326,14 @@ export default function AdminAnalyticsDashboard() {
         ],
       },
       salesTrend: {
-        labels: analytics.sales_trend?.map((item) => new Date(item.month).toLocaleDateString("en-US", { month: "short", year: "2-digit" })) || [],
+        labels: analytics.sales_trend?.map((item) => formatChartDate(item.month)) || [],
         datasets: [
           { label: "Cars Sold", data: analytics.sales_trend?.map((item) => item.cars_sold) || [], borderColor: CHART_COLORS.primary, backgroundColor: `${CHART_COLORS.primary}20`, borderWidth: 2, fill: true, tension: 0.4 },
           { label: "Plates Sold", data: analytics.sales_trend?.map((item) => item.plates_sold) || [], borderColor: CHART_COLORS.accent, backgroundColor: `${CHART_COLORS.accent}20`, borderWidth: 2, fill: true, tension: 0.4 },
         ],
       },
       userGrowth: {
-        labels: analytics.user_growth?.map((item) => new Date(item.month).toLocaleDateString("en-US", { month: "short", year: "2-digit" })) || [],
+        labels: analytics.user_growth?.map((item) => formatChartDate(item.month)) || [],
         datasets: [{ label: "New Users", data: analytics.user_growth?.map((item) => item.new_users) || [], borderColor: CHART_COLORS.success, backgroundColor: `${CHART_COLORS.success}20`, borderWidth: 2, fill: true, tension: 0.4 }],
       },
       topDealerships: {
