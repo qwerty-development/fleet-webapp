@@ -313,74 +313,39 @@ export default function AdminNotifications() {
         return;
       }
 
-      // FIXED: Create notifications with required fields
-      const now = new Date();
-      const hourMark = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
-      
-      const notificationsToInsert = finalRecipients.map(userId => ({
-        user_id: userId,
-        type: notificationType,
-        data: {
-          title: title.trim(),
-          message: message.trim(),
-          screen: getNotificationScreenByType(notificationType),
-          metadata: {
-            sentBy: user?.id,
-            sentAt: now.toISOString(),
-            recipientType: recipientType,
-            priority: 'normal'
+      // ── V2: Call edge function directly (fixes race condition) ──
+      console.log(`Calling process-notificationsv2 for ${finalRecipients.length} recipients...`);
+
+      const { data: v2Result, error: v2Error } = await supabase.functions.invoke(
+        'process-notificationsv2',
+        {
+          body: {
+            mode: 'admin_broadcast',
+            recipients: finalRecipients,
+            title: title.trim(),
+            message: message.trim(),
+            notification_type: notificationType,
+            screen: getNotificationScreenByType(notificationType),
+            metadata: {
+              recipientType: recipientType,
+              priority: 'normal'
+            }
           }
-        },
-        processed: false,
-        created_at_hour: hourMark.toISOString()
-      }));
-
-      console.log('Inserting notifications...', notificationsToInsert.length);
-
-      // FIXED: Batch insert in smaller chunks to avoid limits
-      const BATCH_SIZE = 10;
-      const batches = [];
-      for (let i = 0; i < notificationsToInsert.length; i += BATCH_SIZE) {
-        batches.push(notificationsToInsert.slice(i, i + BATCH_SIZE));
-      }
-
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        console.log(`Processing batch ${i + 1}/${batches.length} (${batch.length} notifications)`);
-        
-        try {
-          const { error: batchError } = await supabase
-            .from('pending_notifications')
-            .insert(batch);
-
-          if (batchError) {
-            console.error(`Batch ${i + 1} error:`, batchError);
-            errorCount += batch.length;
-          } else {
-            console.log(`Batch ${i + 1} success`);
-            successCount += batch.length;
-          }
-        } catch (batchErr) {
-          console.error(`Batch ${i + 1} exception:`, batchErr);
-          errorCount += batch.length;
         }
+      );
 
-        // Small delay between batches to avoid overwhelming the database
-        if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
+      if (v2Error) {
+        console.error('Edge function error:', v2Error);
+        throw new Error(v2Error.message || 'Failed to send notifications via edge function');
       }
 
-      console.log(`Batch processing complete. Success: ${successCount}, Errors: ${errorCount}`);
+      console.log('V2 Result:', v2Result);
 
-      if (successCount === 0) {
-        throw new Error('All notification batches failed to insert');
+      if (!v2Result?.success) {
+        throw new Error(v2Result?.error || 'Edge function returned unsuccessful result');
       }
 
-      // FIXED: Log the admin action with better error handling
+      // Log the admin action with v2 delivery stats
       try {
         const { error: logError } = await supabase
           .from('notification_admin_logs')
@@ -388,47 +353,54 @@ export default function AdminNotifications() {
             sent_by: user?.id,
             title: title.trim(),
             message: message.trim(),
-            recipients_count: successCount,
+            recipients_count: v2Result.pushSent || 0,
             recipient_type: recipientType === 'dealerships' ?
               (selectedRecipients.length === dealerships.length ? 'all_dealerships' : 'selected_dealerships') :
               (selectedRecipients.length === users.length ? 'all_users' : 'selected_users'),
             recipient_ids: finalRecipients,
             notification_type: notificationType,
             metadata: {
+              v2: true,
+              totalRecipients: v2Result.totalRecipients,
+              withTokens: v2Result.withTokens,
+              withoutTokens: v2Result.withoutTokens,
+              pushSent: v2Result.pushSent,
+              pushFailed: v2Result.pushFailed,
+              stored: v2Result.stored,
+              invalidTokensDeactivated: v2Result.invalidTokensDeactivated,
+              executionTimeMs: v2Result.executionTimeMs,
               filterActive,
               filterExpired,
               filterByRole,
               searchQuery,
               recipientType,
-              batchInfo: {
-                totalBatches: batches.length,
-                successCount,
-                errorCount,
-                originalRecipientCount: selectedRecipients.length,
-                validRecipientCount: finalRecipients.length
-              }
+              originalRecipientCount: selectedRecipients.length,
+              validRecipientCount: finalRecipients.length
             }
           });
 
         if (logError) {
           console.error('Failed to log notification:', logError);
-          // Don't throw here - the notifications were sent successfully
         }
       } catch (logErr) {
         console.error('Exception logging notification:', logErr);
-        // Don't throw here - the notifications were sent successfully
       }
 
-      // Show success message
-      if (errorCount > 0) {
-        alert(
-          `Partially successful: ${successCount} notifications sent, ${errorCount} failed. Check logs for details.`
-        );
-      } else {
-        alert(
-          `Success! Notifications sent to ${successCount} dealership${successCount > 1 ? 's' : ''}!`
-        );
-      }
+      // Show detailed success message
+      const tokenlessNote = v2Result.withoutTokens > 0
+        ? `\n📵 ${v2Result.withoutTokens} user(s) don't have the app installed (no push token).`
+        : '';
+      const failedNote = v2Result.pushFailed > 0
+        ? `\n⚠️ ${v2Result.pushFailed} push notification(s) failed to deliver.`
+        : '';
+
+      alert(
+        `✅ Notifications sent!\n\n` +
+        `📱 Push notifications delivered: ${v2Result.pushSent}\n` +
+        `💾 In-app notifications stored: ${v2Result.stored}` +
+        tokenlessNote + failedNote +
+        `\n\n⏱️ Completed in ${(v2Result.executionTimeMs / 1000).toFixed(1)}s`
+      );
 
       // Reset form and refresh
       resetForm();
@@ -441,10 +413,12 @@ export default function AdminNotifications() {
       if (error instanceof Error) {
         if (error.message.includes('validate')) {
           errorMessage = 'Failed to validate recipients. Please check dealership accounts.';
-        } else if (error.message.includes('insert')) {
-          errorMessage = 'Database error while sending notifications. Please try again.';
-        } else if (error.message.includes('batch')) {
-          errorMessage = 'Error processing notification batches. Some may have been sent.';
+        } else if (error.message.includes('edge function') || error.message.includes('Edge function')) {
+          errorMessage = 'Failed to reach the notification service. Please check that process-notificationsv2 is deployed.';
+        } else if (error.message.includes('Admin access')) {
+          errorMessage = 'Your account does not have admin permissions for sending notifications.';
+        } else if (error.message.includes('Missing authorization')) {
+          errorMessage = 'Session expired. Please refresh the page and try again.';
         } else {
           errorMessage = `Error: ${error.message}`;
         }
