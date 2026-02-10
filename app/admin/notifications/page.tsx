@@ -517,7 +517,7 @@ export default function AdminNotifications() {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Send Notifications</h1>
-              <p className="text-gray-400">Send notifications to dealerships</p>
+              <p className="text-gray-400">Send notifications to dealerships v2</p>
             </div>
             <div className="flex items-center space-x-2 mt-4 md:mt-0">
               <button
