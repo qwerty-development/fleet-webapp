@@ -56,6 +56,50 @@ function isValidExpoToken(token: string): boolean {
   return /^ExponentPushToken\[.+\]$/.test(token);
 }
 
+// ─── Batched .in() query helper (avoids URL-too-long errors) ─────────
+// Supabase REST uses GET with URL params for .in(), which crashes
+// when passing 800+ UUIDs. This batches into chunks of 50.
+async function batchedInQuery<T>(
+  supabase: ReturnType<typeof createClient>,
+  table: string,
+  selectCols: string,
+  inColumn: string,
+  inValues: string[],
+  extraFilters?: Record<string, unknown>
+): Promise<T[]> {
+  const BATCH = 50;
+  const results: T[] = [];
+  for (let i = 0; i < inValues.length; i += BATCH) {
+    const batch = inValues.slice(i, i + BATCH);
+    let q = supabase.from(table).select(selectCols).in(inColumn, batch);
+    if (extraFilters) {
+      for (const [k, v] of Object.entries(extraFilters)) {
+        q = q.eq(k, v);
+      }
+    }
+    const { data, error } = await q;
+    if (error) throw error;
+    if (data) results.push(...(data as T[]));
+  }
+  return results;
+}
+
+// ─── Batched .in() update helper ─────────────────────────────────────
+async function batchedInUpdate(
+  supabase: ReturnType<typeof createClient>,
+  table: string,
+  updateData: Record<string, unknown>,
+  inColumn: string,
+  inValues: string[]
+): Promise<void> {
+  const BATCH = 50;
+  for (let i = 0; i < inValues.length; i += BATCH) {
+    const batch = inValues.slice(i, i + BATCH);
+    const { error } = await supabase.from(table).update(updateData).in(inColumn, batch);
+    if (error) console.error(`[WARN] batch update ${table}:`, error);
+  }
+}
+
 // ─── MAIN HANDLER ────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -161,15 +205,14 @@ async function handleAdminBroadcast(
 
   console.log(`[BROADCAST] Starting — ${recipients.length} recipients`);
 
-  // 1. Fetch ALL active push tokens for every recipient in ONE query ──
-  const { data: allTokens, error: tokErr } = await supabase
-    .from("user_push_tokens")
-    .select("user_id, token, device_type")
-    .in("user_id", recipients)
-    .eq("active", true)
-    .eq("signed_in", true);
-
-  if (tokErr) {
+  // 1. Fetch ALL active push tokens in batches (avoids URL-too-long) ──
+  let allTokens: { user_id: string; token: string; device_type: string }[];
+  try {
+    allTokens = await batchedInQuery<{ user_id: string; token: string; device_type: string }>(
+      supabase, "user_push_tokens", "user_id, token, device_type",
+      "user_id", recipients, { active: true, signed_in: true }
+    );
+  } catch (tokErr) {
     console.error("[ERROR] Token fetch:", tokErr);
     return json({ error: "Failed to fetch push tokens" }, 500);
   }
@@ -252,10 +295,7 @@ async function handleAdminBroadcast(
   // 4. Deactivate invalid tokens ──────────────────────────────────────
   if (invalidTokens.size > 0) {
     const arr = Array.from(invalidTokens);
-    await supabase
-      .from("user_push_tokens")
-      .update({ active: false })
-      .in("token", arr);
+    await batchedInUpdate(supabase, "user_push_tokens", { active: false }, "token", arr);
     stats.invalidTokensDeactivated = arr.length;
     console.log(`[INFO] Deactivated ${arr.length} invalid tokens`);
   }
@@ -379,27 +419,22 @@ async function handleBatchProcess(
   stats.total = pending.length;
   console.log(`[BATCH] Processing ${stats.total} pending notifications`);
 
-  // 2. Mark ALL as processed in ONE atomic operation ──────────────────
+  // 2. Mark ALL as processed in batched updates ────────────────────
   const ids = pending.map((p: { id: string }) => p.id);
-  const { error: markErr } = await supabase
-    .from("pending_notifications")
-    .update({ processed: true })
-    .in("id", ids);
+  await batchedInUpdate(supabase, "pending_notifications", { processed: true }, "id", ids);
 
-  if (markErr) {
-    console.error("[ERROR] mark processed:", markErr);
-    // Continue anyway — better to possibly double-send than not send
-  }
-
-  // 3. Collect all unique user IDs and fetch tokens in bulk ───────────
+  // 3. Collect all unique user IDs and fetch tokens in batches ───────
   const userIds = [...new Set(pending.map((p: { user_id: string }) => p.user_id))];
 
-  const { data: allTokens } = await supabase
-    .from("user_push_tokens")
-    .select("user_id, token, device_type")
-    .in("user_id", userIds)
-    .eq("active", true)
-    .eq("signed_in", true);
+  let allTokens: { user_id: string; token: string; device_type: string }[] = [];
+  try {
+    allTokens = await batchedInQuery<{ user_id: string; token: string; device_type: string }>(
+      supabase, "user_push_tokens", "user_id, token, device_type",
+      "user_id", userIds, { active: true, signed_in: true }
+    );
+  } catch (e) {
+    console.error("[ERROR] batch token fetch:", e);
+  }
 
   const tokensByUser = new Map<string, { token: string; device_type: string }[]>();
   for (const t of allTokens ?? []) {
@@ -481,10 +516,7 @@ async function handleBatchProcess(
 
   // 6. Deactivate dead tokens ─────────────────────────────────────────
   if (invalidTokens.size > 0) {
-    await supabase
-      .from("user_push_tokens")
-      .update({ active: false })
-      .in("token", Array.from(invalidTokens));
+    await batchedInUpdate(supabase, "user_push_tokens", { active: false }, "token", Array.from(invalidTokens));
   }
 
   // 7. Bulk store in-app notifications ────────────────────────────────

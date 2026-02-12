@@ -280,19 +280,28 @@ export default function AdminNotifications() {
     try {
       setSending(true);
 
-      // FIXED: Validate that all selected user IDs exist in users table
-      console.log('Validating user IDs...', selectedRecipients);
-      const { data: validUsers, error: validationError } = await supabase
-        .from('users')
-        .select('id')
-        .in('id', selectedRecipients);
+      // FIXED: Validate user IDs in batches to avoid URL length limits (Supabase REST 400 error)
+      console.log('Validating user IDs...', `(${selectedRecipients.length})`);
+      const BATCH_SIZE = 50;
+      const validUserIds: string[] = [];
 
-      if (validationError) {
-        console.error('Error validating users:', validationError);
-        throw new Error('Failed to validate recipient users');
+      for (let i = 0; i < selectedRecipients.length; i += BATCH_SIZE) {
+        const batch = selectedRecipients.slice(i, i + BATCH_SIZE);
+        const { data: batchValid, error: batchError } = await supabase
+          .from('users')
+          .select('id')
+          .in('id', batch);
+
+        if (batchError) {
+          console.error(`Error validating users batch ${i / BATCH_SIZE + 1}:`, batchError);
+          throw new Error('Failed to validate recipient users');
+        }
+
+        if (batchValid) {
+          validUserIds.push(...batchValid.map(u => u.id));
+        }
       }
 
-      const validUserIds = validUsers?.map(u => u.id) || [];
       const invalidUserIds = selectedRecipients.filter(id => !validUserIds.includes(id));
 
       if (invalidUserIds.length > 0) {
