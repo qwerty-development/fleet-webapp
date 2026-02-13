@@ -93,6 +93,13 @@ const SECTIONS = [
     icon: RectangleGroupIcon,
     color: "from-pink-500 to-rose-500",
   },
+  {
+    id: "banner-stats",
+    name: "Banner Stats",
+    description: "View banner analytics for sales",
+    icon: ChartBarIcon,
+    color: "from-indigo-500 to-purple-500",
+  },
 ];
 
 export default function AdminDashboard() {

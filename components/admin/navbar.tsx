@@ -138,6 +138,13 @@ const navItems: NavItem[] = [
     description: "Manage advertisement banners",
   },
   {
+    name: "Banner Stats",
+    href: "/admin/banner-stats",
+    icon: ChartBarIcon,
+    iconActive: ChartBarIconSolid,
+    description: "View banner analytics for sales",
+  },
+  {
     name: "Celebrate",
     href: "/admin/live-stats",
     icon: SparklesIcon,
