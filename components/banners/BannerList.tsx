@@ -3,12 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import BannerCard from './BannerCard';
+import { isBannerActive } from '@/utils/bannerDateUtils';
 
 interface Banner {
   id: string;
   image_url: string;
   redirect_to: string | null;
   created_at: string;
+  active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  manually_deactivated_at: string | null;
 }
 
 interface BannerListProps {
@@ -32,10 +37,11 @@ export default function BannerList({ limit, className = '' }: BannerListProps) {
         let query = supabase
           .from('banners')
           .select('*')
+          .eq('active', true) // Only fetch banners marked as active
           .order('created_at', { ascending: false });
 
         if (limit) {
-          query = query.limit(limit);
+          query = query.limit(limit * 2); // Fetch more to account for client-side filtering
         }
 
         const { data, error } = await query;
@@ -44,7 +50,11 @@ export default function BannerList({ limit, className = '' }: BannerListProps) {
           throw error;
         }
 
-        setBanners(data || []);
+        // Apply client-side filtering to ensure banners are truly active (not expired or scheduled for future)
+        const activeBanners = (data || []).filter(banner => isBannerActive(banner));
+        
+        // Apply limit after filtering
+        setBanners(limit ? activeBanners.slice(0, limit) : activeBanners);
       } catch (err: any) {
         console.error('Error fetching banners:', err);
         setError('Failed to load banners');

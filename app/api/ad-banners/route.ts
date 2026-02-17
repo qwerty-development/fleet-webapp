@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'created_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const activeFilter = searchParams.get('active'); // 'true', 'false', or null for all
+    const status = searchParams.get('status') || 'all'; // all | scheduled | active | expired
 
     // Calculate pagination
     const from = (page - 1) * limit;
@@ -27,8 +28,18 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' })
       .order(sortBy, { ascending: sortOrder === 'asc' });
 
-    // Apply active filter if specified
-    if (activeFilter === 'true') {
+    // Apply status filter (takes precedence over activeFilter)
+    const now = new Date().toISOString();
+    if (status === 'scheduled') {
+      query = query.gt('start_date', now);
+    } else if (status === 'active') {
+      query = query.eq('active', true)
+        .or(`start_date.is.null,start_date.lte.${now}`)
+        .or(`end_date.is.null,end_date.gt.${now}`);
+    } else if (status === 'expired') {
+      query = query.lt('end_date', now);
+    } else if (activeFilter === 'true') {
+      // Legacy active filter for backward compatibility
       query = query.eq('active', true);
     } else if (activeFilter === 'false') {
       query = query.eq('active', false);
@@ -100,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { image_url, redirect_to, active = true } = body;
+    const { image_url, redirect_to, active = true, start_date, end_date } = body;
 
     // Validate required fields
     if (!image_url) {
@@ -110,13 +121,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate date range if both dates are provided
+    if (start_date && end_date) {
+      const start = new Date(start_date);
+      const end = new Date(end_date);
+      if (end <= start) {
+        return NextResponse.json(
+          { error: 'End date must be after start date' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create ad banner
     const { data, error } = await supabase
       .from('ad_banners')
       .insert({
         image_url,
         redirect_to: redirect_to || null,
-        active
+        active,
+        start_date: start_date || null,
+        end_date: end_date || null
       })
       .select()
       .single();

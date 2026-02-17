@@ -16,17 +16,28 @@ import {
   ArrowsUpDownIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  PauseIcon,
+  PlayIcon,
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
+import DateTimeInput from '@/components/ui/DateTimeInput';
+import {
+  calculateBannerStatus,
+  getBannerDateRangeText,
+  getBannerStatusColor,
+  getBannerStatusLabel,
+  validateBannerDates,
+  localDateTimeToUTC,
+  utcToLocalDateTime,
+ isBannerActive,
+} from '@/utils/bannerDateUtils';
+import { Banner as BannerType } from '@/types';
 
 // Define interfaces
-interface Banner {
-  id: string;
-  created_at: string;
-  image_url: string;
-  redirect_to: string | null;
+interface Banner extends BannerType {
+  // Extends the base Banner type from types/index.ts
 }
 
 interface Car {
@@ -67,6 +78,7 @@ export default function AdminBannersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'active' | 'expired'>('all');
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -77,9 +89,13 @@ export default function AdminBannersPage() {
   const [formData, setFormData] = useState({
     image_url: '',
     redirect_to: '',
-    redirect_type: 'none' as 'car' | 'dealership' | 'none'
+    redirect_type: 'none' as 'car' | 'dealership' | 'none',
+    start_date: '',
+    end_date: '',
+    active: true,
   });
   const [file, setFile] = useState<File | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   // Search states for dropdowns
   const [carSearchQuery, setCarSearchQuery] = useState('');
@@ -258,11 +274,15 @@ export default function AdminBannersPage() {
     setFormData({
       image_url: '',
       redirect_to: '',
-      redirect_type: 'none'
+      redirect_type: 'none',
+      start_date: '',
+      end_date: '',
+      active: true,
     });
     setFile(null);
     setCarSearchQuery('');
     setDealershipSearchQuery('');
+    setDateError(null);
     setIsAddModalOpen(true);
   };
 
@@ -288,11 +308,15 @@ export default function AdminBannersPage() {
     setFormData({
       image_url: banner.image_url,
       redirect_to: redirectId,
-      redirect_type: redirectType
+      redirect_type: redirectType,
+      start_date: utcToLocalDateTime(banner.start_date),
+      end_date: utcToLocalDateTime(banner.end_date),
+      active: banner.active,
     });
     setFile(null);
     setCarSearchQuery('');
     setDealershipSearchQuery('');
+    setDateError(null);
     setIsEditModalOpen(true);
   };
 
@@ -319,6 +343,7 @@ export default function AdminBannersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsActionLoading(true);
+    setDateError(null);
 
     try {
       // Validate form
@@ -331,6 +356,17 @@ export default function AdminBannersPage() {
       // If redirect type is car or dealership, ensure redirect_to is selected
       if (formData.redirect_type !== 'none' && !formData.redirect_to) {
         alert(`Please select a ${formData.redirect_type}`);
+        setIsActionLoading(false);
+        return;
+      }
+
+      // Validate date range
+      const startDateUTC = formData.start_date ? localDateTimeToUTC(formData.start_date) : null;
+      const endDateUTC = formData.end_date ? localDateTimeToUTC(formData.end_date) : null;
+      
+      const dateValidationError = validateBannerDates(startDateUTC, endDateUTC);
+      if (dateValidationError) {
+        setDateError(dateValidationError);
         setIsActionLoading(false);
         return;
       }
@@ -353,7 +389,10 @@ export default function AdminBannersPage() {
 
       const bannerData = {
         image_url: imageUrl,
-        redirect_to: redirectUrl
+        redirect_to: redirectUrl,
+        start_date: startDateUTC,
+        end_date: endDateUTC,
+        active: formData.active,
       };
 
       if (isEditModalOpen && selectedBanner) {
@@ -381,6 +420,7 @@ export default function AdminBannersPage() {
       setIsEditModalOpen(false);
       setSelectedBanner(null);
       setFile(null);
+      setDateError(null);
     } catch (err: any) {
       console.error('Error saving banner:', err);
       alert(`Failed to save banner: ${err.message}`);
@@ -407,6 +447,35 @@ export default function AdminBannersPage() {
     } catch (err: any) {
       console.error('Error deleting banner:', err);
       alert(`Failed to delete banner: ${err.message}`);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Handle toggle active/inactive
+  const handleToggleActive = async (banner: Banner) => {
+    const newActiveState = !banner.active;
+    const action = newActiveState ? 'activate' : 'pause';
+    
+    if (!confirm(`Are you sure you want to ${action} this banner?`)) return;
+
+    setIsActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('banners')
+        .update({ 
+          active: newActiveState,
+          manually_deactivated_at: newActiveState ? null : new Date().toISOString()
+        })
+        .eq('id', banner.id);
+
+      if (error) throw error;
+
+      alert(`Banner ${action}d successfully!`);
+      await fetchBanners();
+    } catch (err: any) {
+      console.error(`Error ${action}ing banner:`, err);
+      alert(`Failed to ${action} banner: ${err.message}`);
     } finally {
       setIsActionLoading(false);
     }
@@ -511,6 +580,21 @@ export default function AdminBannersPage() {
                 )}
               </button>
 
+              {/* Status Filter */}
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value as 'all' | 'scheduled' | 'active' | 'expired');
+                  setCurrentPage(1);
+                }}
+                className="bg-gray-800/60 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">All Banners</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="active">Active</option>
+                <option value="expired">Expired</option>
+              </select>
+
             </div>
           </div>
 
@@ -561,16 +645,26 @@ export default function AdminBannersPage() {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                    <div className="absolute bottom-2 left-2 right-2">
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
                       <h3 className="text-white font-semibold text-sm truncate">
                         Banner
                       </h3>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getBannerStatusColor(calculateBannerStatus(banner))}`}>
+                        {getBannerStatusLabel(calculateBannerStatus(banner))}
+                      </span>
                     </div>
                   </div>
 
                   {/* Banner Details */}
                   <div className="p-4">
                     <div className="space-y-3">
+                      {/* Date Range - Show if dates exist */}
+                      {(banner.start_date || banner.end_date) && (
+                        <div className="text-xs text-gray-400">
+                          {getBannerDateRangeText(banner.start_date, banner.end_date)}
+                        </div>
+                      )}
+                      
                       {/* Redirect Info */}
                       <div className="flex items-center text-gray-300">
                         <LinkIcon className="h-4 w-4 text-gray-400 mr-2" />
@@ -615,6 +709,29 @@ export default function AdminBannersPage() {
 
                     {/* Action Buttons */}
                     <div className="flex justify-end space-x-2 mt-4">
+                      {/* Toggle Active/Pause Button */}
+                      <button
+                        onClick={() => handleToggleActive(banner)}
+                        disabled={isActionLoading}
+                        className={`flex items-center px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                          banner.active
+                            ? 'bg-amber-600/80 hover:bg-amber-600 text-white'
+                            : 'bg-emerald-600/80 hover:bg-emerald-600 text-white'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {banner.active ? (
+                          <>
+                            <PauseIcon className="h-3.5 w-3.5 mr-1" />
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <PlayIcon className="h-3.5 w-3.5 mr-1" />
+                            Activate
+                          </>
+                        )}
+                      </button>
+
                       <button
                         onClick={() => openEditModal(banner)}
                         className="flex items-center px-3 py-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-xs transition-colors"
@@ -889,6 +1006,50 @@ export default function AdminBannersPage() {
                       )}
                     </div>
                     )}
+
+                    {/* Schedule Section */}
+                    <div className="border-t border-gray-700 pt-6 mt-6">
+                      <h4 className="text-white font-medium mb-4">Schedule (Optional)</h4>
+                      
+                      {/* Active Toggle */}
+                      <div className="mb-4">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.active}
+                            onChange={(e) => setFormData({...formData, active: e.target.checked})}
+                            className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-gray-300">
+                            Active {!formData.active && "(Banner will be paused)"}
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Start Date */}
+                      <div className="mb-4">
+                        <DateTimeInput
+                          id="start_date"
+                          label="Start Date & Time"
+                          value={formData.start_date}
+                          onChange={(value) => setFormData({...formData, start_date: value})}
+                          helperText="Leave empty for immediate activation"
+                        />
+                      </div>
+
+                      {/* End Date */}
+                      <div className="mb-4">
+                        <DateTimeInput
+                          id="end_date"
+                          label="End Date & Time"
+                          value={formData.end_date}
+                          onChange={(value) => setFormData({...formData, end_date: value})}
+                          min={formData.start_date || undefined}
+                          error={formData.dateError}
+                          helperText="Leave empty for no expiration"
+                        />
+                      </div>
+                    </div>
 
                     {/* Submit and Cancel Buttons */}
                     <div className="flex justify-end space-x-3">

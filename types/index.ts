@@ -121,3 +121,38 @@ export interface DealershipSummary {
   rating?: number;
   featured?: boolean;
 }
+
+// Banner types for promotional banners (used on home page)
+export interface Banner {
+  id: string;
+  created_at: string;
+  image_url: string;
+  redirect_to: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  active: boolean;
+  manually_deactivated_at: string | null;
+}
+
+// Ad Banner types for advertisement banners (mobile app)
+export interface AdBanner {
+  id: number;
+  created_at: string;
+  image_url: string | null;
+  redirect_to: string | null;
+  active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  manually_deactivated_at: string | null;
+}
+
+// Banner status types
+export type BannerStatus = 'scheduled' | 'active' | 'expired' | 'paused' | 'no_schedule';
+
+// Helper interface for banner date range display
+export interface BannerDateRange {
+  start: Date | null;
+  end: Date | null;
+  status: BannerStatus;
+  displayText: string;
+}

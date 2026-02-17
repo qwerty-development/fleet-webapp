@@ -18,10 +18,22 @@ import {
   XCircleIcon,
   CloudArrowUpIcon,
   GlobeAltIcon,
+  PauseIcon,
+  PlayIcon,
 } from "@heroicons/react/24/outline";
 import AdminNavbar from "@/components/admin/navbar";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
+import DateTimeInput from '@/components/ui/DateTimeInput';
+import {
+  calculateBannerStatus,
+  getBannerDateRangeText,
+  getBannerStatusColor,
+  getBannerStatusLabel,
+  validateBannerDates,
+  localDateTimeToUTC,
+  utcToLocalDateTime,
+} from '@/utils/bannerDateUtils';
 
 // Define interfaces
 interface AdBanner {
@@ -30,6 +42,9 @@ interface AdBanner {
   image_url: string | null;
   redirect_to: string | null;
   active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  manually_deactivated_at: string | null;
 }
 
 // Constants
@@ -51,7 +66,7 @@ export default function AdminAdBannersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [filterActive, setFilterActive] = useState<"all" | "active" | "inactive">("all");
+  const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'active' | 'expired'>('all');
 
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -64,6 +79,9 @@ export default function AdminAdBannersPage() {
     image_url: "",
     redirect_to: "",
     active: true,
+    start_date: "",
+    end_date: "",
+    dateError: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [imageInputMode, setImageInputMode] = useState<"url" | "upload">("upload");
@@ -80,13 +98,6 @@ export default function AdminAdBannersPage() {
         .select("*", { count: "exact" })
         .order(sortBy, { ascending: sortOrder === "asc" });
 
-      // Filter by active status
-      if (filterActive === "active") {
-        query = query.eq("active", true);
-      } else if (filterActive === "inactive") {
-        query = query.eq("active", false);
-      }
-
       // Search by redirect_to URL
       if (searchQuery) {
         query = query.ilike("redirect_to", `%${searchQuery}%`);
@@ -102,7 +113,15 @@ export default function AdminAdBannersPage() {
 
       if (error) throw error;
 
-      setAdBanners(data || []);
+      // Apply status filtering client-side
+      let filteredData = data || [];
+      if (filterStatus !== 'all') {
+        filteredData = filteredData.filter(banner => 
+          calculateBannerStatus(banner) === filterStatus
+        );
+      }
+
+      setAdBanners(filteredData);
       setTotalCount(count || 0);
       setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
     } catch (err: any) {
@@ -111,7 +130,7 @@ export default function AdminAdBannersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, sortBy, sortOrder, searchQuery, filterActive]);
+  }, [currentPage, sortBy, sortOrder, searchQuery, filterStatus]);
 
   // Initial data fetch
   useEffect(() => {
@@ -152,6 +171,9 @@ export default function AdminAdBannersPage() {
       image_url: "",
       redirect_to: "",
       active: true,
+      start_date: "",
+      end_date: "",
+      dateError: "",
     });
     setFile(null);
     setImageInputMode("upload");
@@ -166,6 +188,9 @@ export default function AdminAdBannersPage() {
       image_url: banner.image_url || "",
       redirect_to: banner.redirect_to || "",
       active: banner.active,
+      start_date: banner.start_date ? utcToLocalDateTime(banner.start_date) : "",
+      end_date: banner.end_date ? utcToLocalDateTime(banner.end_date) : "",
+      dateError: "",
     });
     setFile(null);
     setImageInputMode(banner.image_url ? "url" : "upload");
@@ -226,6 +251,15 @@ export default function AdminAdBannersPage() {
         return;
       }
 
+      // Validate dates
+      const dateValidationError = validateBannerDates(formData.start_date, formData.end_date);
+      if (dateValidationError) {
+        setFormData({...formData, dateError: dateValidationError});
+        setIsActionLoading(false);
+        return;
+      }
+      setFormData({...formData, dateError: ''});
+
       let imageUrl = formData.image_url;
 
       // Upload new file if selected
@@ -237,6 +271,8 @@ export default function AdminAdBannersPage() {
         image_url: imageUrl,
         redirect_to: formData.redirect_to || null,
         active: formData.active,
+        start_date: formData.start_date ? localDateTimeToUTC(formData.start_date) : null,
+        end_date: formData.end_date ? localDateTimeToUTC(formData.end_date) : null,
       };
 
       if (isEditModalOpen && selectedBanner) {
@@ -296,21 +332,30 @@ export default function AdminAdBannersPage() {
     }
   };
 
-  // Handle toggle active status
+  // Handle toggle active/inactive
   const handleToggleActive = async (banner: AdBanner) => {
+    const newActiveState = !banner.active;
+    const action = newActiveState ? 'activate' : 'pause';
+    
+    if (!confirm(`Are you sure you want to ${action} this ad banner?`)) return;
+
     setIsActionLoading(true);
     try {
       const { error } = await supabase
-        .from("ad_banners")
-        .update({ active: !banner.active })
-        .eq("id", banner.id);
+        .from('ad_banners')
+        .update({ 
+          active: newActiveState,
+          manually_deactivated_at: newActiveState ? null : new Date().toISOString()
+        })
+        .eq('id', banner.id);
 
       if (error) throw error;
 
+      alert(`Ad banner ${action}d successfully!`);
       await fetchAdBanners();
     } catch (err: any) {
-      console.error("Error updating ad banner status:", err);
-      alert(`Failed to update status: ${err.message}`);
+      console.error(`Error ${action}ing ad banner:`, err);
+      alert(`Failed to ${action} ad banner: ${err.message}`);
     } finally {
       setIsActionLoading(false);
     }
@@ -389,18 +434,19 @@ export default function AdminAdBannersPage() {
 
             {/* Filter and Sort Buttons */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {/* Active Filter */}
+              {/* Status Filter */}
               <select
-                value={filterActive}
+                value={filterStatus}
                 onChange={(e) => {
-                  setFilterActive(e.target.value as "all" | "active" | "inactive");
+                  setFilterStatus(e.target.value as 'all' | 'scheduled' | 'active' | 'expired');
                   setCurrentPage(1);
                 }}
                 className="px-3 py-1.5 rounded-lg text-sm bg-gray-800/60 text-gray-300 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="all">All Status</option>
-                <option value="active">Active Only</option>
-                <option value="inactive">Inactive Only</option>
+                <option value="all">All Banners</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="active">Active</option>
+                <option value="expired">Expired</option>
               </select>
 
               {/* Sort by Date */}
@@ -466,7 +512,7 @@ export default function AdminAdBannersPage() {
                 No Ad Banners Found
               </h3>
               <p className="text-gray-400 mb-6">
-                {searchQuery || filterActive !== "all"
+                {searchQuery || filterStatus !== "all"
                   ? "No ad banners match your search criteria. Try a different filter."
                   : "No ad banners available. Create your first ad banner to get started."}
               </p>
@@ -503,16 +549,10 @@ export default function AdminAdBannersPage() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
 
-                    {/* Active Badge */}
+                    {/* Status Badge */}
                     <div className="absolute top-2 right-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          banner.active
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
-                        }`}
-                      >
-                        {banner.active ? "Active" : "Inactive"}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getBannerStatusColor(calculateBannerStatus(banner))}`}>
+                        {getBannerStatusLabel(calculateBannerStatus(banner))}
                       </span>
                     </div>
 
@@ -527,6 +567,13 @@ export default function AdminAdBannersPage() {
                   {/* Banner Details */}
                   <div className="p-4">
                     <div className="space-y-3">
+                      {/* Date Range - Show if dates exist */}
+                      {(banner.start_date || banner.end_date) && (
+                        <div className="text-xs text-gray-400">
+                          {getBannerDateRangeText(banner.start_date, banner.end_date)}
+                        </div>
+                      )}
+                      
                       {/* Redirect URL */}
                       <div className="flex items-start text-gray-300">
                         <LinkIcon className="h-4 w-4 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
@@ -547,7 +594,7 @@ export default function AdminAdBannersPage() {
                       <button
                         onClick={() => handleToggleActive(banner)}
                         disabled={isActionLoading}
-                        className={`flex items-center px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                        className={`flex items-center px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                           banner.active
                             ? "bg-amber-600/80 hover:bg-amber-600 text-white"
                             : "bg-emerald-600/80 hover:bg-emerald-600 text-white"
@@ -555,12 +602,12 @@ export default function AdminAdBannersPage() {
                       >
                         {banner.active ? (
                           <>
-                            <XCircleIcon className="h-3.5 w-3.5 mr-1" />
-                            Deactivate
+                            <PauseIcon className="h-3.5 w-3.5 mr-1" />
+                            Pause
                           </>
                         ) : (
                           <>
-                            <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
+                            <PlayIcon className="h-3.5 w-3.5 mr-1" />
                             Activate
                           </>
                         )}
@@ -843,6 +890,35 @@ export default function AdminAdBannersPage() {
                           }`}
                         />
                       </button>
+                    </div>
+
+                    {/* Schedule Section */}
+                    <div className="border-t border-gray-700 pt-6 mt-6">
+                      <h4 className="text-white font-medium mb-4">Schedule (Optional)</h4>
+                      
+                      {/* Start Date */}
+                      <div className="mb-4">
+                        <DateTimeInput
+                          id="start_date"
+                          label="Start Date & Time"
+                          value={formData.start_date}
+                          onChange={(value) => setFormData({...formData, start_date: value})}
+                          helperText="Leave empty for immediate activation"
+                        />
+                      </div>
+
+                      {/* End Date */}
+                      <div className="mb-4">
+                        <DateTimeInput
+                          id="end_date"
+                          label="End Date & Time"
+                          value={formData.end_date}
+                          onChange={(value) => setFormData({...formData, end_date: value})}
+                          min={formData.start_date || undefined}
+                          error={formData.dateError}
+                          helperText="Leave empty for no expiration"
+                        />
+                      </div>
                     </div>
 
                     {/* Submit and Cancel Buttons */}

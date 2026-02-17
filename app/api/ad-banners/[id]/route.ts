@@ -76,13 +76,35 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { image_url, redirect_to, active } = body;
+    const { image_url, redirect_to, active, start_date, end_date } = body;
+
+    // Validate date range if both dates are provided
+    if (start_date && end_date) {
+      const start = new Date(start_date);
+      const end = new Date(end_date);
+      if (end <= start) {
+        return NextResponse.json(
+          { error: 'End date must be after start date' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Build update object with only provided fields
     const updateData: Record<string, any> = {};
     if (image_url !== undefined) updateData.image_url = image_url;
     if (redirect_to !== undefined) updateData.redirect_to = redirect_to;
-    if (active !== undefined) updateData.active = active;
+    if (active !== undefined) {
+      updateData.active = active;
+      // Track manual deactivation
+      if (!active) {
+        updateData.manually_deactivated_at = new Date().toISOString();
+      } else {
+        updateData.manually_deactivated_at = null;
+      }
+    }
+    if (start_date !== undefined) updateData.start_date = start_date || null;
+    if (end_date !== undefined) updateData.end_date = end_date || null;
 
     // Validate that we have something to update
     if (Object.keys(updateData).length === 0) {
@@ -158,11 +180,24 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    const { active } = body;
+
+    // Build update object
+    const updateData: Record<string, any> = { ...body };
+    
+    // Track manual deactivation if active status is being changed
+    if (active !== undefined) {
+      if (!active) {
+        updateData.manually_deactivated_at = new Date().toISOString();
+      } else {
+        updateData.manually_deactivated_at = null;
+      }
+    }
 
     // Update ad banner with provided fields
     const { data, error } = await supabase
       .from('ad_banners')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

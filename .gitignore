@@ -47,3 +47,4 @@ db/create_admin_analytics_v2_rpc.sql
 docs/MOBILE-DEV-PUSH-TOKEN-GUIDE.md
 docs/RC3-SCHEDULE-TIMEOUT-FIX.md
 docs/RC4-NOTIFICATION-RACE-CONDITION-FIX.md
+scripts/test-banner-scheduling.sh
